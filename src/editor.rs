@@ -44,14 +44,16 @@ pub struct Editor {
     pub lines: Vec<String>,
 }
 
-impl Editor {
-    pub fn new() -> Self {
+impl Default for Editor {
+    fn default() -> Self {
         Self {
             cursor: Cursor::new(0, 0),
             lines: vec![String::new()],
         }
     }
+}
 
+impl Editor {
     pub fn handle_event(&mut self, event: KeyEvent) -> Result<bool> {
         match event {
             KeyEvent {
