@@ -1,0 +1,18 @@
+[package]
+name = "tui-editor"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = ["crossterm"]
+crossterm = ["dep:crossterm", "tui/crossterm"]
+
+[dependencies]
+crossterm = { version = "0.26.1", optional = true }
+tui = { version = "0.19.0", default-features = false }
+
+anyhow = "1.0.70"
+
+[lib]
+name = "tui_editor"
+path = "src/lib.rs"
