@@ -1,5 +1,6 @@
 mod app;
 mod editor;
+mod event;
 
 use app::App;
 use editor::Editor;
