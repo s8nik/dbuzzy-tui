@@ -66,7 +66,7 @@ impl<B: Backend + Write> App<B> {
             })?;
 
             let (x, y) = self.editor.cursor();
-            self.terminal.set_cursor(x, y)?;
+            self.terminal.set_cursor(x as u16, y as u16)?;
             self.terminal.show_cursor()?;
         }
 

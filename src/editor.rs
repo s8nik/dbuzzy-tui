@@ -6,14 +6,14 @@ use tui::{
 
 use crate::event::{Event, Input};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Cursor {
-    pub x: u16,
-    pub y: u16,
+    pub x: usize,
+    pub y: usize,
 }
 
 impl Cursor {
-    pub fn new(x: u16, y: u16) -> Self {
+    pub fn new(x: usize, y: usize) -> Self {
         Self { x, y }
     }
 
@@ -21,18 +21,18 @@ impl Cursor {
         match direction {
             Event::Left => self.x = self.x.saturating_sub(1),
             Event::Right => {
-                if self.x.saturating_add(1) < (lines[self.y as usize].len() as u16) + 1 {
+                if self.x.saturating_add(1) < (lines[self.y].len()) + 1 {
                     self.x += 1;
                 }
             }
             Event::Up => {
                 self.y = self.y.saturating_sub(1);
-                self.x = std::cmp::min(self.x, lines[self.y as usize].len() as u16);
+                self.x = std::cmp::min(self.x, lines[self.y].len());
             }
             Event::Down => {
-                if self.y.saturating_add(1) < lines.len() as u16 {
+                if self.y.saturating_add(1) < lines.len() {
                     self.y += 1;
-                    self.x = std::cmp::min(self.x, lines[self.y as usize].len() as u16);
+                    self.x = std::cmp::min(self.x, lines[self.y].len());
                 }
             }
             _ => unimplemented!(),
@@ -104,7 +104,7 @@ impl Editor {
                     let curr_y = self.cursor.y as usize;
                     if curr_y != 0 {
                         self.cursor.y = self.cursor.y.saturating_sub(1);
-                        self.cursor.x = self.lines[self.cursor.y as usize].len() as u16;
+                        self.cursor.x = self.lines[self.cursor.y].len();
 
                         let prev = self.lines.remove(curr_y);
                         if !prev.is_empty() {
@@ -133,7 +133,7 @@ impl Editor {
         Text::from(self.lines.join("\n"))
     }
 
-    pub fn cursor(&self) -> (u16, u16) {
+    pub fn cursor(&self) -> (usize, usize) {
         (self.cursor.x, self.cursor.y)
     }
 }
