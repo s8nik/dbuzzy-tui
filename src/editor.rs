@@ -1,9 +1,10 @@
 use anyhow::Result;
-use crossterm::event::{self, KeyCode, KeyEvent};
 use tui::{
     text::Text,
     widgets::{Paragraph, Widget},
 };
+
+use crate::event::{Event, Input};
 
 #[derive(Debug)]
 pub struct Cursor {
@@ -16,19 +17,19 @@ impl Cursor {
         Self { x, y }
     }
 
-    pub fn set(&mut self, direction: KeyCode, lines: &Vec<String>) {
+    pub fn set(&mut self, direction: Event, lines: &Vec<String>) {
         match direction {
-            KeyCode::Left => self.x = self.x.saturating_sub(1),
-            KeyCode::Right => {
+            Event::Left => self.x = self.x.saturating_sub(1),
+            Event::Right => {
                 if self.x.saturating_add(1) < (lines[self.y as usize].len() as u16) + 1 {
                     self.x += 1;
                 }
             }
-            KeyCode::Up => {
+            Event::Up => {
                 self.y = self.y.saturating_sub(1);
                 self.x = std::cmp::min(self.x, lines[self.y as usize].len() as u16);
             }
-            KeyCode::Down => {
+            Event::Down => {
                 if self.y.saturating_add(1) < lines.len() as u16 {
                     self.y += 1;
                     self.x = std::cmp::min(self.x, lines[self.y as usize].len() as u16);
@@ -54,51 +55,68 @@ impl Default for Editor {
 }
 
 impl Editor {
-    pub fn handle_event(&mut self, event: KeyEvent) -> Result<bool> {
+    pub fn handle_event(&mut self, event: Input) -> Result<bool> {
         match event {
-            KeyEvent {
-                code: KeyCode::Char('q'),
-                modifiers: event::KeyModifiers::CONTROL,
-                ..
+            Input {
+                event: Event::Char('q'),
+                ctrl: true,
+                alt: false,
             } => return Ok(true),
-            KeyEvent {
-                code: KeyCode::Char(c),
-                modifiers: event::KeyModifiers::NONE | event::KeyModifiers::SHIFT,
-                ..
+            Input {
+                event: Event::Char(c),
+                ctrl: false,
+                alt: false,
             } => {
                 let line = &mut self.lines[self.cursor.y as usize];
 
-                line.push(c);
-                self.cursor.x = line.len() as u16;
+                line.insert(self.cursor.x as usize, c);
+                self.cursor.x = self.cursor.x.saturating_add(1);
             }
-            KeyEvent {
-                code: direction @ (KeyCode::Up | KeyCode::Left | KeyCode::Right | KeyCode::Down),
-                modifiers: event::KeyModifiers::NONE,
-                ..
+            Input {
+                event: direction @ (Event::Up | Event::Left | Event::Right | Event::Down),
+                ctrl: false,
+                alt: false,
             } => self.cursor.set(direction, &self.lines),
-            KeyEvent {
-                code: KeyCode::Enter,
-                modifiers: event::KeyModifiers::NONE,
-                ..
+            Input {
+                event: Event::Enter,
+                ctrl: false,
+                alt: false,
             } => {
-                self.lines.push(String::new());
+                let x = self.cursor.x as usize;
+                let line = &mut self.lines[self.cursor.y as usize];
+
                 self.cursor.x = 0;
-                self.cursor.y = (self.lines.len() - 1) as u16;
+                self.cursor.y = self.cursor.y.saturating_add(1);
+
+                if x < line.len() {
+                    let str_to_move = line.split_off(x);
+                    self.lines.insert(self.cursor.y as usize, str_to_move);
+                } else {
+                    self.lines.insert(self.cursor.y as usize, String::new());
+                }
             }
-            KeyEvent {
-                code: KeyCode::Backspace,
-                modifiers: event::KeyModifiers::NONE,
-                ..
+            Input {
+                event: Event::Backspace,
+                ctrl: false,
+                alt: false,
             } => {
-                let row = self.cursor.y as usize;
-                if self.lines[row].is_empty() && row != 0 {
-                    self.lines.pop();
-                    self.cursor.y = self.cursor.y.saturating_sub(1);
-                    self.cursor.x = self.lines[self.cursor.y as usize].len() as u16;
+                if self.cursor.x == 0 {
+                    let curr_y = self.cursor.y as usize;
+                    if curr_y != 0 {
+                        self.cursor.y = self.cursor.y.saturating_sub(1);
+                        self.cursor.x = self.lines[self.cursor.y as usize].len() as u16;
+
+                        let prev = self.lines.remove(curr_y);
+                        if !prev.is_empty() {
+                            self.lines[self.cursor.y as usize].push_str(&prev);
+                        }
+                    }
                 } else {
                     let line = &mut self.lines[self.cursor.y as usize];
-                    line.pop();
-                    self.cursor.x = line.len() as u16;
+                    let mut chars: Vec<char> = line.chars().collect();
+                    chars.remove((self.cursor.x - 1) as usize);
+                    *line = chars.into_iter().collect();
+                    self.cursor.x = self.cursor.x.saturating_sub(1);
                 }
             }
             _ => todo!(),

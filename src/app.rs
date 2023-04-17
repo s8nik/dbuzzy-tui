@@ -1,5 +1,6 @@
 use std::{io::Write, time::Duration};
 
+use crossterm::ExecutableCommand;
 use tui::{backend::Backend, Terminal};
 
 use crate::editor::Editor;
@@ -26,12 +27,27 @@ impl<B: Backend + Write> App<B> {
         Self { editor, terminal }
     }
 
+    fn setup_panic() {
+        let hook = std::panic::take_hook();
+
+        std::panic::set_hook(Box::new(move |info| {
+            let mut stdout = std::io::stdout();
+            stdout
+                .execute(crossterm::terminal::LeaveAlternateScreen)
+                .ok();
+            crossterm::terminal::disable_raw_mode().ok();
+
+            hook(info);
+        }));
+    }
+
     pub fn run(&mut self) -> anyhow::Result<()> {
+        Self::setup_panic();
         loop {
             let exit = {
                 if crossterm::event::poll(Duration::from_millis(200))? {
                     if let crossterm::event::Event::Key(event) = crossterm::event::read()? {
-                        self.editor.handle_event(event)?
+                        self.editor.handle_event(event.into())?
                     } else {
                         false
                     }
