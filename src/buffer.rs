@@ -1,10 +1,10 @@
-use anyhow::Result;
 use std::{
     fs::File,
     io::BufReader,
     path::{Path, PathBuf},
 };
 
+use anyhow::Result;
 use ropey::Rope;
 
 #[derive(Default)]

@@ -1,9 +1,10 @@
 use std::{io::Write, time::Duration};
 
+use anyhow::Result;
 use crossterm::ExecutableCommand;
 use tui::{backend::Backend, Terminal};
 
-use crate::editor::Editor;
+use crate::{buffer::Buffer, editor::Editor};
 
 pub struct App<B: Backend + Write> {
     editor: Editor,
@@ -11,7 +12,16 @@ pub struct App<B: Backend + Write> {
 }
 
 impl<B: Backend + Write> App<B> {
-    pub fn new(editor: Editor, backend: B) -> Self {
+    pub fn new(mut args: impl Iterator<Item = String>, backend: B) -> Result<Self> {
+        let filepath = args.nth(1);
+        // todo: one file at this moment
+        let buffer = if let Some(path) = filepath {
+            Buffer::from_path(path)?
+        } else {
+            Buffer::default()
+        };
+
+        let editor = Editor::new(buffer);
         let mut terminal = Terminal::new(backend).expect("terminal");
 
         if cfg!(feature = "crossterm") {
@@ -24,7 +34,7 @@ impl<B: Backend + Write> App<B> {
             .expect("enable rules");
         }
 
-        Self { editor, terminal }
+        Ok(Self { editor, terminal })
     }
 
     fn setup_panic() {
@@ -41,7 +51,7 @@ impl<B: Backend + Write> App<B> {
         }));
     }
 
-    pub fn run(&mut self) -> anyhow::Result<()> {
+    pub fn run(&mut self) -> Result<()> {
         Self::setup_panic();
         loop {
             let exit = {

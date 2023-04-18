@@ -1,14 +1,13 @@
 use tui::backend::CrosstermBackend;
 
-use tui_editor::{app::App, editor::Editor};
+use tui_editor::app::App;
 
 fn main() -> anyhow::Result<()> {
     let stdout = std::io::stdout();
 
     let backend = CrosstermBackend::new(stdout);
-    let editor = Editor::default();
 
-    let mut app = App::new(editor, backend);
+    let mut app = App::new(std::env::args(), backend)?;
     app.run()?;
 
     Ok(())

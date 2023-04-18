@@ -1,12 +1,16 @@
 use anyhow::Result;
+use ropey::Rope;
 use tui::{
     text::Text,
     widgets::{Paragraph, Widget},
 };
 
-use crate::event::{Event, Input};
+use crate::{
+    buffer::Buffer,
+    event::{Event, Input},
+};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Cursor {
     pub x: usize,
     pub y: usize,
@@ -17,22 +21,22 @@ impl Cursor {
         Self { x, y }
     }
 
-    pub fn set(&mut self, direction: Event, lines: &Vec<String>) {
+    pub fn set(&mut self, direction: Event, text: &Rope) {
         match direction {
             Event::Left => self.x = self.x.saturating_sub(1),
             Event::Right => {
-                if self.x.saturating_add(1) < (lines[self.y].len()) + 1 {
+                if self.x.saturating_add(1) < (text.line(self.y).len_chars()) + 1 {
                     self.x += 1;
                 }
             }
             Event::Up => {
                 self.y = self.y.saturating_sub(1);
-                self.x = std::cmp::min(self.x, lines[self.y].len());
+                self.x = std::cmp::min(self.x, text.line(self.y).len_chars());
             }
             Event::Down => {
-                if self.y.saturating_add(1) < lines.len() {
+                if self.y.saturating_add(1) < text.len_lines() {
                     self.y += 1;
-                    self.x = std::cmp::min(self.x, lines[self.y].len());
+                    self.x = std::cmp::min(self.x, text.line(self.y).len_chars());
                 }
             }
             _ => unimplemented!(),
@@ -40,21 +44,21 @@ impl Cursor {
     }
 }
 
+#[derive(Default)]
 pub struct Editor {
     pub cursor: Cursor,
-    pub lines: Vec<String>,
-}
-
-impl Default for Editor {
-    fn default() -> Self {
-        Self {
-            cursor: Cursor::new(0, 0),
-            lines: vec![String::new()],
-        }
-    }
+    pub buffer: Buffer,
 }
 
 impl Editor {
+    // todo: change to vec of buffers later
+    pub fn new(buffer: Buffer) -> Self {
+        Self {
+            buffer,
+            ..Default::default()
+        }
+    }
+
     pub fn handle_event(&mut self, event: Input) -> Result<bool> {
         match event {
             Input {
@@ -67,57 +71,33 @@ impl Editor {
                 ctrl: false,
                 alt: false,
             } => {
-                let line = &mut self.lines[self.cursor.y as usize];
+                let text = self.buffer.text_mut();
+                let curr_pos = text.line_to_char(self.cursor.y) + self.cursor.x;
 
-                line.insert(self.cursor.x as usize, c);
+                text.insert_char(curr_pos, c);
                 self.cursor.x = self.cursor.x.saturating_add(1);
             }
             Input {
                 event: direction @ (Event::Up | Event::Left | Event::Right | Event::Down),
                 ctrl: false,
                 alt: false,
-            } => self.cursor.set(direction, &self.lines),
+            } => self.cursor.set(direction, self.buffer.text()),
             Input {
                 event: Event::Enter,
                 ctrl: false,
                 alt: false,
             } => {
-                let x = self.cursor.x as usize;
-                let line = &mut self.lines[self.cursor.y as usize];
+                self.buffer.text_mut().split_off(self.cursor.x);
 
                 self.cursor.x = 0;
                 self.cursor.y = self.cursor.y.saturating_add(1);
-
-                if x < line.len() {
-                    let str_to_move = line.split_off(x);
-                    self.lines.insert(self.cursor.y as usize, str_to_move);
-                } else {
-                    self.lines.insert(self.cursor.y as usize, String::new());
-                }
             }
             Input {
                 event: Event::Backspace,
                 ctrl: false,
                 alt: false,
             } => {
-                if self.cursor.x == 0 {
-                    let curr_y = self.cursor.y as usize;
-                    if curr_y != 0 {
-                        self.cursor.y = self.cursor.y.saturating_sub(1);
-                        self.cursor.x = self.lines[self.cursor.y].len();
-
-                        let prev = self.lines.remove(curr_y);
-                        if !prev.is_empty() {
-                            self.lines[self.cursor.y as usize].push_str(&prev);
-                        }
-                    }
-                } else {
-                    let line = &mut self.lines[self.cursor.y as usize];
-                    let mut chars: Vec<char> = line.chars().collect();
-                    chars.remove((self.cursor.x - 1) as usize);
-                    *line = chars.into_iter().collect();
-                    self.cursor.x = self.cursor.x.saturating_sub(1);
-                }
+                todo!()
             }
             _ => todo!(),
         };
@@ -130,7 +110,7 @@ impl Editor {
     }
 
     pub fn text(&self) -> Text {
-        Text::from(self.lines.join("\n"))
+        Text::raw(self.buffer.text())
     }
 
     pub fn cursor(&self) -> (usize, usize) {
