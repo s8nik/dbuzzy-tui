@@ -12,6 +12,8 @@ pub struct Buffer {
     text: Rope,
     path: Option<PathBuf>,
     readonly: bool,
+    cursor_offset: usize,
+    line_index: usize,
 }
 
 impl Buffer {
@@ -40,6 +42,13 @@ impl Buffer {
         Ok(buffer)
     }
 
+    fn cursor_bound(&mut self) {
+        let line_bytes_len = self.text.line(self.line_index).len_bytes();
+        if self.cursor_offset > line_bytes_len {
+            self.cursor_offset = line_bytes_len;
+        }
+    }
+
     pub const fn text(&self) -> &Rope {
         &self.text
     }
@@ -54,6 +63,66 @@ impl Buffer {
 
     pub fn readonly(&self) -> bool {
         self.readonly
+    }
+
+    pub fn cursor_offset(&self) -> usize {
+        self.cursor_offset
+    }
+
+    pub fn line_index(&self) -> usize {
+        self.line_index
+    }
+
+    pub fn move_back_by(&mut self, offset: usize) {
+        self.cursor_offset = self.cursor_offset.saturating_sub(offset);
+    }
+
+    pub fn move_forward_by(&mut self, offset: usize) {
+        let line_bytes_len = self.text.line(self.line_index).len_bytes();
+        if (self.cursor_offset + offset) <= line_bytes_len {
+            self.cursor_offset += offset
+        }
+    }
+
+    pub fn move_up_by(&mut self, offset: usize) {
+        self.line_index = self.line_index.saturating_sub(offset);
+        self.cursor_bound();
+    }
+
+    pub fn move_down_by(&mut self, offset: usize) {
+        if (self.line_index + offset) < self.text.len_lines() {
+            self.line_index += offset;
+        }
+        self.cursor_bound();
+    }
+
+    pub fn cursor_position(&self) -> usize {
+        let line_index = self.text.line_to_byte(self.line_index);
+        line_index + self.cursor_offset
+    }
+
+    pub fn insert_char(&mut self, ch: char) {
+        self.text.insert_char(self.cursor_position(), ch);
+    }
+
+    pub fn new_line(&mut self) {
+        self.insert_char('\n');
+        self.cursor_offset = 0;
+        self.line_index += 1;
+    }
+
+    pub fn backspace(&mut self) {
+        let pos = self.cursor_position();
+
+        if pos != 0 {
+            if self.cursor_offset == 0 {
+                self.move_up_by(1);
+                self.cursor_offset = self.text.line(self.line_index).len_bytes();
+            }
+
+            self.text.remove(pos - 1..pos);
+            self.move_back_by(1);
+        }
     }
 
     pub fn save(&self) -> Result<()> {

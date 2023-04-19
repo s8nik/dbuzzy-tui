@@ -1,5 +1,4 @@
 use anyhow::Result;
-use ropey::Rope;
 use tui::{
     text::Text,
     widgets::{Paragraph, Widget},
@@ -10,43 +9,8 @@ use crate::{
     event::{Event, Input},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct Cursor {
-    pub x: usize,
-    pub y: usize,
-}
-
-impl Cursor {
-    pub fn new(x: usize, y: usize) -> Self {
-        Self { x, y }
-    }
-
-    pub fn set(&mut self, direction: Event, text: &Rope) {
-        match direction {
-            Event::Left => self.x = self.x.saturating_sub(1),
-            Event::Right => {
-                if self.x.saturating_add(1) < (text.line(self.y).len_chars()) + 1 {
-                    self.x += 1;
-                }
-            }
-            Event::Up => {
-                self.y = self.y.saturating_sub(1);
-                self.x = std::cmp::min(self.x, text.line(self.y).len_chars());
-            }
-            Event::Down => {
-                if self.y.saturating_add(1) < text.len_lines() {
-                    self.y += 1;
-                    self.x = std::cmp::min(self.x, text.line(self.y).len_chars());
-                }
-            }
-            _ => unimplemented!(),
-        }
-    }
-}
-
 #[derive(Default)]
 pub struct Editor {
-    pub cursor: Cursor,
     pub buffer: Buffer,
 }
 
@@ -71,34 +35,30 @@ impl Editor {
                 ctrl: false,
                 alt: false,
             } => {
-                let text = self.buffer.text_mut();
-                let curr_pos = text.line_to_char(self.cursor.y) + self.cursor.x;
-
-                text.insert_char(curr_pos, c);
-                self.cursor.x = self.cursor.x.saturating_add(1);
+                self.buffer.insert_char(c);
+                self.buffer.move_forward_by(1);
             }
             Input {
                 event: direction @ (Event::Up | Event::Left | Event::Right | Event::Down),
                 ctrl: false,
                 alt: false,
-            } => self.cursor.set(direction, self.buffer.text()),
+            } => match direction {
+                Event::Left => self.buffer.move_back_by(1),
+                Event::Right => self.buffer.move_forward_by(1),
+                Event::Up => self.buffer.move_up_by(1),
+                Event::Down => self.buffer.move_down_by(1),
+                _ => unreachable!(),
+            },
             Input {
                 event: Event::Enter,
                 ctrl: false,
                 alt: false,
-            } => {
-                self.buffer.text_mut().split_off(self.cursor.x);
-
-                self.cursor.x = 0;
-                self.cursor.y = self.cursor.y.saturating_add(1);
-            }
+            } => self.buffer.new_line(),
             Input {
                 event: Event::Backspace,
                 ctrl: false,
                 alt: false,
-            } => {
-                todo!()
-            }
+            } => self.buffer.backspace(),
             _ => todo!(),
         };
 
@@ -114,7 +74,7 @@ impl Editor {
     }
 
     pub fn cursor(&self) -> (usize, usize) {
-        (self.cursor.x, self.cursor.y)
+        (self.buffer.cursor_offset(), self.buffer.line_index())
     }
 }
 
