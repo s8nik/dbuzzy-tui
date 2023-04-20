@@ -4,7 +4,7 @@ use anyhow::Result;
 use crossterm::ExecutableCommand;
 use tui::{backend::Backend, Terminal};
 
-use crate::{buffer::Buffer, editor::Editor};
+use crate::editor::Editor;
 
 pub struct App<B: Backend + Write> {
     editor: Editor,
@@ -12,16 +12,17 @@ pub struct App<B: Backend + Write> {
 }
 
 impl<B: Backend + Write> App<B> {
-    pub fn new(mut args: impl Iterator<Item = String>, backend: B) -> Result<Self> {
-        let filepath = args.nth(1);
-        // todo: one file at this moment
-        let buffer = if let Some(path) = filepath {
-            Buffer::from_path(path)?
-        } else {
-            Buffer::default()
-        };
+    pub fn new(args: impl Iterator<Item = String>, backend: B) -> Result<Self> {
+        let mut editor = Editor::init();
 
-        let editor = Editor::new(buffer);
+        for filepath in args.skip(1) {
+            editor.open(filepath)?;
+        }
+
+        if editor.empty() {
+            editor.open_scratch();
+        }
+
         let mut terminal = Terminal::new(backend).expect("terminal");
 
         if cfg!(feature = "crossterm") {
@@ -54,19 +55,13 @@ impl<B: Backend + Write> App<B> {
     pub fn run(&mut self) -> Result<()> {
         Self::setup_panic();
         loop {
-            let exit = {
-                if crossterm::event::poll(Duration::from_millis(200))? {
-                    if let crossterm::event::Event::Key(event) = crossterm::event::read()? {
-                        self.editor.handle_event(event.into())?
-                    } else {
-                        false
-                    }
-                } else {
-                    false
+            if crossterm::event::poll(Duration::from_millis(200))? {
+                if let crossterm::event::Event::Key(event) = crossterm::event::read()? {
+                    self.editor.handle_event(event.into())?
                 }
-            };
+            }
 
-            if exit {
+            if self.editor.exit() {
                 break;
             }
 

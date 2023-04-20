@@ -1,14 +1,39 @@
 use std::{
     fs::File,
     io::BufReader,
+    num::NonZeroUsize,
     path::{Path, PathBuf},
+    sync::atomic::{AtomicUsize, Ordering},
 };
 
 use anyhow::Result;
 use ropey::Rope;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct BufferId(NonZeroUsize);
+
+impl BufferId {
+    pub const MAX: Self = Self(unsafe { NonZeroUsize::new_unchecked(usize::MAX) });
+
+    pub fn next() -> Self {
+        pub static IDS: AtomicUsize = AtomicUsize::new(1);
+
+        let next = NonZeroUsize::new(IDS.fetch_add(1, Ordering::SeqCst))
+            .expect("BufferId counter overflowed");
+
+        Self(next)
+    }
+}
+
+impl Default for BufferId {
+    fn default() -> Self {
+        BufferId::next()
+    }
+}
+
 #[derive(Default)]
 pub struct Buffer {
+    id: BufferId,
     text: Rope,
     path: Option<PathBuf>,
     readonly: bool,
@@ -19,7 +44,6 @@ pub struct Buffer {
 impl Buffer {
     pub fn from_path(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref();
-
         let mut buffer = Self::default();
 
         if !path.exists() {
@@ -47,6 +71,10 @@ impl Buffer {
         if self.cursor_offset > line_bytes_len {
             self.cursor_offset = line_bytes_len;
         }
+    }
+
+    pub fn id(&self) -> BufferId {
+        self.id
     }
 
     pub const fn text(&self) -> &Rope {
