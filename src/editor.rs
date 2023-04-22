@@ -9,6 +9,7 @@ use tui::{
 use crate::{
     buffer::{Buffer, BufferId},
     event::{Event, Input},
+    mode::CursorMode,
 };
 
 #[derive(Default)]
@@ -64,12 +65,52 @@ impl Editor {
     }
 
     pub fn handle_event(&mut self, event: Input) -> Result<()> {
+        let cursor_mode = self.current_buff().cursor_mode();
+        match cursor_mode {
+            CursorMode::Insert => self.handle_insert_mode_event(event)?,
+            CursorMode::Normal => self.handle_normal_mode_event(event)?,
+            CursorMode::Visual => todo!(),
+        }
+
+        Ok(())
+    }
+
+    fn handle_normal_mode_event(&mut self, event: Input) -> Result<()> {
+        match event {
+            Input {
+                event: Event::Char('i'),
+                ctrl: false,
+                alt: false,
+            } => self.current_buff_mut().set_cursor_mode(CursorMode::Insert),
+            Input {
+                event: Event::Char(direction @ ('h' | 'j' | 'k' | 'l')),
+                ctrl: false,
+                alt: false,
+            } => match direction {
+                'h' => self.current_buff_mut().move_back_by(1),
+                'j' => self.current_buff_mut().move_down_by(1),
+                'k' => self.current_buff_mut().move_up_by(1),
+                'l' => self.current_buff_mut().move_forward_by(1),
+                _ => unreachable!(),
+            },
+            _ => todo!(),
+        }
+
+        Ok(())
+    }
+
+    fn handle_insert_mode_event(&mut self, event: Input) -> Result<()> {
         match event {
             Input {
                 event: Event::Char('q'),
                 ctrl: true,
                 alt: false,
             } => self.exit = true,
+            Input {
+                event: Event::Esc,
+                ctrl: false,
+                alt: false,
+            } => self.current_buff_mut().set_cursor_mode(CursorMode::Normal),
             Input {
                 event: Event::Char(c),
                 ctrl: false,

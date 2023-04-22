@@ -9,6 +9,8 @@ use std::{
 use anyhow::Result;
 use ropey::Rope;
 
+use crate::mode::CursorMode;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BufferId(NonZeroUsize);
 
@@ -39,6 +41,7 @@ pub struct Buffer {
     readonly: bool,
     cursor_offset: usize,
     line_index: usize,
+    cursor_mode: CursorMode,
 }
 
 impl Buffer {
@@ -161,5 +164,13 @@ impl Buffer {
         }
 
         Ok(())
+    }
+
+    pub fn cursor_mode(&self) -> CursorMode {
+        self.cursor_mode
+    }
+
+    pub fn set_cursor_mode(&mut self, mode: CursorMode) {
+        self.cursor_mode = mode;
     }
 }

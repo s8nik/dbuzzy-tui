@@ -1,10 +1,10 @@
 use std::{io::Write, time::Duration};
 
 use anyhow::Result;
-use crossterm::ExecutableCommand;
+use crossterm::{execute, ExecutableCommand};
 use tui::{backend::Backend, Terminal};
 
-use crate::editor::Editor;
+use crate::{editor::Editor, mode::CursorMode};
 
 pub struct App<B: Backend + Write> {
     editor: Editor,
@@ -71,7 +71,12 @@ impl<B: Backend + Write> App<B> {
             })?;
 
             let (x, y) = self.editor.cursor();
+            let cursor_mode = self.editor.current_buff().cursor_mode();
             self.terminal.set_cursor(x as u16, y as u16)?;
+            execute!(
+                self.terminal.backend_mut(),
+                CursorMode::cursor_style(cursor_mode)
+            )?;
             self.terminal.show_cursor()?;
         }
 
