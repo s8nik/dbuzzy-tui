@@ -1,6 +1,6 @@
 use crossterm::cursor::SetCursorStyle;
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum CursorMode {
     Insert,
     #[default]

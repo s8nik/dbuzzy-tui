@@ -7,7 +7,7 @@ use tui::{backend::Backend, Terminal};
 use crate::{editor::Editor, mode::CursorMode};
 
 pub struct App<B: Backend + Write> {
-    editor: Editor,
+    editor: Editor<'static>,
     terminal: Terminal<B>,
 }
 
@@ -57,11 +57,11 @@ impl<B: Backend + Write> App<B> {
         loop {
             if crossterm::event::poll(Duration::from_millis(200))? {
                 if let crossterm::event::Event::Key(event) = crossterm::event::read()? {
-                    self.editor.handle_event(event.into())?
+                    self.editor.handle_event(event.into());
                 }
             }
 
-            if self.editor.exit() {
+            if self.editor.command().should_exit() {
                 break;
             }
 
