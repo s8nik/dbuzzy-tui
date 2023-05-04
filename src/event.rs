@@ -1,5 +1,6 @@
 // The structure of this code was inspired by the example in tui-textarea (https://github.com/rhysd/tui-textarea/blob/main/src/input.rs).
 
+use anyhow::Context;
 #[cfg(feature = "crossterm")]
 use crossterm::event::{
     Event as CrosstermEvent, KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind,
@@ -28,6 +29,37 @@ pub enum Event {
 
     #[default]
     Null,
+}
+
+impl TryFrom<&str> for Event {
+    type Error = anyhow::Error;
+
+    // TODO: handle F(u8)
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let event = if value.len() == 1 {
+            let c = value.chars().next().with_context(|| "char should exist!")?;
+            Self::Char(c)
+        } else {
+            match value {
+                "backspace" => Self::Backspace,
+                "enter" => Self::Enter,
+                "left" => Self::Left,
+                "right" => Self::Right,
+                "up" => Self::Up,
+                "down" => Self::Down,
+                "tab" => Self::Tab,
+                "delete" => Self::Delete,
+                "home" => Self::Home,
+                "end" => Self::End,
+                "pageup" => Self::PageUp,
+                "pagedown" => Self::PageDown,
+                "esc" => Self::Esc,
+                other => anyhow::bail!("{other} event doesn't exist"),
+            }
+        };
+
+        Ok(event)
+    }
 }
 
 #[derive(Debug, Clone, Default)]

@@ -20,10 +20,8 @@ pub struct Editor<'a> {
 
 impl<'a> Editor<'a> {
     pub fn init() -> Self {
-        let keymaps = Box::leak(Box::new(Keymaps::init()));
-
         Self {
-            keymaps,
+            keymaps: Keymaps::init(),
             buffers: HashMap::new(),
             command: Command::default(),
             current: BufferId::MAX,

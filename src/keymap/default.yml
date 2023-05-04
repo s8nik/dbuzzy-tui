@@ -1,0 +1,20 @@
+normal:
+  i: switch_to_insert_mode
+
+  h: move_back  
+  j: move_down
+  k: move_up
+  l: move_forward
+
+  A: switch_to_insert_mode_line_end
+  I: switch_to_insert_mode_line_start
+
+  g_g: go_to_start_line
+  g_e: go_to_end_line
+
+insert:
+  esc: normal_mode
+  left: move_forward
+  right: move_back
+  up: move_up
+  down: move_down

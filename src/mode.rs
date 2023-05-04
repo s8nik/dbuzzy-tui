@@ -1,6 +1,8 @@
 use crossterm::cursor::SetCursorStyle;
+use serde::Deserialize;
 
-#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Default, Deserialize, Clone, Copy, Eq, PartialEq, Hash)]
+#[serde(rename_all = "lowercase")]
 pub enum CursorMode {
     Insert,
     #[default]
