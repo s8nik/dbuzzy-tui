@@ -5,10 +5,8 @@ use anyhow::Context;
 use crossterm::event::{
     Event as CrosstermEvent, KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind,
 };
-use serde::Deserialize;
 
-#[derive(Debug, Copy, Clone, Deserialize, Default, Eq, PartialEq, PartialOrd, Ord)]
-#[serde(rename_all = "lowercase")]
+#[derive(Debug, Copy, Clone, Default, Eq, PartialEq, PartialOrd, Ord)]
 pub enum Event {
     Char(char),
     F(u8),
