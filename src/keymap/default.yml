@@ -13,8 +13,10 @@ normal:
   g_e: go_to_end_line
 
 insert:
-  esc: normal_mode
-  left: move_forward
-  right: move_back
+  esc: switch_to_normal_mode
+  left: move_back
+  right: move_forward
   up: move_up
   down: move_down
+  backspace: delete_char
+  enter: new_line

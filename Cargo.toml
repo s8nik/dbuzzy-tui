@@ -13,8 +13,10 @@ tui = { version = "0.19.0", default-features = false }
 
 anyhow = "1.0.70"
 ropey = "1.6.0"
-serde = { version = "1.0.160", features = ["derive"] }
+strum = { version = "0.24.1", features = ["derive"] }
+
 serde_yaml = "0.9.21"
+serde = { version = "1.0.160", features = ["derive"] }
 
 [lib]
 name = "tui_editor"

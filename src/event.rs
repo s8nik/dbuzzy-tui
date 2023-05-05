@@ -5,8 +5,10 @@ use anyhow::Context;
 use crossterm::event::{
     Event as CrosstermEvent, KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind,
 };
+use serde::Deserialize;
 
-#[derive(Debug, Copy, Clone, Default, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, Deserialize, Default, Eq, PartialEq, PartialOrd, Ord)]
+#[serde(rename_all = "lowercase")]
 pub enum Event {
     Char(char),
     F(u8),
@@ -34,7 +36,6 @@ pub enum Event {
 impl TryFrom<&str> for Event {
     type Error = anyhow::Error;
 
-    // TODO: handle F(u8)
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let event = if value.len() == 1 {
             let c = value.chars().next().with_context(|| "char should exist!")?;

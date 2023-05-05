@@ -1,9 +1,32 @@
+use strum::EnumString;
+
 use crate::{
     buffer::Buffer,
-    event::{Event, Input},
+    event::Input,
     keymap::{Keymap, KeymapNode},
     mode::CursorMode,
 };
+
+#[derive(Debug, EnumString)]
+#[strum(serialize_all = "snake_case")]
+pub enum CommandType {
+    SwitchToInsertMode,
+    SwitchToNormalMode,
+
+    MoveBack,
+    MoveDown,
+    MoveUp,
+    MoveForward,
+
+    SwitchToInsertModeLineEnd,
+    SwitchToInsertModeLineStart,
+
+    GoToStartLine,
+    GoToEndLine,
+
+    DeleteChar,
+    NewLine,
+}
 
 #[derive(Default)]
 pub struct Command<'a> {
@@ -16,64 +39,39 @@ impl<'a> Command<'a> {
         self.should_exit
     }
 
-    pub fn insert_mode(&mut self, event: Input, buffer: &mut Buffer) {
-        match event {
-            Input {
-                event: Event::Char('q'),
-                ctrl: true,
-                alt: false,
-            } => self.should_exit = true,
-            Input {
-                event: Event::Esc,
-                ctrl: false,
-                alt: false,
-            } => buffer.set_cursor_mode(CursorMode::Normal),
-            Input {
-                event: Event::Char(ch),
-                ctrl: false,
-                alt: false,
-            } => Self::insert_char(buffer, ch),
-            Input {
-                event: direction @ (Event::Up | Event::Left | Event::Right | Event::Down),
-                ctrl: false,
-                alt: false,
-            } => Self::move_cursor(buffer, direction),
-            Input {
-                event: Event::Enter,
-                ctrl: false,
-                alt: false,
-            } => Self::new_line(buffer),
-            Input {
-                event: Event::Backspace,
-                ctrl: false,
-                alt: false,
-            } => Self::delete_char(buffer),
-            _ => todo!(),
-        };
+    pub fn do_exit(&mut self) {
+        self.should_exit = true
     }
 
-    pub fn execute(&mut self, event: Event, buffer: &mut Buffer, keymap: &'static Keymap) {
+    // TODO: Handle ctrl/alt
+    pub fn execute(&mut self, input: Input, buffer: &mut Buffer, keymap: &'static Keymap) {
         let keymap_node = match self.current_node {
             Some(node) => Some(node),
-            None => keymap.get(event),
+            None => keymap.get(input.event),
         };
 
         if let Some(node) = keymap_node {
             match node {
-                KeymapNode::Leaf(command) => match command.as_str() {
-                    "insert_mode" => buffer.set_cursor_mode(CursorMode::Insert),
-                    "move_cursor_back" => Self::move_cursor_back_by(buffer, 1),
-                    "move_cursor_down" => Self::move_cursor_down_by(buffer, 1),
-                    "move_cursor_up" => Self::move_cursor_up_by(buffer, 1),
-                    "move_cursor_forward" => Self::move_cursor_forward_by(buffer, 1),
-                    _ => (),
+                KeymapNode::Leaf(command_type) => match command_type {
+                    CommandType::SwitchToInsertMode => buffer.set_cursor_mode(CursorMode::Insert),
+                    CommandType::SwitchToNormalMode => buffer.set_cursor_mode(CursorMode::Normal),
+                    CommandType::MoveBack => Self::move_cursor_back_by(buffer, 1),
+                    CommandType::MoveDown => Self::move_cursor_down_by(buffer, 1),
+                    CommandType::MoveUp => Self::move_cursor_up_by(buffer, 1),
+                    CommandType::MoveForward => Self::move_cursor_forward_by(buffer, 1),
+                    CommandType::SwitchToInsertModeLineEnd => todo!(),
+                    CommandType::SwitchToInsertModeLineStart => todo!(),
+                    CommandType::GoToStartLine => todo!(),
+                    CommandType::GoToEndLine => todo!(),
+                    CommandType::DeleteChar => Self::delete_char(buffer),
+                    CommandType::NewLine => Self::new_line(buffer),
                 },
-                KeymapNode::Node(next) => self.current_node = next.get(event),
+                KeymapNode::Node(next) => self.current_node = next.get(input.event),
             }
         }
     }
 
-    fn insert_char(buffer: &mut Buffer, ch: char) {
+    pub fn insert_char(buffer: &mut Buffer, ch: char) {
         let pos = buffer.cursor_position();
         let text = buffer.text_mut();
 
@@ -81,16 +79,6 @@ impl<'a> Command<'a> {
 
         let new_offset = buffer.cursor_offset() + 1;
         buffer.set_cursor_offset(new_offset);
-    }
-
-    fn move_cursor(buffer: &mut Buffer, direction: Event) {
-        match direction {
-            Event::Left => Self::move_cursor_back_by(buffer, 1),
-            Event::Right => Self::move_cursor_forward_by(buffer, 1),
-            Event::Up => Self::move_cursor_up_by(buffer, 1),
-            Event::Down => Self::move_cursor_down_by(buffer, 1),
-            _ => unreachable!(),
-        }
     }
 
     fn move_cursor_forward_by(buffer: &mut Buffer, offset: usize) {
