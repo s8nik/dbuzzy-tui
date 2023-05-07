@@ -5,7 +5,7 @@ use anyhow::Result;
 use crate::{
     buffer::{Buffer, BufferId},
     command::Command,
-    event::{Event, Input},
+    event::Input,
     keymap::Keymaps,
     mode::CursorMode,
     widget::EditorWidget,
@@ -77,27 +77,15 @@ impl<'a> Editor<'a> {
         let current_mode = self.current_buff().cursor_mode();
         let buffer = self.buffers.get_mut(&self.current).expect("should exist");
 
-        if current_mode == CursorMode::Insert {
-            match input {
-                Input {
-                    event: Event::Char(ch),
-                    ctrl: false,
-                    alt: false,
-                } => Command::insert_char(buffer, ch),
-                Input {
-                    event: Event::Char('q'),
-                    ctrl: true,
-                    alt: false,
-                } => self.command.do_exit(),
-                _ => (),
-            }
-        }
-
         let keymap = self
             .keymaps
             .get(current_mode)
             .expect("keymap should be registered!");
 
-        self.command.execute(input, buffer, keymap)
+        self.command.execute(input, buffer, keymap);
+
+        if !self.command.in_progress() && current_mode == CursorMode::Insert {
+            self.command.insert_mode_on_input(input, buffer);
+        }
     }
 }

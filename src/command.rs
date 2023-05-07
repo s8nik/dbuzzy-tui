@@ -2,7 +2,7 @@ use strum::EnumString;
 
 use crate::{
     buffer::Buffer,
-    event::Input,
+    event::{Event, Input},
     keymap::{Keymap, KeymapNode},
     mode::CursorMode,
 };
@@ -18,8 +18,10 @@ pub enum CommandType {
     MoveUp,
     MoveForward,
 
-    SwitchToInsertModeLineEnd,
-    SwitchToInsertModeLineStart,
+    SwitchToInsertLineEnd,
+    SwitchToInsertLineStart,
+    SwitchToInsertNewLineNext,
+    SwitchToInsertNewLinePrev,
 
     GoToStartLine,
     GoToEndLine,
@@ -39,8 +41,8 @@ impl<'a> Command<'a> {
         self.should_exit
     }
 
-    pub fn do_exit(&mut self) {
-        self.should_exit = true
+    pub fn in_progress(&self) -> bool {
+        self.current_node.is_some()
     }
 
     // TODO: Handle ctrl/alt
@@ -59,8 +61,10 @@ impl<'a> Command<'a> {
                     CommandType::MoveDown => Self::move_cursor_down_by(buffer, 1),
                     CommandType::MoveUp => Self::move_cursor_up_by(buffer, 1),
                     CommandType::MoveForward => Self::move_cursor_forward_by(buffer, 1),
-                    CommandType::SwitchToInsertModeLineEnd => todo!(),
-                    CommandType::SwitchToInsertModeLineStart => todo!(),
+                    CommandType::SwitchToInsertLineEnd => Self::to_insert_move_end(buffer),
+                    CommandType::SwitchToInsertLineStart => Self::to_insert_move_start(buffer),
+                    CommandType::SwitchToInsertNewLineNext => Self::to_insert_new_line_next(buffer),
+                    CommandType::SwitchToInsertNewLinePrev => Self::to_insert_new_line_prev(buffer),
                     CommandType::GoToStartLine => todo!(),
                     CommandType::GoToEndLine => todo!(),
                     CommandType::DeleteChar => Self::delete_char(buffer),
@@ -71,7 +75,23 @@ impl<'a> Command<'a> {
         }
     }
 
-    pub fn insert_char(buffer: &mut Buffer, ch: char) {
+    pub fn insert_mode_on_input(&mut self, input: Input, buffer: &mut Buffer) {
+        match input {
+            Input {
+                event: Event::Char(ch),
+                ctrl: false,
+                alt: false,
+            } => Self::insert_char(buffer, ch),
+            Input {
+                event: Event::Char('q'),
+                ctrl: true,
+                alt: false,
+            } => self.should_exit = true,
+            _ => (),
+        }
+    }
+
+    fn insert_char(buffer: &mut Buffer, ch: char) {
         let pos = buffer.cursor_position();
         let text = buffer.text_mut();
 
@@ -144,5 +164,40 @@ impl<'a> Command<'a> {
             buffer.text_mut().remove(pos - 1..pos);
             Self::move_cursor_back_by(buffer, 1);
         }
+    }
+
+    fn move_cursor_to_line_end(buffer: &mut Buffer) {
+        let new_offset = buffer.text().line(buffer.line_index()).len_bytes();
+        buffer.set_cursor_offset(new_offset);
+        Self::cursor_line_bounds(buffer);
+    }
+
+    fn to_insert_move_end(buffer: &mut Buffer) {
+        Self::move_cursor_to_line_end(buffer);
+        buffer.set_cursor_mode(CursorMode::Insert);
+    }
+
+    fn to_insert_move_start(buffer: &mut Buffer) {
+        buffer.set_cursor_offset(0);
+        buffer.set_cursor_mode(CursorMode::Insert);
+    }
+
+    fn to_insert_new_line_next(buffer: &mut Buffer) {
+        Self::move_cursor_to_line_end(buffer);
+        Self::new_line(buffer);
+        buffer.set_cursor_mode(CursorMode::Insert);
+    }
+
+    fn to_insert_new_line_prev(buffer: &mut Buffer) {
+        if buffer.line_index() == 0 {
+            buffer.set_cursor_offset(0);
+            Self::new_line(buffer);
+            Self::move_cursor_up_by(buffer, 1);
+        } else {
+            Self::move_cursor_up_by(buffer, 1);
+            Self::to_insert_new_line_next(buffer);
+        }
+
+        buffer.set_cursor_mode(CursorMode::Insert);
     }
 }

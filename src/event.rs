@@ -61,7 +61,7 @@ impl TryFrom<&str> for Event {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct Input {
     pub event: Event,
     pub ctrl: bool,
