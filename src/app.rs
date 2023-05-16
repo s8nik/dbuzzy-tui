@@ -24,6 +24,8 @@ impl<B: Backend + Write> App<B> {
         }
 
         let mut terminal = Terminal::new(backend).expect("terminal");
+        let size = terminal.size()?;
+        editor.set_viewport(size.width, size.height);
 
         if cfg!(feature = "crossterm") {
             crossterm::terminal::enable_raw_mode().expect("enable raw mode");
@@ -56,8 +58,12 @@ impl<B: Backend + Write> App<B> {
         Self::setup_panic();
         loop {
             if crossterm::event::poll(Duration::from_millis(200))? {
-                if let crossterm::event::Event::Key(event) = crossterm::event::read()? {
+                let event = crossterm::event::read()?;
+
+                if let crossterm::event::Event::Key(event) = event {
                     self.editor.handle_event(event.into());
+                } else if let crossterm::event::Event::Resize(w, h) = event {
+                    self.editor.set_viewport(w, h);
                 }
             }
 

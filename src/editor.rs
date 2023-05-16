@@ -16,6 +16,7 @@ pub struct Editor<'a> {
     keymaps: &'static Keymaps,
     current: BufferId,
     command: Command<'a>,
+    viewport: (usize, usize),
 }
 
 impl<'a> Editor<'a> {
@@ -25,6 +26,7 @@ impl<'a> Editor<'a> {
             buffers: HashMap::new(),
             command: Command::default(),
             current: BufferId::MAX,
+            viewport: (0, 0),
         }
     }
 
@@ -64,13 +66,20 @@ impl<'a> Editor<'a> {
         &self.command
     }
 
+    pub fn viewport(&self) -> (usize, usize) {
+        self.viewport
+    }
+
     pub fn widget(&self) -> EditorWidget {
         EditorWidget::new(self)
     }
 
     pub fn cursor(&self) -> (usize, usize) {
         let buffer = self.current_buff();
-        (buffer.cursor_offset(), buffer.line_index())
+        (
+            buffer.cursor_offset(),
+            buffer.line_index() - buffer.vscroll_index(),
+        )
     }
 
     pub fn handle_event(&mut self, input: Input) {
@@ -87,5 +96,11 @@ impl<'a> Editor<'a> {
         if !self.command.in_progress() && current_mode == CursorMode::Insert {
             self.command.insert_mode_on_input(input, buffer);
         }
+
+        Command::scroll(buffer, self.viewport.1);
+    }
+
+    pub fn set_viewport(&mut self, width: u16, height: u16) {
+        self.viewport = (width as usize, height as usize);
     }
 }

@@ -45,6 +45,18 @@ impl<'a> Command<'a> {
         self.current_node.is_some()
     }
 
+    pub fn scroll(buffer: &mut Buffer, max: usize) {
+        let lower_bound = buffer.vscroll_index();
+        let upper_bound = lower_bound + max - 1;
+
+        let line_index = buffer.line_index();
+        if line_index >= upper_bound {
+            buffer.set_vsscroll_index(lower_bound + line_index - upper_bound);
+        } else if line_index < lower_bound {
+            buffer.set_vsscroll_index(line_index)
+        }
+    }
+
     // TODO: Handle ctrl/alt
     pub fn execute(&mut self, input: Input, buffer: &mut Buffer, keymap: &'static Keymap) {
         let keymap_node = match self.current_node {

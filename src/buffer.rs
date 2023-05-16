@@ -41,6 +41,7 @@ pub struct Buffer {
     readonly: bool,
     cursor_offset: usize,
     line_index: usize,
+    vscroll_index: usize,
     cursor_mode: CursorMode,
 }
 
@@ -108,6 +109,14 @@ impl Buffer {
     pub fn cursor_position(&self) -> usize {
         let line_index = self.text.line_to_byte(self.line_index);
         line_index + self.cursor_offset
+    }
+
+    pub fn vscroll_index(&self) -> usize {
+        self.vscroll_index
+    }
+
+    pub fn set_vsscroll_index(&mut self, new_index: usize) {
+        self.vscroll_index = new_index
     }
 
     pub fn cursor_mode(&self) -> CursorMode {
