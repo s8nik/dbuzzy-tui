@@ -3,78 +3,56 @@ use std::{
     str::FromStr,
 };
 
-use serde_yaml::Value;
-
-use crate::{command::CommandType, event::Event, mode::CursorMode};
+use crate::{command::Command, event::Input, mode::CursorMode};
 
 #[derive(Debug)]
-pub struct Keymap(BTreeMap<Event, KeymapNode>);
+pub struct Bindings(BTreeMap<Input, Keymap>);
 
 #[derive(Debug)]
-pub enum KeymapNode {
-    Leaf(CommandType),
-    Node(Keymap),
+pub enum Keymap {
+    Leaf(Command),
+    Node(Bindings),
 }
 
 #[derive(Debug, Default)]
-pub struct Keymaps(HashMap<CursorMode, Keymap>);
+pub struct Keymaps(HashMap<CursorMode, Bindings>);
 
-impl Keymap {
-    pub fn get(&self, event: Event) -> Option<&KeymapNode> {
+impl Bindings {
+    pub fn get(&self, event: Event) -> Option<&Keymap> {
         self.0.get(&event)
     }
 }
 
 impl Keymaps {
     pub fn init() -> &'static Self {
-        let raw = include_bytes!("default.yml");
-        let maps: HashMap<CursorMode, Value> = serde_yaml::from_slice(raw).expect("default keymap");
+        let bytes = include_bytes!("default");
+        let config = String::from_utf8_lossy(bytes);
 
-        let mut keymaps: HashMap<CursorMode, Keymap> = HashMap::new();
+        for (i, line) in config.lines().enumerate() {
+            let content = line.splitn(2, "#").next().unwrap_or(line);
 
-        for (mode, value) in maps {
-            if let Value::Mapping(map) = value {
-                let mut root = BTreeMap::new();
-
-                for (k, v) in map {
-                    match (k, v) {
-                        (Value::String(keys), Value::String(command)) => {
-                            Self::parse_map(&mut root, keys.split('_').collect(), command);
-                        }
-                        _ => continue,
-                    }
-                }
-
-                keymaps.insert(mode, Keymap(root));
-            }
-        }
-
-        Box::leak(Box::new(Keymaps(keymaps)))
-    }
-
-    fn parse_map(parent: &mut BTreeMap<Event, KeymapNode>, mut keys: Vec<&str>, command: String) {
-        if keys.is_empty() {
-            return;
-        }
-
-        let key = keys.remove(0);
-        let event = Event::try_from(key).expect("valid event!");
-
-        if keys.is_empty() {
-            let command_type = CommandType::from_str(&command).expect("command should be valid");
-            parent.insert(event, KeymapNode::Leaf(command_type));
-        } else {
-            if let Some(KeymapNode::Node(ref mut child)) = parent.get_mut(&event) {
-                return Self::parse_map(&mut child.0, keys, command);
+            if content.is_empty() {
+                continue;
             }
 
-            let mut child = BTreeMap::new();
-            Self::parse_map(&mut child, keys, command);
-            parent.insert(event, KeymapNode::Node(Keymap(child)));
+            let (definition, command) = split_once(content, ':', i);
+            let (mode, sequence) = split_once(definition, ' ', i);
+
+            println!("[{}], [{}]", mode, sequence);
         }
+
+        unimplemented!();
     }
 
-    pub fn get(&self, mode: CursorMode) -> Option<&Keymap> {
-        self.0.get(&mode)
-    }
+    fn parse(sequence: &str, command: &str) {}
+
+    fn extract_specials() {}
+}
+
+fn split_once(slice: &str, sep: char, i: usize) -> (&str, &str) {
+    let Some((first, second)) = slice.split_once(sep) else {
+        panic!("invalid format at line: {}", i);
+    };
+
+    (first.trim(), second.trim())
 }

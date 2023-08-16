@@ -1,12 +1,21 @@
 // The structure of this code was inspired by the example in tui-textarea (https://github.com/rhysd/tui-textarea/blob/main/src/input.rs).
 
 use anyhow::Context;
-#[cfg(feature = "crossterm")]
 use crossterm::event::{
     Event as CrosstermEvent, KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind,
 };
 
-#[derive(Debug, Copy, Clone, Default, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy)]
+pub enum Modifier {
+    Shift,
+    Control,
+    Alt,
+    Super,
+    Hyper,
+    Meta,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
 pub enum Event {
     Char(char),
     F(u8),
@@ -64,11 +73,9 @@ impl TryFrom<&str> for Event {
 #[derive(Debug, Copy, Clone, Default)]
 pub struct Input {
     pub event: Event,
-    pub ctrl: bool,
-    pub alt: bool,
+    pub modifiers: Vec<Modifier>,
 }
 
-#[cfg(feature = "crossterm")]
 impl From<CrosstermEvent> for Input {
     fn from(event: CrosstermEvent) -> Self {
         match event {
@@ -79,7 +86,6 @@ impl From<CrosstermEvent> for Input {
     }
 }
 
-#[cfg(feature = "crossterm")]
 impl From<KeyEvent> for Input {
     fn from(key: KeyEvent) -> Self {
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
@@ -106,7 +112,6 @@ impl From<KeyEvent> for Input {
     }
 }
 
-#[cfg(feature = "crossterm")]
 impl From<MouseEvent> for Input {
     fn from(mouse: MouseEvent) -> Self {
         let event = match mouse.kind {

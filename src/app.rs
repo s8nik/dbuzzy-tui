@@ -7,7 +7,7 @@ use tui::{backend::Backend, Terminal};
 use crate::{editor::Editor, mode::CursorMode};
 
 pub struct App<B: Backend + Write> {
-    editor: Editor<'static>,
+    editor: Editor,
     terminal: Terminal<B>,
 }
 
@@ -67,9 +67,9 @@ impl<B: Backend + Write> App<B> {
                 }
             }
 
-            if self.editor.command().should_exit() {
-                break;
-            }
+            // if self.editor.command().should_exit() {
+            //     break;
+            // }
 
             let widget = self.editor.widget();
             self.terminal.draw(|ui| {

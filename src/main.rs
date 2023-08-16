@@ -1,6 +1,6 @@
 use tui::backend::CrosstermBackend;
 
-use tui_editor::app::App;
+use duzzy::app::App;
 
 fn main() -> anyhow::Result<()> {
     let stdout = std::io::stdout();

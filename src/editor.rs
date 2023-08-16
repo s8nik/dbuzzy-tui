@@ -11,20 +11,20 @@ use crate::{
     widget::EditorWidget,
 };
 
-pub struct Editor<'a> {
+pub struct Editor {
     buffers: HashMap<BufferId, Buffer>,
     keymaps: &'static Keymaps,
     current: BufferId,
-    command: Command<'a>,
     viewport: (usize, usize),
+    // command: Command<'a>,
 }
 
-impl<'a> Editor<'a> {
+impl Editor {
     pub fn init() -> Self {
         Self {
             keymaps: Keymaps::init(),
             buffers: HashMap::new(),
-            command: Command::default(),
+            // command: Command::default(),
             current: BufferId::MAX,
             viewport: (0, 0),
         }
@@ -62,9 +62,9 @@ impl<'a> Editor<'a> {
         self.current = buffer_id;
     }
 
-    pub fn command(&self) -> &Command {
-        &self.command
-    }
+    // pub fn command(&self) -> &Command {
+    //     &self.command
+    // }
 
     pub fn viewport(&self) -> (usize, usize) {
         self.viewport
@@ -86,18 +86,14 @@ impl<'a> Editor<'a> {
         let current_mode = self.current_buff().cursor_mode();
         let buffer = self.buffers.get_mut(&self.current).expect("should exist");
 
-        let keymap = self
-            .keymaps
-            .get(current_mode)
-            .expect("keymap should be registered!");
+        // let keymap = self
+        //     .keymaps
+        //     .get(current_mode)
+        //     .expect("keymap should be registered!");
 
-        self.command.execute(input, buffer, keymap);
+        // self.command.execute(input, buffer, keymap);
 
-        if !self.command.in_progress() && current_mode == CursorMode::Insert {
-            self.command.insert_mode_on_input(input, buffer);
-        }
-
-        Command::scroll(buffer, self.viewport.1);
+        // Command::scroll(buffer, self.viewport.1);
     }
 
     pub fn set_viewport(&mut self, width: u16, height: u16) {
