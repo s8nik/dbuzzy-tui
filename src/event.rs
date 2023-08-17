@@ -26,6 +26,42 @@ impl From<KeyModifiers> for Modifiers {
     }
 }
 
+impl From<&[String]> for Modifiers {
+    fn from(values: &[String]) -> Self {
+        let mut modifiers = Modifiers::default();
+
+        for name in values {
+            modifiers.set_by(&name, true);
+        }
+
+        modifiers
+    }
+}
+
+impl Modifiers {
+    const NAMES: [&str; 6] = ["shift", "ctr", "alt", "super", "hyper", "meta"];
+
+    pub fn contain(name: &str) -> bool {
+        Self::NAMES.contains(&name)
+    }
+
+    pub fn set_by(&mut self, name: &str, value: bool) {
+        let Some(position) = Self::NAMES.iter().position(|x| *x == name) else {
+            return;
+        };
+
+        match position {
+            0 => self.shift = value,
+            1 => self.control = value,
+            2 => self.alt = value,
+            3 => self.sup = value,
+            4 => self.hyper = value,
+            5 => self.meta = value,
+            _ => (),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Event {
     Char(char),

@@ -12,7 +12,6 @@ crossterm = "0.26.1"
 tui = { version = "0.19.0", default-features = false, features = ["crossterm"] }
 
 strum = { version = "0.24.1", features = ["derive"] }
-serde = { version = "1.0.160", features = ["derive"] }
 
 [lib]
 name = "duzzy"
