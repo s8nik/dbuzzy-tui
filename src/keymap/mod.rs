@@ -18,8 +18,8 @@ pub enum Keymap {
 pub struct Keymaps(HashMap<CursorMode, Bindings>);
 
 impl Bindings {
-    pub fn get(&self, event: Event) -> Option<&Keymap> {
-        self.0.get(&event)
+    pub fn get(&self, input: Input) -> Option<&Keymap> {
+        self.0.get(&iput)
     }
 }
 
@@ -45,8 +45,6 @@ impl Keymaps {
     }
 
     fn parse(sequence: &str, command: &str) {}
-
-    fn extract_specials() {}
 }
 
 fn split_once(slice: &str, sep: char, i: usize) -> (&str, &str) {

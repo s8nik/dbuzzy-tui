@@ -1,24 +1,34 @@
-// The structure of this code was inspired by the example in tui-textarea (https://github.com/rhysd/tui-textarea/blob/main/src/input.rs).
-
 use anyhow::Context;
 use crossterm::event::{
     Event as CrosstermEvent, KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind,
 };
 
-#[derive(Debug, Clone, Copy)]
-pub enum Modifier {
-    Shift,
-    Control,
-    Alt,
-    Super,
-    Hyper,
-    Meta,
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Modifiers {
+    shift: bool,
+    control: bool,
+    alt: bool,
+    sup: bool,
+    hyper: bool,
+    meta: bool,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+impl From<KeyModifiers> for Modifiers {
+    fn from(modifiers: KeyModifiers) -> Self {
+        Self {
+            shift: modifiers.contains(KeyModifiers::SHIFT),
+            control: modifiers.contains(KeyModifiers::CONTROL),
+            alt: modifiers.contains(KeyModifiers::ALT),
+            sup: modifiers.contains(KeyModifiers::SUPER),
+            hyper: modifiers.contains(KeyModifiers::HYPER),
+            meta: modifiers.contains(KeyModifiers::META),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Event {
     Char(char),
-    F(u8),
     Backspace,
     Enter,
     Left,
@@ -45,7 +55,7 @@ impl TryFrom<&str> for Event {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let event = if value.len() == 1 {
-            let c = value.chars().next().with_context(|| "char should exist!")?;
+            let c = value.chars().next().with_context(|| "must exist")?;
             Self::Char(c)
         } else {
             match value {
@@ -62,7 +72,7 @@ impl TryFrom<&str> for Event {
                 "pageup" => Self::PageUp,
                 "pagedown" => Self::PageDown,
                 "esc" => Self::Esc,
-                other => anyhow::bail!("{other} event doesn't exist"),
+                other => anyhow::bail!("unsupported event: {}", other),
             }
         };
 
@@ -70,10 +80,10 @@ impl TryFrom<&str> for Event {
     }
 }
 
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Input {
     pub event: Event,
-    pub modifiers: Vec<Modifier>,
+    pub modifiers: Modifiers,
 }
 
 impl From<CrosstermEvent> for Input {
@@ -88,8 +98,6 @@ impl From<CrosstermEvent> for Input {
 
 impl From<KeyEvent> for Input {
     fn from(key: KeyEvent) -> Self {
-        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
-        let alt = key.modifiers.contains(KeyModifiers::ALT);
         let event = match key.code {
             KeyCode::Char(c) => Event::Char(c),
             KeyCode::Backspace => Event::Backspace,
@@ -105,10 +113,10 @@ impl From<KeyEvent> for Input {
             KeyCode::PageUp => Event::PageUp,
             KeyCode::PageDown => Event::PageDown,
             KeyCode::Esc => Event::Esc,
-            KeyCode::F(x) => Event::F(x),
             _ => Event::Null,
         };
-        Self { event, ctrl, alt }
+        let modifiers = key.modifiers.into();
+        Self { event, modifiers }
     }
 }
 
@@ -119,8 +127,7 @@ impl From<MouseEvent> for Input {
             MouseEventKind::ScrollUp => Event::MouseScrollUp,
             _ => return Self::default(),
         };
-        let ctrl = mouse.modifiers.contains(KeyModifiers::CONTROL);
-        let alt = mouse.modifiers.contains(KeyModifiers::ALT);
-        Self { event, ctrl, alt }
+        let modifiers = mouse.modifiers.into();
+        Self { event, modifiers }
     }
 }
