@@ -7,7 +7,7 @@ use tui::{
 
 use crate::editor::Editor;
 
-pub struct EditorWidget<'a>(&'a Editor);
+pub struct EditorWidget<'a>(&'a Editor<'a>);
 
 impl<'a> EditorWidget<'a> {
     pub fn new(editor: &'a Editor) -> Self {

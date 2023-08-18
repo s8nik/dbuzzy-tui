@@ -7,7 +7,7 @@ use tui::{backend::Backend, Terminal};
 use crate::{editor::Editor, mode::CursorMode};
 
 pub struct App<B: Backend + Write> {
-    editor: Editor,
+    editor: Editor<'static>,
     terminal: Terminal<B>,
 }
 
@@ -86,7 +86,7 @@ impl<B: Backend + Write> App<B> {
             self.terminal.show_cursor()?;
         }
 
-        Ok(())
+        // Ok(())
     }
 }
 

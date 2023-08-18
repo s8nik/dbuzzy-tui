@@ -6,12 +6,18 @@ use std::{
 
 use crate::{
     command::Command,
-    event::{Event, Input, Modifiers},
+    input::{Event, Input, Modifiers},
     mode::CursorMode,
 };
 
 #[derive(Debug, Default)]
 pub struct Bindings(BTreeMap<Input, Keymap>);
+
+impl Bindings {
+    pub fn get(&self, input: Input) -> Option<&Keymap> {
+        self.0.get(&input)
+    }
+}
 
 #[derive(Debug)]
 pub enum Keymap {
@@ -22,9 +28,9 @@ pub enum Keymap {
 #[derive(Debug, Default)]
 pub struct Keymaps(HashMap<CursorMode, Bindings>);
 
-impl Bindings {
-    pub fn get(&self, input: Input) -> Option<&Keymap> {
-        self.0.get(&input)
+impl Keymaps {
+    pub fn get(&self, mode: &CursorMode) -> Option<&Bindings> {
+        self.0.get(mode)
     }
 }
 
@@ -53,69 +59,68 @@ impl Keymaps {
             Self::parse(root, sequence, command);
         }
 
-        dbg!(map);
-        unimplemented!();
+        Box::leak(Box::new(Keymaps(map)))
     }
 
     fn parse(root: &mut Bindings, sequence: &str, command: &str) {
-        let target = sequence.to_lowercase();
         let re = regex::Regex::new(r"<(.*?)>").expect("valid pattern");
 
         let mut specials: Vec<String> = re
-            .captures_iter(&target)
+            .captures_iter(&sequence)
             .map(|capture| capture[1].to_string())
             .collect();
 
         let modifiers: Modifiers = specials.deref().into();
-        specials.retain(|x| !Modifiers::contain(x));
+        specials.retain(|x| !Modifiers::contain(&x.to_lowercase()));
 
-        let mut sequence: Vec<String> = re
-            .replace_all(&target, "")
+        let mut keys: Vec<String> = re
+            .replace_all(&sequence, "")
             .chars()
             .map(|c| c.to_string())
             .collect();
 
-        sequence.extend(specials);
-        sequence.sort_by(|a, b| {
-            let pos_a = target.find(a).unwrap_or(usize::MAX);
-            let pos_b = target.find(b).unwrap_or(usize::MAX);
+        keys.extend(specials);
+        keys.sort_by(|a, b| {
+            let pos_a = sequence.find(a).unwrap_or(usize::MAX);
+            let pos_b = sequence.find(b).unwrap_or(usize::MAX);
             pos_a.cmp(&pos_b)
         });
-        sequence.reverse();
+        keys.reverse();
 
-        Self::parse_sequence(root, modifiers, sequence, command);
+        Self::parse_keys(root, modifiers, keys, command);
     }
 
-    fn parse_sequence(
+    fn parse_keys(
         parent: &mut Bindings,
         modifiers: Modifiers,
-        mut sequence: Vec<String>,
+        mut keys: Vec<String>,
         command: &str,
     ) {
-        let Some(key) = sequence.pop() else {
+        let Some(key) = keys.pop() else {
             return;
         };
 
-        let event: Event = match key.as_str().try_into() {
+        let event: Event = match key.to_lowercase().as_str().try_into() {
             Ok(e) => e,
             Err(e) => {
                 // @todo: better loggs
+                println!("{e}");
                 return;
             }
         };
 
         let input = Input { event, modifiers };
 
-        if sequence.is_empty() {
+        if keys.is_empty() {
             let command = Command::from_str(command).expect("unsupported command");
             parent.0.insert(input, Keymap::Leaf(command));
         } else {
             if let Some(Keymap::Node(ref mut child)) = parent.0.get_mut(&input) {
-                return Self::parse_sequence(child, modifiers, sequence, command);
+                return Self::parse_keys(child, modifiers, keys, command);
             }
 
             let mut child = Bindings::default();
-            Self::parse_sequence(&mut child, modifiers, sequence, command);
+            Self::parse_keys(&mut child, modifiers, keys, command);
             parent.0.insert(input, Keymap::Node(child));
         }
     }

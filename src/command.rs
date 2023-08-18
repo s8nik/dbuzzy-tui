@@ -1,5 +1,12 @@
 use strum::EnumString;
 
+use crate::{
+    buffer::Buffer,
+    input::Input,
+    keymap::{Bindings, Keymap},
+    mode::CursorMode,
+};
+
 #[derive(Debug, EnumString)]
 #[strum(serialize_all = "snake_case")]
 pub enum Command {
@@ -23,186 +30,165 @@ pub enum Command {
     NewLineNext,
 }
 
-// #[derive(Default)]
-// pub struct Command<'a> {
-//     current_node: Option<&'a KeymapNode>,
-//     should_exit: bool,
-// }
+#[derive(Default)]
+pub struct CommandExecutor<'a> {
+    current: Option<&'a Keymap>,
+    pub exit: bool,
+}
 
-// impl<'a> Command<'a> {
-//     pub fn should_exit(&self) -> bool {
-//         self.should_exit
-//     }
+impl<'a> CommandExecutor<'a> {
+    pub fn free(&self) -> bool {
+        self.current.is_none()
+    }
 
-//     pub fn in_progress(&self) -> bool {
-//         self.current_node.is_some()
-//     }
+    pub fn execute(&mut self, input: Input, buffer: &mut Buffer, bindings: &'static Bindings) {
+        let keymap = match self.current {
+            Some(node) => Some(node),
+            None => bindings.get(input),
+        };
 
-//     // TODO: Handle ctrl/alt
-//     pub fn execute(&mut self, input: Input, buffer: &mut Buffer, keymap: &'static Keymap) {
-//         let keymap_node = match self.current_node {
-//             Some(node) => Some(node),
-//             None => keymap.get(input.event),
-//         };
+        if let Some(node) = keymap {
+            match node {
+                Keymap::Leaf(command) => match command {
+                    Command::InsertMode => buffer.set_cursor_mode(CursorMode::Insert),
+                    Command::NormalMode => buffer.set_cursor_mode(CursorMode::Normal),
+                    Command::MoveBack => cursor_back_by(buffer, 1),
+                    Command::MoveDown => cursor_down_by(buffer, 1),
+                    Command::MoveUp => cursor_up_by(buffer, 1),
+                    Command::MoveForward => cursor_forward_by(buffer, 1),
+                    Command::InsertModeLineEnd => insert_mode_line_end(buffer),
+                    Command::InsertModeLineStart => insert_mode_line_start(buffer),
+                    Command::InsertModeNewLineNext => insert_mode_line_next(buffer),
+                    Command::InsertModeNewLinePrev => insert_mode_line_prev(buffer),
+                    Command::GoToStartLine => todo!(),
+                    Command::GoToEndLine => todo!(),
+                    Command::DeleteChar => delete_char(buffer),
+                    Command::NewLineNext => new_line(buffer),
+                },
+                Keymap::Node(next) => self.current = next.get(input),
+            }
+        }
+    }
+}
 
-// pub fn scroll(buffer: &mut Buffer, max: usize) {
-//     let lower_bound = buffer.vscroll_index();
-//     let upper_bound = lower_bound + max - 1;
+pub fn scroll(buffer: &mut Buffer, max: usize) {
+    let lower_bound = buffer.vscroll_index();
+    let upper_bound = lower_bound + max - 1;
 
-//     let line_index = buffer.line_index();
-//     if line_index >= upper_bound {
-//         buffer.set_vsscroll_index(lower_bound + line_index - upper_bound);
-//     } else if line_index < lower_bound {
-//         buffer.set_vsscroll_index(line_index)
-//     }
-// }
+    let line_index = buffer.line_index();
+    if line_index >= upper_bound {
+        buffer.set_vsscroll_index(lower_bound + line_index - upper_bound);
+    } else if line_index < lower_bound {
+        buffer.set_vsscroll_index(line_index)
+    }
+}
 
-//         if let Some(node) = keymap_node {
-//             match node {
-//                 KeymapNode::Leaf(command_type) => match command_type {
-//                     CommandType::SwitchToInsertMode => buffer.set_cursor_mode(CursorMode::Insert),
-//                     CommandType::SwitchToNormalMode => buffer.set_cursor_mode(CursorMode::Normal),
-//                     CommandType::MoveBack => Self::move_cursor_back_by(buffer, 1),
-//                     CommandType::MoveDown => Self::move_cursor_down_by(buffer, 1),
-//                     CommandType::MoveUp => Self::move_cursor_up_by(buffer, 1),
-//                     CommandType::MoveForward => Self::move_cursor_forward_by(buffer, 1),
-//                     CommandType::SwitchToInsertLineEnd => Self::to_insert_move_end(buffer),
-//                     CommandType::SwitchToInsertLineStart => Self::to_insert_move_start(buffer),
-//                     CommandType::SwitchToInsertNewLineNext => Self::to_insert_new_line_next(buffer),
-//                     CommandType::SwitchToInsertNewLinePrev => Self::to_insert_new_line_prev(buffer),
-//                     CommandType::GoToStartLine => todo!(),
-//                     CommandType::GoToEndLine => todo!(),
-//                     CommandType::DeleteChar => Self::delete_char(buffer),
-//                     CommandType::NewLine => Self::new_line(buffer),
-//                 },
-//                 KeymapNode::Node(next) => self.current_node = next.get(input.event),
-//             }
-//         }
-//     }
+fn insert_char(buffer: &mut Buffer, ch: char) {
+    let pos = buffer.cursor_position();
+    let text = buffer.text_mut();
 
-//     pub fn insert_mode_on_input(&mut self, input: Input, buffer: &mut Buffer) {
-//         match input {
-//             Input {
-//                 event: Event::Char(ch),
-//                 ctrl: false,
-//                 alt: false,
-//             } => Self::insert_char(buffer, ch),
-//             Input {
-//                 event: Event::Char('q'),
-//                 ctrl: true,
-//                 alt: false,
-//             } => self.should_exit = true,
-//             _ => (),
-//         }
-//     }
+    text.insert_char(pos, ch);
 
-//     fn insert_char(buffer: &mut Buffer, ch: char) {
-//         let pos = buffer.cursor_position();
-//         let text = buffer.text_mut();
+    let new_offset = buffer.cursor_offset() + 1;
+    buffer.set_cursor_offset(new_offset);
+}
 
-//         text.insert_char(pos, ch);
+fn cursor_forward_by(buffer: &mut Buffer, offset: usize) {
+    let new_offset = buffer.cursor_offset() + offset;
+    buffer.set_cursor_offset(new_offset);
+    cursor_line_bounds(buffer);
+}
 
-//         let new_offset = buffer.cursor_offset() + 1;
-//         buffer.set_cursor_offset(new_offset);
-//     }
+fn cursor_back_by(buffer: &mut Buffer, offset: usize) {
+    let cursor_offset = buffer.cursor_offset();
+    let new_offset = cursor_offset.saturating_sub(offset);
+    buffer.set_cursor_offset(new_offset);
+}
 
-//     fn move_cursor_forward_by(buffer: &mut Buffer, offset: usize) {
-//         let new_offset = buffer.cursor_offset() + offset;
-//         buffer.set_cursor_offset(new_offset);
-//         Self::cursor_line_bounds(buffer);
-//     }
+fn cursor_up_by(buffer: &mut Buffer, offset: usize) {
+    let line_index = buffer.line_index();
+    let new_line_index = line_index.saturating_sub(offset);
+    buffer.set_line_index(new_line_index);
+    cursor_line_bounds(buffer);
+}
 
-//     fn move_cursor_back_by(buffer: &mut Buffer, offset: usize) {
-//         let cursor_offset = buffer.cursor_offset();
-//         let new_offset = cursor_offset.saturating_sub(offset);
-//         buffer.set_cursor_offset(new_offset);
-//     }
+fn cursor_down_by(buffer: &mut Buffer, offset: usize) {
+    let new_offset = buffer.line_index() + offset;
 
-//     fn move_cursor_up_by(buffer: &mut Buffer, offset: usize) {
-//         let line_index = buffer.line_index();
-//         let new_line_index = line_index.saturating_sub(offset);
-//         buffer.set_line_index(new_line_index);
-//         Self::cursor_line_bounds(buffer);
-//     }
+    if new_offset < buffer.text().len_lines() {
+        buffer.set_line_index(new_offset);
+    }
 
-//     fn move_cursor_down_by(buffer: &mut Buffer, offset: usize) {
-//         let new_offset = buffer.line_index() + offset;
+    cursor_line_bounds(buffer);
+}
 
-//         if new_offset < buffer.text().len_lines() {
-//             buffer.set_line_index(new_offset);
-//         }
+fn cursor_line_bounds(buffer: &mut Buffer) {
+    let text = buffer.text();
 
-//         Self::cursor_line_bounds(buffer);
-//     }
+    let mut line_bytes_len = text.line(buffer.line_index()).len_bytes();
+    if buffer.line_index() < text.lines().len() - 1 {
+        line_bytes_len -= 1;
+    }
 
-//     fn cursor_line_bounds(buffer: &mut Buffer) {
-//         let text = buffer.text();
+    if buffer.cursor_offset() > line_bytes_len {
+        buffer.set_cursor_offset(line_bytes_len);
+    }
+}
 
-//         let mut line_bytes_len = text.line(buffer.line_index()).len_bytes();
-//         if buffer.line_index() < text.lines().len() - 1 {
-//             line_bytes_len -= 1;
-//         }
+fn new_line(buffer: &mut Buffer) {
+    insert_char(buffer, '\n');
 
-//         if buffer.cursor_offset() > line_bytes_len {
-//             buffer.set_cursor_offset(line_bytes_len);
-//         }
-//     }
+    buffer.set_cursor_offset(0);
+    buffer.set_line_index(buffer.line_index() + 1);
+}
 
-//     fn new_line(buffer: &mut Buffer) {
-//         Self::insert_char(buffer, '\n');
+fn delete_char(buffer: &mut Buffer) {
+    let pos = buffer.cursor_position();
 
-//         buffer.set_cursor_offset(0);
-//         buffer.set_line_index(buffer.line_index() + 1);
-//     }
+    if pos != 0 {
+        if buffer.cursor_offset() == 0 {
+            cursor_up_by(buffer, 1);
 
-//     fn delete_char(buffer: &mut Buffer) {
-//         let pos = buffer.cursor_position();
+            let new_offset = buffer.text().line(buffer.line_index()).len_bytes();
+            buffer.set_cursor_offset(new_offset);
+        }
 
-//         if pos != 0 {
-//             if buffer.cursor_offset() == 0 {
-//                 Self::move_cursor_up_by(buffer, 1);
+        buffer.text_mut().remove(pos - 1..pos);
+        cursor_back_by(buffer, 1);
+    }
+}
 
-//                 let new_offset = buffer.text().line(buffer.line_index()).len_bytes();
-//                 buffer.set_cursor_offset(new_offset);
-//             }
+fn move_cursor_to_line_end(buffer: &mut Buffer) {
+    let new_offset = buffer.text().line(buffer.line_index()).len_bytes();
+    buffer.set_cursor_offset(new_offset);
+    cursor_line_bounds(buffer);
+}
 
-//             buffer.text_mut().remove(pos - 1..pos);
-//             Self::move_cursor_back_by(buffer, 1);
-//         }
-//     }
+fn insert_mode_line_end(buffer: &mut Buffer) {
+    move_cursor_to_line_end(buffer);
+    buffer.set_cursor_mode(CursorMode::Insert);
+}
 
-//     fn move_cursor_to_line_end(buffer: &mut Buffer) {
-//         let new_offset = buffer.text().line(buffer.line_index()).len_bytes();
-//         buffer.set_cursor_offset(new_offset);
-//         Self::cursor_line_bounds(buffer);
-//     }
+fn insert_mode_line_start(buffer: &mut Buffer) {
+    buffer.set_cursor_offset(0);
+    buffer.set_cursor_mode(CursorMode::Insert);
+}
 
-//     fn to_insert_move_end(buffer: &mut Buffer) {
-//         Self::move_cursor_to_line_end(buffer);
-//         buffer.set_cursor_mode(CursorMode::Insert);
-//     }
+fn insert_mode_line_next(buffer: &mut Buffer) {
+    move_cursor_to_line_end(buffer);
+    new_line(buffer);
+    buffer.set_cursor_mode(CursorMode::Insert);
+}
 
-//     fn to_insert_move_start(buffer: &mut Buffer) {
-//         buffer.set_cursor_offset(0);
-//         buffer.set_cursor_mode(CursorMode::Insert);
-//     }
+fn insert_mode_line_prev(buffer: &mut Buffer) {
+    if buffer.line_index() == 0 {
+        buffer.set_cursor_offset(0);
+        new_line(buffer);
+        cursor_up_by(buffer, 1);
+    } else {
+        cursor_up_by(buffer, 1);
+        insert_mode_line_next(buffer);
+    }
 
-//     fn to_insert_new_line_next(buffer: &mut Buffer) {
-//         Self::move_cursor_to_line_end(buffer);
-//         Self::new_line(buffer);
-//         buffer.set_cursor_mode(CursorMode::Insert);
-//     }
-
-//     fn to_insert_new_line_prev(buffer: &mut Buffer) {
-//         if buffer.line_index() == 0 {
-//             buffer.set_cursor_offset(0);
-//             Self::new_line(buffer);
-//             Self::move_cursor_up_by(buffer, 1);
-//         } else {
-//             Self::move_cursor_up_by(buffer, 1);
-//             Self::to_insert_new_line_next(buffer);
-//         }
-
-//         buffer.set_cursor_mode(CursorMode::Insert);
-//     }
-// }
+    buffer.set_cursor_mode(CursorMode::Insert);
+}

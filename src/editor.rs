@@ -4,29 +4,31 @@ use anyhow::Result;
 
 use crate::{
     buffer::{Buffer, BufferId},
-    command::Command,
-    event::Input,
+    command::CommandExecutor,
+    input::Input,
     keymap::Keymaps,
     mode::CursorMode,
     widget::EditorWidget,
 };
 
-pub struct Editor {
+pub struct Editor<'a> {
     buffers: HashMap<BufferId, Buffer>,
     keymaps: &'static Keymaps,
     current: BufferId,
     viewport: (usize, usize),
-    // command: Command<'a>,
+    executor: CommandExecutor<'a>,
+    exit: bool,
 }
 
-impl Editor {
+impl<'a> Editor<'a> {
     pub fn init() -> Self {
         Self {
             keymaps: Keymaps::init(),
             buffers: HashMap::new(),
-            // command: Command::default(),
             current: BufferId::MAX,
             viewport: (0, 0),
+            executor: CommandExecutor::default(),
+            exit: false,
         }
     }
 
@@ -62,10 +64,6 @@ impl Editor {
         self.current = buffer_id;
     }
 
-    // pub fn command(&self) -> &Command {
-    //     &self.command
-    // }
-
     pub fn viewport(&self) -> (usize, usize) {
         self.viewport
     }
@@ -86,12 +84,12 @@ impl Editor {
         let current_mode = self.current_buff().cursor_mode();
         let buffer = self.buffers.get_mut(&self.current).expect("should exist");
 
-        // let keymap = self
-        //     .keymaps
-        //     .get(current_mode)
-        //     .expect("keymap should be registered!");
+        let bindings = self
+            .keymaps
+            .get(&current_mode)
+            .expect("keymap must be registered");
 
-        // self.command.execute(input, buffer, keymap);
+        self.executor.execute(input, buffer, bindings);
 
         // Command::scroll(buffer, self.viewport.1);
     }
