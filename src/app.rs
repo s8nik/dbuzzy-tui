@@ -4,7 +4,7 @@ use anyhow::Result;
 use crossterm::{execute, ExecutableCommand};
 use tui::{backend::Backend, Terminal};
 
-use crate::{editor::Editor, mode::CursorMode};
+use crate::{cursor::CursorMode, editor::Editor};
 
 pub struct App<B: Backend + Write> {
     editor: Editor<'static>,
@@ -27,15 +27,13 @@ impl<B: Backend + Write> App<B> {
         let size = terminal.size()?;
         editor.set_viewport(size.width, size.height);
 
-        if cfg!(feature = "crossterm") {
-            crossterm::terminal::enable_raw_mode().expect("enable raw mode");
-            crossterm::execute!(
-                &mut terminal.backend_mut(),
-                crossterm::terminal::EnterAlternateScreen,
-                crossterm::event::EnableMouseCapture
-            )
-            .expect("enable rules");
-        }
+        crossterm::terminal::enable_raw_mode().expect("enable raw mode");
+        crossterm::execute!(
+            &mut terminal.backend_mut(),
+            crossterm::terminal::EnterAlternateScreen,
+            crossterm::event::EnableMouseCapture
+        )
+        .expect("enable rules");
 
         Ok(Self { editor, terminal })
     }
@@ -67,7 +65,7 @@ impl<B: Backend + Write> App<B> {
                 }
             }
 
-            if self.editor.command().should_exit() {
+            if self.editor.exit() {
                 break;
             }
 
@@ -76,12 +74,15 @@ impl<B: Backend + Write> App<B> {
                 ui.render_widget(widget, ui.size());
             })?;
 
-            let (x, y) = self.editor.cursor();
-            let cursor_mode = self.editor.current_buff().cursor_mode();
-            self.terminal.set_cursor(x as u16, y as u16)?;
+            let content = self.editor.current_buff().content();
+
+            let x = content.cursor.offset as u16;
+            let y = content.cursor.index as u16;
+
+            self.terminal.set_cursor(x, y)?;
             execute!(
                 self.terminal.backend_mut(),
-                CursorMode::cursor_style(cursor_mode)
+                CursorMode::style(content.cursor.mode)
             )?;
             self.terminal.show_cursor()?;
         }
@@ -93,14 +94,12 @@ impl<B: Backend + Write> App<B> {
 impl<B: Backend + Write> Drop for App<B> {
     fn drop(&mut self) {
         self.terminal.show_cursor().expect("show cursor");
-        if cfg!(feature = "crossterm") {
-            crossterm::terminal::disable_raw_mode().expect("disable raw mode");
-            crossterm::execute!(
-                self.terminal.backend_mut(),
-                crossterm::terminal::LeaveAlternateScreen,
-                crossterm::event::DisableMouseCapture
-            )
-            .expect("disable rules");
-        }
+        crossterm::terminal::disable_raw_mode().expect("disable raw mode");
+        crossterm::execute!(
+            self.terminal.backend_mut(),
+            crossterm::terminal::LeaveAlternateScreen,
+            crossterm::event::DisableMouseCapture
+        )
+        .expect("disable rules");
     }
 }

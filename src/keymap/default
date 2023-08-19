@@ -1,0 +1,26 @@
+# normal mode
+normal i: insert_mode
+
+normal h: move_back
+normal j: move_down 
+normal k: move_up
+normal l: move_forward
+
+normal A: insert_mode_line_end
+normal I: insert_mode_line_start
+normal o: insert_mode_new_line_next
+normal O: insert_mode_new_line_prev
+
+normal d: delete_char
+
+normal gg: go_to_start_line
+normal ge: go_to_end_line
+
+# insert mode
+insert <Esc>: normal_mode
+insert <Left>: move_back
+insert <Right>: move_forward
+insert <Up>: move_up
+insert <Down>: move_down
+insert <Backspace>: delete_char
+insert <Enter>: new_line_next

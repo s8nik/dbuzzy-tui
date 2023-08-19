@@ -1,215 +1,224 @@
 use strum::EnumString;
 
 use crate::{
-    buffer::Buffer,
-    event::{Event, Input},
-    keymap::{Keymap, KeymapNode},
-    mode::CursorMode,
+    buffer::{Buffer, Content},
+    cursor::CursorMode,
+    input::{Event, Input, Modifiers},
+    keymap::{Bindings, Keymap},
 };
 
 #[derive(Debug, EnumString)]
 #[strum(serialize_all = "snake_case")]
-pub enum CommandType {
-    SwitchToInsertMode,
-    SwitchToNormalMode,
+pub enum Command {
+    InsertMode,
+    NormalMode,
 
     MoveBack,
     MoveDown,
     MoveUp,
     MoveForward,
 
-    SwitchToInsertLineEnd,
-    SwitchToInsertLineStart,
-    SwitchToInsertNewLineNext,
-    SwitchToInsertNewLinePrev,
+    InsertModeLineEnd,
+    InsertModeLineStart,
+    InsertModeNewLineNext,
+    InsertModeNewLinePrev,
 
     GoToStartLine,
     GoToEndLine,
 
     DeleteChar,
-    NewLine,
+    NewLineNext,
 }
 
 #[derive(Default)]
-pub struct Command<'a> {
-    current_node: Option<&'a KeymapNode>,
-    should_exit: bool,
+pub struct CommandExecutor<'a> {
+    current: Option<&'a Keymap>,
+    pub exit: bool,
 }
 
-impl<'a> Command<'a> {
-    pub fn should_exit(&self) -> bool {
-        self.should_exit
-    }
-
-    pub fn in_progress(&self) -> bool {
-        self.current_node.is_some()
-    }
-
-    pub fn scroll(buffer: &mut Buffer, max: usize) {
-        let lower_bound = buffer.vscroll_index();
-        let upper_bound = lower_bound + max - 1;
-
-        let line_index = buffer.line_index();
-        if line_index >= upper_bound {
-            buffer.set_vsscroll_index(lower_bound + line_index - upper_bound);
-        } else if line_index < lower_bound {
-            buffer.set_vsscroll_index(line_index)
-        }
-    }
-
-    // TODO: Handle ctrl/alt
-    pub fn execute(&mut self, input: Input, buffer: &mut Buffer, keymap: &'static Keymap) {
-        let keymap_node = match self.current_node {
+impl<'a> CommandExecutor<'a> {
+    pub fn execute(
+        &mut self,
+        input: Input,
+        buffer: &mut Buffer,
+        bindings: &'static Bindings,
+        max: usize,
+    ) {
+        let keymap = match self.current {
             Some(node) => Some(node),
-            None => keymap.get(input.event),
+            None => bindings.get(input),
         };
 
-        if let Some(node) = keymap_node {
+        let content = buffer.content_mut();
+
+        if self.current.is_none() && content.cursor.mode == CursorMode::Insert {
+            match input {
+                Input {
+                    event: Event::Char('q'),
+                    modifiers:
+                        Modifiers {
+                            // shift: false,
+                            control: true,
+                            // alt: false,
+                            // sup: false,
+                            // hyper: false,
+                            // meta: false,
+                            ..
+                        },
+                } => self.exit = true,
+                Input {
+                    event: Event::Char(ch),
+                    modifiers,
+                } => insert_char(content, ch),
+                _ => (),
+            }
+        }
+
+        if let Some(node) = keymap {
             match node {
-                KeymapNode::Leaf(command_type) => match command_type {
-                    CommandType::SwitchToInsertMode => buffer.set_cursor_mode(CursorMode::Insert),
-                    CommandType::SwitchToNormalMode => buffer.set_cursor_mode(CursorMode::Normal),
-                    CommandType::MoveBack => Self::move_cursor_back_by(buffer, 1),
-                    CommandType::MoveDown => Self::move_cursor_down_by(buffer, 1),
-                    CommandType::MoveUp => Self::move_cursor_up_by(buffer, 1),
-                    CommandType::MoveForward => Self::move_cursor_forward_by(buffer, 1),
-                    CommandType::SwitchToInsertLineEnd => Self::to_insert_move_end(buffer),
-                    CommandType::SwitchToInsertLineStart => Self::to_insert_move_start(buffer),
-                    CommandType::SwitchToInsertNewLineNext => Self::to_insert_new_line_next(buffer),
-                    CommandType::SwitchToInsertNewLinePrev => Self::to_insert_new_line_prev(buffer),
-                    CommandType::GoToStartLine => todo!(),
-                    CommandType::GoToEndLine => todo!(),
-                    CommandType::DeleteChar => Self::delete_char(buffer),
-                    CommandType::NewLine => Self::new_line(buffer),
+                Keymap::Leaf(command) => match command {
+                    Command::InsertMode => content.cursor.mode = CursorMode::Insert,
+                    Command::NormalMode => content.cursor.mode = CursorMode::Normal,
+                    Command::MoveBack => cursor_back_by(content, 1),
+                    Command::MoveDown => cursor_down_by(content, 1),
+                    Command::MoveUp => cursor_up_by(content, 1),
+                    Command::MoveForward => cursor_forward_by(content, 1),
+                    Command::InsertModeLineEnd => insert_mode_line_end(content),
+                    Command::InsertModeLineStart => insert_mode_line_start(content),
+                    Command::InsertModeNewLineNext => insert_mode_line_next(content),
+                    Command::InsertModeNewLinePrev => insert_mode_line_prev(content),
+                    Command::GoToStartLine => todo!(),
+                    Command::GoToEndLine => todo!(),
+                    Command::DeleteChar => delete_char(content),
+                    Command::NewLineNext => new_line(content),
                 },
-                KeymapNode::Node(next) => self.current_node = next.get(input.event),
+                Keymap::Node(next) => self.current = next.get(input),
             }
         }
-    }
 
-    pub fn insert_mode_on_input(&mut self, input: Input, buffer: &mut Buffer) {
-        match input {
-            Input {
-                event: Event::Char(ch),
-                ctrl: false,
-                alt: false,
-            } => Self::insert_char(buffer, ch),
-            Input {
-                event: Event::Char('q'),
-                ctrl: true,
-                alt: false,
-            } => self.should_exit = true,
-            _ => (),
-        }
-    }
-
-    fn insert_char(buffer: &mut Buffer, ch: char) {
-        let pos = buffer.cursor_position();
-        let text = buffer.text_mut();
-
-        text.insert_char(pos, ch);
-
-        let new_offset = buffer.cursor_offset() + 1;
-        buffer.set_cursor_offset(new_offset);
-    }
-
-    fn move_cursor_forward_by(buffer: &mut Buffer, offset: usize) {
-        let new_offset = buffer.cursor_offset() + offset;
-        buffer.set_cursor_offset(new_offset);
-        Self::cursor_line_bounds(buffer);
-    }
-
-    fn move_cursor_back_by(buffer: &mut Buffer, offset: usize) {
-        let cursor_offset = buffer.cursor_offset();
-        let new_offset = cursor_offset.saturating_sub(offset);
-        buffer.set_cursor_offset(new_offset);
-    }
-
-    fn move_cursor_up_by(buffer: &mut Buffer, offset: usize) {
-        let line_index = buffer.line_index();
-        let new_line_index = line_index.saturating_sub(offset);
-        buffer.set_line_index(new_line_index);
-        Self::cursor_line_bounds(buffer);
-    }
-
-    fn move_cursor_down_by(buffer: &mut Buffer, offset: usize) {
-        let new_offset = buffer.line_index() + offset;
-
-        if new_offset < buffer.text().len_lines() {
-            buffer.set_line_index(new_offset);
-        }
-
-        Self::cursor_line_bounds(buffer);
-    }
-
-    fn cursor_line_bounds(buffer: &mut Buffer) {
-        let text = buffer.text();
-
-        let mut line_bytes_len = text.line(buffer.line_index()).len_bytes();
-        if buffer.line_index() < text.lines().len() - 1 {
-            line_bytes_len -= 1;
-        }
-
-        if buffer.cursor_offset() > line_bytes_len {
-            buffer.set_cursor_offset(line_bytes_len);
-        }
-    }
-
-    fn new_line(buffer: &mut Buffer) {
-        Self::insert_char(buffer, '\n');
-
-        buffer.set_cursor_offset(0);
-        buffer.set_line_index(buffer.line_index() + 1);
-    }
-
-    fn delete_char(buffer: &mut Buffer) {
-        let pos = buffer.cursor_position();
-
-        if pos != 0 {
-            if buffer.cursor_offset() == 0 {
-                Self::move_cursor_up_by(buffer, 1);
-
-                let new_offset = buffer.text().line(buffer.line_index()).len_bytes();
-                buffer.set_cursor_offset(new_offset);
+        if self.current.is_none() && content.cursor.mode == CursorMode::Insert {
+            if let Event::Char(ch) = input.event {
+                insert_char(content, ch);
             }
-
-            buffer.text_mut().remove(pos - 1..pos);
-            Self::move_cursor_back_by(buffer, 1);
-        }
-    }
-
-    fn move_cursor_to_line_end(buffer: &mut Buffer) {
-        let new_offset = buffer.text().line(buffer.line_index()).len_bytes();
-        buffer.set_cursor_offset(new_offset);
-        Self::cursor_line_bounds(buffer);
-    }
-
-    fn to_insert_move_end(buffer: &mut Buffer) {
-        Self::move_cursor_to_line_end(buffer);
-        buffer.set_cursor_mode(CursorMode::Insert);
-    }
-
-    fn to_insert_move_start(buffer: &mut Buffer) {
-        buffer.set_cursor_offset(0);
-        buffer.set_cursor_mode(CursorMode::Insert);
-    }
-
-    fn to_insert_new_line_next(buffer: &mut Buffer) {
-        Self::move_cursor_to_line_end(buffer);
-        Self::new_line(buffer);
-        buffer.set_cursor_mode(CursorMode::Insert);
-    }
-
-    fn to_insert_new_line_prev(buffer: &mut Buffer) {
-        if buffer.line_index() == 0 {
-            buffer.set_cursor_offset(0);
-            Self::new_line(buffer);
-            Self::move_cursor_up_by(buffer, 1);
-        } else {
-            Self::move_cursor_up_by(buffer, 1);
-            Self::to_insert_new_line_next(buffer);
         }
 
-        buffer.set_cursor_mode(CursorMode::Insert);
+        scroll(content, max);
     }
+}
+
+pub fn scroll(content: &mut Content, max: usize) {
+    let lower_bound = content.cursor.vscroll;
+    let upper_bound = lower_bound + max - 1;
+
+    let index = content.cursor.index;
+    if index >= upper_bound {
+        content.cursor.vscroll = lower_bound + index - upper_bound;
+    } else if index < lower_bound {
+        content.cursor.vscroll = index;
+    }
+}
+
+fn insert_char(content: &mut Content, ch: char) {
+    let Content { text, cursor } = content;
+    let position = cursor.position(text);
+
+    text.insert_char(position, ch);
+    cursor.offset += 1;
+}
+
+fn cursor_forward_by(content: &mut Content, offset: usize) {
+    content.cursor.offset += offset;
+    cursor_line_bounds(content);
+}
+
+fn cursor_back_by(content: &mut Content, offset: usize) {
+    let cursor = &mut content.cursor;
+    cursor.offset = cursor.offset.saturating_sub(offset);
+}
+
+fn cursor_up_by(content: &mut Content, offset: usize) {
+    let cursor = &mut content.cursor;
+    cursor.index = cursor.index.saturating_sub(offset);
+    cursor_line_bounds(content);
+}
+
+fn cursor_down_by(content: &mut Content, offset: usize) {
+    let new_offset = content.cursor.index + offset;
+
+    if new_offset < content.text.len_lines() {
+        content.cursor.index = new_offset;
+    }
+
+    cursor_line_bounds(content);
+}
+
+fn cursor_line_bounds(content: &mut Content) {
+    let Content { text, cursor } = content;
+
+    let mut bytes_len = text.line(cursor.index).len_bytes();
+    if cursor.index < text.lines().len() - 1 {
+        bytes_len -= 1;
+    }
+
+    if cursor.offset > bytes_len {
+        cursor.offset = bytes_len;
+    }
+}
+
+fn new_line(content: &mut Content) {
+    insert_char(content, '\n');
+
+    content.cursor.offset = 0;
+    content.cursor.index += 1;
+}
+
+fn delete_char(content: &mut Content) {
+    let position = content.cursor.position(&content.text);
+
+    if position != 0 {
+        if content.cursor.offset == 0 {
+            cursor_up_by(content, 1);
+
+            let bytes_len = content.text.line(content.cursor.index).len_bytes();
+            content.cursor.offset = bytes_len;
+        }
+
+        content.text.remove(position - 1..position);
+        cursor_back_by(content, 1);
+    }
+}
+
+fn move_cursor_to_line_end(content: &mut Content) {
+    let Content { text, cursor } = content;
+    cursor.offset = text.line(cursor.index).len_bytes();
+    cursor_line_bounds(content);
+}
+
+fn insert_mode_line_end(content: &mut Content) {
+    move_cursor_to_line_end(content);
+    content.cursor.mode = CursorMode::Insert;
+}
+
+fn insert_mode_line_start(content: &mut Content) {
+    content.cursor.offset = 0;
+    content.cursor.mode = CursorMode::Insert;
+}
+
+fn insert_mode_line_next(content: &mut Content) {
+    move_cursor_to_line_end(content);
+    new_line(content);
+    content.cursor.mode = CursorMode::Insert;
+}
+
+fn insert_mode_line_prev(content: &mut Content) {
+    if content.cursor.index == 0 {
+        content.cursor.offset = 0;
+        new_line(content);
+        cursor_up_by(content, 1);
+    } else {
+        cursor_up_by(content, 1);
+        insert_mode_line_next(content);
+    }
+
+    content.cursor.mode = CursorMode::Insert;
 }
