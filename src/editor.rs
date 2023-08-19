@@ -65,6 +65,10 @@ impl<'a> Editor<'a> {
         self.viewport
     }
 
+    pub fn exit(&self) -> bool {
+        self.executor.exit
+    }
+
     pub fn widget(&self) -> EditorWidget {
         EditorWidget::new(self)
     }

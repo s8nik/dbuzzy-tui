@@ -100,7 +100,7 @@ impl Keymaps {
             return;
         };
 
-        let event: Event = match key.to_lowercase().as_str().try_into() {
+        let event: Event = match key.as_str().try_into() {
             Ok(e) => e,
             Err(e) => {
                 // @todo: better loggs

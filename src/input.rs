@@ -5,18 +5,16 @@ use crossterm::event::{
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Modifiers {
-    shift: bool,
-    control: bool,
-    alt: bool,
-    sup: bool,
-    hyper: bool,
-    meta: bool,
+    pub control: bool,
+    pub alt: bool,
+    pub sup: bool,
+    pub hyper: bool,
+    pub meta: bool,
 }
 
 impl From<KeyModifiers> for Modifiers {
     fn from(modifiers: KeyModifiers) -> Self {
         Self {
-            shift: modifiers.contains(KeyModifiers::SHIFT),
             control: modifiers.contains(KeyModifiers::CONTROL),
             alt: modifiers.contains(KeyModifiers::ALT),
             sup: modifiers.contains(KeyModifiers::SUPER),
@@ -39,7 +37,7 @@ impl From<&[String]> for Modifiers {
 }
 
 impl Modifiers {
-    const NAMES: [&str; 6] = ["shift", "ctr", "alt", "super", "hyper", "meta"];
+    const NAMES: [&str; 5] = ["ctr", "alt", "super", "hyper", "meta"];
 
     pub fn contain(name: &str) -> bool {
         Self::NAMES.contains(&name)
@@ -51,12 +49,11 @@ impl Modifiers {
         };
 
         match position {
-            0 => self.shift = value,
-            1 => self.control = value,
-            2 => self.alt = value,
-            3 => self.sup = value,
-            4 => self.hyper = value,
-            5 => self.meta = value,
+            0 => self.control = value,
+            1 => self.alt = value,
+            2 => self.sup = value,
+            3 => self.hyper = value,
+            4 => self.meta = value,
             _ => (),
         }
     }
@@ -94,7 +91,7 @@ impl TryFrom<&str> for Event {
             let c = value.chars().next().with_context(|| "must exist")?;
             Self::Char(c)
         } else {
-            match value {
+            match value.to_lowercase().as_str() {
                 "backspace" => Self::Backspace,
                 "enter" => Self::Enter,
                 "left" => Self::Left,

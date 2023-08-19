@@ -3,7 +3,7 @@ use strum::EnumString;
 use crate::{
     buffer::{Buffer, Content},
     cursor::CursorMode,
-    input::{Event, Input},
+    input::{Event, Input, Modifiers},
     keymap::{Bindings, Keymap},
 };
 
@@ -33,6 +33,7 @@ pub enum Command {
 #[derive(Default)]
 pub struct CommandExecutor<'a> {
     current: Option<&'a Keymap>,
+    pub exit: bool,
 }
 
 impl<'a> CommandExecutor<'a> {
@@ -49,6 +50,29 @@ impl<'a> CommandExecutor<'a> {
         };
 
         let content = buffer.content_mut();
+
+        if self.current.is_none() && content.cursor.mode == CursorMode::Insert {
+            match input {
+                Input {
+                    event: Event::Char('q'),
+                    modifiers:
+                        Modifiers {
+                            // shift: false,
+                            control: true,
+                            // alt: false,
+                            // sup: false,
+                            // hyper: false,
+                            // meta: false,
+                            ..
+                        },
+                } => self.exit = true,
+                Input {
+                    event: Event::Char(ch),
+                    modifiers,
+                } => insert_char(content, ch),
+                _ => (),
+            }
+        }
 
         if let Some(node) = keymap {
             match node {

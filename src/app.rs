@@ -27,15 +27,13 @@ impl<B: Backend + Write> App<B> {
         let size = terminal.size()?;
         editor.set_viewport(size.width, size.height);
 
-        if cfg!(feature = "crossterm") {
-            crossterm::terminal::enable_raw_mode().expect("enable raw mode");
-            crossterm::execute!(
-                &mut terminal.backend_mut(),
-                crossterm::terminal::EnterAlternateScreen,
-                crossterm::event::EnableMouseCapture
-            )
-            .expect("enable rules");
-        }
+        crossterm::terminal::enable_raw_mode().expect("enable raw mode");
+        crossterm::execute!(
+            &mut terminal.backend_mut(),
+            crossterm::terminal::EnterAlternateScreen,
+            crossterm::event::EnableMouseCapture
+        )
+        .expect("enable rules");
 
         Ok(Self { editor, terminal })
     }
@@ -67,9 +65,9 @@ impl<B: Backend + Write> App<B> {
                 }
             }
 
-            // if self.editor.command().should_exit() {
-            //     break;
-            // }
+            if self.editor.exit() {
+                break;
+            }
 
             let widget = self.editor.widget();
             self.terminal.draw(|ui| {
@@ -89,21 +87,19 @@ impl<B: Backend + Write> App<B> {
             self.terminal.show_cursor()?;
         }
 
-        // Ok(())
+        Ok(())
     }
 }
 
 impl<B: Backend + Write> Drop for App<B> {
     fn drop(&mut self) {
         self.terminal.show_cursor().expect("show cursor");
-        if cfg!(feature = "crossterm") {
-            crossterm::terminal::disable_raw_mode().expect("disable raw mode");
-            crossterm::execute!(
-                self.terminal.backend_mut(),
-                crossterm::terminal::LeaveAlternateScreen,
-                crossterm::event::DisableMouseCapture
-            )
-            .expect("disable rules");
-        }
+        crossterm::terminal::disable_raw_mode().expect("disable raw mode");
+        crossterm::execute!(
+            self.terminal.backend_mut(),
+            crossterm::terminal::LeaveAlternateScreen,
+            crossterm::event::DisableMouseCapture
+        )
+        .expect("disable rules");
     }
 }
