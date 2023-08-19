@@ -4,7 +4,7 @@ use anyhow::Result;
 use crossterm::{execute, ExecutableCommand};
 use tui::{backend::Backend, Terminal};
 
-use crate::{editor::Editor, mode::CursorMode};
+use crate::{cursor::CursorMode, editor::Editor};
 
 pub struct App<B: Backend + Write> {
     editor: Editor<'static>,
@@ -76,12 +76,15 @@ impl<B: Backend + Write> App<B> {
                 ui.render_widget(widget, ui.size());
             })?;
 
-            let (x, y) = self.editor.cursor();
-            let cursor_mode = self.editor.current_buff().cursor_mode();
-            self.terminal.set_cursor(x as u16, y as u16)?;
+            let content = self.editor.current_buff().content();
+
+            let x = content.cursor.offset as u16;
+            let y = content.cursor.index as u16;
+
+            self.terminal.set_cursor(x, y)?;
             execute!(
                 self.terminal.backend_mut(),
-                CursorMode::cursor_style(cursor_mode)
+                CursorMode::style(content.cursor.mode)
             )?;
             self.terminal.show_cursor()?;
         }

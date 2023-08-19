@@ -9,7 +9,7 @@ use std::{
 use anyhow::Result;
 use ropey::Rope;
 
-use crate::mode::CursorMode;
+use crate::cursor::Cursor;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BufferId(NonZeroUsize);
@@ -34,15 +34,22 @@ impl Default for BufferId {
 }
 
 #[derive(Default)]
+pub struct FileMeta {
+    pub path: Option<PathBuf>,
+    pub readonly: bool,
+}
+
+#[derive(Default)]
+pub struct Content {
+    pub text: Rope,
+    pub cursor: Cursor,
+}
+
+#[derive(Default)]
 pub struct Buffer {
     id: BufferId,
-    text: Rope,
-    path: Option<PathBuf>,
-    readonly: bool,
-    cursor_offset: usize,
-    line_index: usize,
-    vscroll_index: usize,
-    cursor_mode: CursorMode,
+    meta: FileMeta,
+    content: Content,
 }
 
 impl Buffer {
@@ -51,7 +58,7 @@ impl Buffer {
         let mut buffer = Self::default();
 
         if !path.exists() {
-            buffer.path = Some(path.into());
+            buffer.meta.path = Some(path.into());
             return Ok(buffer);
         }
 
@@ -63,9 +70,11 @@ impl Buffer {
         let file = File::open(path)?;
         let text = Rope::from_reader(BufReader::new(file))?;
 
-        buffer.text = text;
-        buffer.path = Some(path.into());
-        buffer.readonly = metadata.permissions().readonly();
+        buffer.content.text = text;
+        buffer.meta = FileMeta {
+            path: Some(path.into()),
+            readonly: metadata.permissions().readonly(),
+        };
 
         Ok(buffer)
     }
@@ -74,63 +83,24 @@ impl Buffer {
         self.id
     }
 
-    pub const fn text(&self) -> &Rope {
-        &self.text
+    pub fn meta(&self) -> &FileMeta {
+        &self.meta
     }
 
-    pub fn text_mut(&mut self) -> &mut Rope {
-        &mut self.text
+    pub fn content(&self) -> &Content {
+        &self.content
     }
 
-    pub fn path(&self) -> Option<&Path> {
-        self.path.as_ref().map(|m| m.as_ref())
-    }
-
-    pub fn readonly(&self) -> bool {
-        self.readonly
-    }
-
-    pub fn cursor_offset(&self) -> usize {
-        self.cursor_offset
-    }
-
-    pub fn set_cursor_offset(&mut self, new_offset: usize) {
-        self.cursor_offset = new_offset;
-    }
-
-    pub fn line_index(&self) -> usize {
-        self.line_index
-    }
-
-    pub fn set_line_index(&mut self, new_index: usize) {
-        self.line_index = new_index;
-    }
-
-    pub fn cursor_position(&self) -> usize {
-        let line_index = self.text.line_to_byte(self.line_index);
-        line_index + self.cursor_offset
-    }
-
-    pub fn vscroll_index(&self) -> usize {
-        self.vscroll_index
-    }
-
-    pub fn set_vsscroll_index(&mut self, new_index: usize) {
-        self.vscroll_index = new_index
-    }
-
-    pub fn cursor_mode(&self) -> CursorMode {
-        self.cursor_mode
-    }
-
-    pub fn set_cursor_mode(&mut self, mode: CursorMode) {
-        self.cursor_mode = mode;
+    pub fn content_mut(&mut self) -> &mut Content {
+        &mut self.content
     }
 
     pub fn save(&self) -> Result<()> {
-        if let Some(path) = self.path.as_ref() {
-            if !self.readonly {
-                self.text.write_to(File::create(path)?)?;
+        let FileMeta { path, readonly } = &self.meta;
+
+        if let Some(path) = path.as_ref() {
+            if !readonly {
+                self.content.text.write_to(File::create(path)?)?;
             }
         }
 

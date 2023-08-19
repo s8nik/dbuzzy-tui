@@ -6,8 +6,8 @@ use std::{
 
 use crate::{
     command::Command,
+    cursor::CursorMode,
     input::{Event, Input, Modifiers},
-    mode::CursorMode,
 };
 
 #[derive(Debug, Default)]

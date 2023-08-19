@@ -7,7 +7,6 @@ use crate::{
     command::CommandExecutor,
     input::Input,
     keymap::Keymaps,
-    mode::CursorMode,
     widget::EditorWidget,
 };
 
@@ -17,7 +16,6 @@ pub struct Editor<'a> {
     current: BufferId,
     viewport: (usize, usize),
     executor: CommandExecutor<'a>,
-    exit: bool,
 }
 
 impl<'a> Editor<'a> {
@@ -28,7 +26,6 @@ impl<'a> Editor<'a> {
             current: BufferId::MAX,
             viewport: (0, 0),
             executor: CommandExecutor::default(),
-            exit: false,
         }
     }
 
@@ -72,26 +69,17 @@ impl<'a> Editor<'a> {
         EditorWidget::new(self)
     }
 
-    pub fn cursor(&self) -> (usize, usize) {
-        let buffer = self.current_buff();
-        (
-            buffer.cursor_offset(),
-            buffer.line_index() - buffer.vscroll_index(),
-        )
-    }
-
     pub fn handle_event(&mut self, input: Input) {
-        let current_mode = self.current_buff().cursor_mode();
         let buffer = self.buffers.get_mut(&self.current).expect("should exist");
+        let cursor = &buffer.content().cursor;
 
         let bindings = self
             .keymaps
-            .get(&current_mode)
+            .get(&cursor.mode)
             .expect("keymap must be registered");
 
-        self.executor.execute(input, buffer, bindings);
-
-        // Command::scroll(buffer, self.viewport.1);
+        self.executor
+            .execute(input, buffer, bindings, self.viewport.1);
     }
 
     pub fn set_viewport(&mut self, width: u16, height: u16) {
