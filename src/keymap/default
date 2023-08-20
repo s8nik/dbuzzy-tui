@@ -8,8 +8,8 @@ normal l: move_forward
 
 normal A: insert_mode_line_end
 normal I: insert_mode_line_start
-normal o: insert_mode_new_line_next
-normal O: insert_mode_new_line_prev
+normal o: insert_mode_line_next
+normal O: insert_mode_line_prev
 
 normal d: delete_char
 
@@ -23,4 +23,4 @@ insert <Right>: move_forward
 insert <Up>: move_up
 insert <Down>: move_down
 insert <Backspace>: delete_char
-insert <Enter>: new_line_next
+insert <Enter>: new_line

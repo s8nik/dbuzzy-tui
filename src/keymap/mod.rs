@@ -5,7 +5,6 @@ use std::{
 };
 
 use crate::{
-    command::Command,
     cursor::CursorMode,
     input::{Event, Input, Modifiers},
 };
@@ -21,7 +20,7 @@ impl Bindings {
 
 #[derive(Debug)]
 pub enum Keymap {
-    Leaf(Command),
+    Leaf(String),
     Node(Bindings),
 }
 
@@ -112,8 +111,7 @@ impl Keymaps {
         let input = Input { event, modifiers };
 
         if keys.is_empty() {
-            let command = Command::from_str(command).expect("unsupported command");
-            parent.0.insert(input, Keymap::Leaf(command));
+            parent.0.insert(input, Keymap::Leaf(command.to_owned()));
         } else {
             if let Some(Keymap::Node(ref mut child)) = parent.0.get_mut(&input) {
                 return Self::parse_keys(child, modifiers, keys, command);

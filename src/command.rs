@@ -1,4 +1,4 @@
-use strum::EnumString;
+use std::{collections::HashMap, sync::Arc};
 
 use crate::{
     buffer::{Buffer, Content},
@@ -7,36 +7,82 @@ use crate::{
     keymap::{Bindings, Keymap},
 };
 
-#[derive(Debug, EnumString)]
-#[strum(serialize_all = "snake_case")]
-pub enum Command {
-    InsertMode,
-    NormalMode,
+pub type Callback = fn(&mut Content);
 
-    MoveBack,
-    MoveDown,
-    MoveUp,
-    MoveForward,
+macro_rules! command {
+    ($fun: ident) => {{
+        let name = stringify!($fun);
+        Command::new(name.to_string(), $fun)
+    }};
+}
 
-    InsertModeLineEnd,
-    InsertModeLineStart,
-    InsertModeNewLineNext,
-    InsertModeNewLinePrev,
+pub struct Command {
+    name: String,
+    callback: Callback,
+}
 
-    GoToStartLine,
-    GoToEndLine,
+impl Command {
+    pub fn new(name: String, callback: Callback) -> Self {
+        Self { name, callback }
+    }
 
-    DeleteChar,
-    NewLineNext,
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn call(&self, content: &mut Content) {
+        (self.callback)(content)
+    }
+}
+
+pub struct Registry {
+    commands: HashMap<Arc<str>, Arc<Command>>,
+}
+
+impl Registry {
+    pub fn register() -> Self {
+        let commands = vec![
+            command!(insert_mode),
+            command!(normal_mode),
+            command!(move_back),
+            command!(move_down),
+            command!(move_up),
+            command!(move_forward),
+            command!(insert_mode_line_end),
+            command!(insert_mode_line_start),
+            command!(insert_mode_line_next),
+            command!(insert_mode_line_prev),
+            command!(delete_char),
+            command!(new_line),
+        ];
+
+        let mut map = HashMap::new();
+        for command in commands {
+            map.insert(Arc::from(command.name.as_str()), Arc::new(command));
+        }
+
+        Self { commands: map }
+    }
+
+    pub fn get(&self, name: &str) -> Option<Arc<Command>> {
+        self.commands.get(name).cloned()
+    }
+}
+
+impl Default for Registry {
+    fn default() -> Self {
+        Self::register()
+    }
 }
 
 #[derive(Default)]
-pub struct CommandExecutor<'a> {
+pub struct Executor<'a> {
+    registry: Registry,
     current: Option<&'a Keymap>,
     pub exit: bool,
 }
 
-impl<'a> CommandExecutor<'a> {
+impl<'a> Executor<'a> {
     pub fn execute(
         &mut self,
         input: Input,
@@ -68,7 +114,7 @@ impl<'a> CommandExecutor<'a> {
                 } => self.exit = true,
                 Input {
                     event: Event::Char(ch),
-                    modifiers,
+                    modifiers: _,
                 } => insert_char(content, ch),
                 _ => (),
             }
@@ -76,34 +122,25 @@ impl<'a> CommandExecutor<'a> {
 
         if let Some(node) = keymap {
             match node {
-                Keymap::Leaf(command) => match command {
-                    Command::InsertMode => content.cursor.mode = CursorMode::Insert,
-                    Command::NormalMode => content.cursor.mode = CursorMode::Normal,
-                    Command::MoveBack => cursor_back_by(content, 1),
-                    Command::MoveDown => cursor_down_by(content, 1),
-                    Command::MoveUp => cursor_up_by(content, 1),
-                    Command::MoveForward => cursor_forward_by(content, 1),
-                    Command::InsertModeLineEnd => insert_mode_line_end(content),
-                    Command::InsertModeLineStart => insert_mode_line_start(content),
-                    Command::InsertModeNewLineNext => insert_mode_line_next(content),
-                    Command::InsertModeNewLinePrev => insert_mode_line_prev(content),
-                    Command::GoToStartLine => todo!(),
-                    Command::GoToEndLine => todo!(),
-                    Command::DeleteChar => delete_char(content),
-                    Command::NewLineNext => new_line(content),
-                },
+                Keymap::Leaf(command) => {
+                    if let Some(command) = self.registry.get(command) {
+                        command.call(content);
+                    }
+                }
                 Keymap::Node(next) => self.current = next.get(input),
-            }
-        }
-
-        if self.current.is_none() && content.cursor.mode == CursorMode::Insert {
-            if let Event::Char(ch) = input.event {
-                insert_char(content, ch);
             }
         }
 
         scroll(content, max);
     }
+}
+
+pub fn insert_mode(content: &mut Content) {
+    content.cursor.mode = CursorMode::Insert;
+}
+
+pub fn normal_mode(content: &mut Content) {
+    content.cursor.mode = CursorMode::Normal;
 }
 
 pub fn scroll(content: &mut Content, max: usize) {
@@ -126,24 +163,24 @@ fn insert_char(content: &mut Content, ch: char) {
     cursor.offset += 1;
 }
 
-fn cursor_forward_by(content: &mut Content, offset: usize) {
-    content.cursor.offset += offset;
+fn move_forward(content: &mut Content) {
+    content.cursor.offset += 1;
     cursor_line_bounds(content);
 }
 
-fn cursor_back_by(content: &mut Content, offset: usize) {
+fn move_back(content: &mut Content) {
     let cursor = &mut content.cursor;
-    cursor.offset = cursor.offset.saturating_sub(offset);
+    cursor.offset = cursor.offset.saturating_sub(1);
 }
 
-fn cursor_up_by(content: &mut Content, offset: usize) {
+fn move_up(content: &mut Content) {
     let cursor = &mut content.cursor;
-    cursor.index = cursor.index.saturating_sub(offset);
+    cursor.index = cursor.index.saturating_sub(1);
     cursor_line_bounds(content);
 }
 
-fn cursor_down_by(content: &mut Content, offset: usize) {
-    let new_offset = content.cursor.index + offset;
+fn move_down(content: &mut Content) {
+    let new_offset = content.cursor.index + 1;
 
     if new_offset < content.text.len_lines() {
         content.cursor.index = new_offset;
@@ -177,14 +214,14 @@ fn delete_char(content: &mut Content) {
 
     if position != 0 {
         if content.cursor.offset == 0 {
-            cursor_up_by(content, 1);
+            move_up(content);
 
             let bytes_len = content.text.line(content.cursor.index).len_bytes();
             content.cursor.offset = bytes_len;
         }
 
         content.text.remove(position - 1..position);
-        cursor_back_by(content, 1);
+        move_back(content);
     }
 }
 
@@ -214,9 +251,9 @@ fn insert_mode_line_prev(content: &mut Content) {
     if content.cursor.index == 0 {
         content.cursor.offset = 0;
         new_line(content);
-        cursor_up_by(content, 1);
+        move_up(content);
     } else {
-        cursor_up_by(content, 1);
+        move_up(content);
         insert_mode_line_next(content);
     }
 

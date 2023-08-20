@@ -4,7 +4,7 @@ use anyhow::Result;
 
 use crate::{
     buffer::{Buffer, BufferId},
-    command::CommandExecutor,
+    command::Executor,
     input::Input,
     keymap::Keymaps,
     widget::EditorWidget,
@@ -15,7 +15,7 @@ pub struct Editor<'a> {
     keymaps: &'static Keymaps,
     current: BufferId,
     viewport: (usize, usize),
-    executor: CommandExecutor<'a>,
+    executor: Executor<'a>,
 }
 
 impl<'a> Editor<'a> {
@@ -25,7 +25,7 @@ impl<'a> Editor<'a> {
             buffers: HashMap::new(),
             current: BufferId::MAX,
             viewport: (0, 0),
-            executor: CommandExecutor::default(),
+            executor: Executor::default(),
         }
     }
 
