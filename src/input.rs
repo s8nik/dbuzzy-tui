@@ -37,7 +37,7 @@ impl From<&[String]> for Modifiers {
 }
 
 impl Modifiers {
-    const NAMES: [&str; 5] = ["ctr", "alt", "super", "hyper", "meta"];
+    const NAMES: [&'static str; 5] = ["ctr", "alt", "super", "hyper", "meta"];
 
     pub fn contain(name: &str) -> bool {
         Self::NAMES.contains(&name)

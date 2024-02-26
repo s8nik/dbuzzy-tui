@@ -15,6 +15,16 @@ impl Cursor {
         let byte_index = text.line_to_byte(self.index);
         self.offset + byte_index
     }
+
+    pub fn scroll(&mut self, max: usize) {
+        let upper_bound = self.vscroll + max - 1;
+
+        if self.index >= self.vscroll {
+            self.vscroll = (self.vscroll + self.index).saturating_sub(upper_bound);
+        } else if self.index < self.vscroll {
+            self.vscroll = self.index;
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash, EnumString)]

@@ -75,15 +75,14 @@ impl<'a> Editor<'a> {
 
     pub fn handle_event(&mut self, input: Input) {
         let buffer = self.buffers.get_mut(&self.current).expect("should exist");
-        let cursor = &buffer.content().cursor;
 
         let bindings = self
             .keymaps
-            .get(&cursor.mode)
+            .get(&buffer.cursor().mode)
             .expect("keymap must be registered");
 
-        self.executor
-            .execute(input, buffer, bindings, self.viewport.1);
+        self.executor.execute(input, buffer, bindings);
+        buffer.cursor_mut().scroll(self.viewport.1);
     }
 
     pub fn set_viewport(&mut self, width: u16, height: u16) {

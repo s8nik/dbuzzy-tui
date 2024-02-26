@@ -74,16 +74,13 @@ impl<B: Backend + Write> App<B> {
                 ui.render_widget(widget, ui.size());
             })?;
 
-            let content = self.editor.current_buff().content();
+            let cursor = self.editor.current_buff().cursor();
 
-            let x = content.cursor.offset as u16;
-            let y = content.cursor.index as u16;
+            let x = cursor.offset as u16;
+            let y = cursor.index as u16;
 
             self.terminal.set_cursor(x, y)?;
-            execute!(
-                self.terminal.backend_mut(),
-                CursorMode::style(content.cursor.mode)
-            )?;
+            execute!(self.terminal.backend_mut(), CursorMode::style(cursor.mode))?;
             self.terminal.show_cursor()?;
         }
 

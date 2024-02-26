@@ -1,13 +1,15 @@
 use std::{collections::HashMap, sync::Arc};
 
+use tui::buffer;
+
 use crate::{
-    buffer::{Buffer, Content},
+    buffer::Buffer,
     cursor::CursorMode,
     input::{Event, Input, Modifiers},
     keymap::{Bindings, Keymap},
 };
 
-pub type Callback = fn(&mut Content);
+pub type Callback = fn(&mut Buffer);
 
 macro_rules! command {
     ($fun: ident) => {{
@@ -30,7 +32,7 @@ impl Command {
         &self.name
     }
 
-    pub fn call(&self, content: &mut Content) {
+    pub fn call(&self, content: &mut Buffer) {
         (self.callback)(content)
     }
 }
@@ -53,6 +55,7 @@ impl Registry {
             command!(insert_mode_line_next),
             command!(insert_mode_line_prev),
             command!(delete_char),
+            command!(delete_char_under_cursor),
             command!(new_line),
         ];
 
@@ -83,21 +86,13 @@ pub struct Executor<'a> {
 }
 
 impl<'a> Executor<'a> {
-    pub fn execute(
-        &mut self,
-        input: Input,
-        buffer: &mut Buffer,
-        bindings: &'static Bindings,
-        max: usize,
-    ) {
+    pub fn execute(&mut self, input: Input, buffer: &mut Buffer, bindings: &'static Bindings) {
         let keymap = match self.current {
             Some(node) => Some(node),
             None => bindings.get(input),
         };
 
-        let content = buffer.content_mut();
-
-        if self.current.is_none() && content.cursor.mode == CursorMode::Insert {
+        if self.current.is_none() && buffer.cursor().mode == CursorMode::Insert {
             match input {
                 Input {
                     event: Event::Char('q'),
@@ -115,7 +110,7 @@ impl<'a> Executor<'a> {
                 Input {
                     event: Event::Char(ch),
                     modifiers: _,
-                } => insert_char(content, ch),
+                } => insert_char(buffer, ch),
                 _ => (),
             }
         }
@@ -124,138 +119,137 @@ impl<'a> Executor<'a> {
             match node {
                 Keymap::Leaf(command) => {
                     if let Some(command) = self.registry.get(command) {
-                        command.call(content);
+                        command.call(buffer);
                     }
                 }
                 Keymap::Node(next) => self.current = next.get(input),
             }
         }
-
-        scroll(content, max);
     }
 }
 
-pub fn insert_mode(content: &mut Content) {
-    content.cursor.mode = CursorMode::Insert;
+fn insert_mode(buffer: &mut Buffer) {
+    buffer.cursor_mut().mode = CursorMode::Insert;
 }
 
-pub fn normal_mode(content: &mut Content) {
-    content.cursor.mode = CursorMode::Normal;
+fn normal_mode(buffer: &mut Buffer) {
+    buffer.cursor_mut().mode = CursorMode::Normal;
 }
 
-pub fn scroll(content: &mut Content, max: usize) {
-    let lower_bound = content.cursor.vscroll;
-    let upper_bound = lower_bound + max - 1;
+fn insert_char(buffer: &mut Buffer, ch: char) {
+    let position = buffer.cursor().position(buffer.text());
 
-    let index = content.cursor.index;
-    if index >= upper_bound {
-        content.cursor.vscroll = lower_bound + index - upper_bound;
-    } else if index < lower_bound {
-        content.cursor.vscroll = index;
-    }
+    buffer.text_mut().insert_char(position, ch);
+    buffer.cursor_mut().offset += 1;
 }
 
-fn insert_char(content: &mut Content, ch: char) {
-    let Content { text, cursor } = content;
-    let position = cursor.position(text);
-
-    text.insert_char(position, ch);
-    cursor.offset += 1;
+fn move_forward(buffer: &mut Buffer) {
+    buffer.cursor_mut().offset += 1;
+    cursor_line_bounds(buffer);
 }
 
-fn move_forward(content: &mut Content) {
-    content.cursor.offset += 1;
-    cursor_line_bounds(content);
-}
-
-fn move_back(content: &mut Content) {
-    let cursor = &mut content.cursor;
+fn move_back(buffer: &mut Buffer) {
+    let cursor = buffer.cursor_mut();
     cursor.offset = cursor.offset.saturating_sub(1);
 }
 
-fn move_up(content: &mut Content) {
-    let cursor = &mut content.cursor;
+fn move_up(buffer: &mut Buffer) {
+    let cursor = buffer.cursor_mut();
     cursor.index = cursor.index.saturating_sub(1);
-    cursor_line_bounds(content);
+    cursor_line_bounds(buffer);
 }
 
-fn move_down(content: &mut Content) {
-    let new_offset = content.cursor.index + 1;
+fn move_down(buffer: &mut Buffer) {
+    let new_offset = buffer.cursor().index + 1;
 
-    if new_offset < content.text.len_lines() {
-        content.cursor.index = new_offset;
+    if new_offset < buffer.text().len_lines() {
+        buffer.cursor_mut().index = new_offset;
     }
 
-    cursor_line_bounds(content);
+    cursor_line_bounds(buffer);
 }
 
-fn cursor_line_bounds(content: &mut Content) {
-    let Content { text, cursor } = content;
-
-    let mut bytes_len = text.line(cursor.index).len_bytes();
-    if cursor.index < text.lines().len() - 1 {
+fn cursor_line_bounds(buffer: &mut Buffer) {
+    let mut bytes_len = buffer.text().line(buffer.cursor().index).len_bytes();
+    if buffer.cursor().index < buffer.text().lines().len() - 1 {
         bytes_len -= 1;
     }
 
-    if cursor.offset > bytes_len {
-        cursor.offset = bytes_len;
+    if buffer.cursor().offset > bytes_len {
+        buffer.cursor_mut().offset = bytes_len;
     }
 }
 
-fn new_line(content: &mut Content) {
-    insert_char(content, '\n');
+fn new_line(buffer: &mut Buffer) {
+    insert_char(buffer, '\n');
 
-    content.cursor.offset = 0;
-    content.cursor.index += 1;
+    buffer.cursor_mut().offset = 0;
+    buffer.cursor_mut().index += 1;
 }
 
-fn delete_char(content: &mut Content) {
-    let position = content.cursor.position(&content.text);
+fn delete_char_under_cursor(buffer: &mut Buffer) {
+    let position = buffer.cursor().position(&buffer.text());
+    let bytes_len = buffer.text().line(buffer.cursor().index).len_bytes();
 
-    if position != 0 {
-        if content.cursor.offset == 0 {
-            move_up(content);
+    if bytes_len == 0 {
+        move_up(buffer);
+        buffer.cursor_mut().offset = bytes_len;
+    }
 
-            let bytes_len = content.text.line(content.cursor.index).len_bytes();
-            content.cursor.offset = bytes_len;
+    if buffer.text().len_bytes() != 0 {
+        buffer.text_mut().remove(position..position + 1);
+
+        if buffer.cursor().offset == buffer.text().line(buffer.cursor().index).len_bytes() {
+            move_back(buffer);
         }
-
-        content.text.remove(position - 1..position);
-        move_back(content);
     }
 }
 
-fn move_cursor_to_line_end(content: &mut Content) {
-    let Content { text, cursor } = content;
-    cursor.offset = text.line(cursor.index).len_bytes();
-    cursor_line_bounds(content);
+fn delete_char(buffer: &mut Buffer) {
+    let position = buffer.cursor().position(&buffer.text());
+    let bytes_len = buffer.text().line(buffer.cursor().index).len_bytes();
+
+    if buffer.text().len_bytes() != 0 {
+        buffer.text_mut().remove(position - 1..position);
+        move_back(buffer);
+    }
+
+    if bytes_len == 0 || buffer.cursor().offset == 0 {
+        move_up(buffer);
+        buffer.cursor_mut().offset = buffer.text().line(buffer.cursor().index).len_bytes() - 1;
+    }
 }
 
-fn insert_mode_line_end(content: &mut Content) {
-    move_cursor_to_line_end(content);
-    content.cursor.mode = CursorMode::Insert;
+fn move_cursor_to_line_end(buffer: &mut Buffer) {
+    buffer.cursor_mut().offset = buffer.text().line(buffer.cursor().index).len_bytes();
+    cursor_line_bounds(buffer);
 }
 
-fn insert_mode_line_start(content: &mut Content) {
-    content.cursor.offset = 0;
-    content.cursor.mode = CursorMode::Insert;
+fn insert_mode_line_end(buffer: &mut Buffer) {
+    move_cursor_to_line_end(buffer);
+    buffer.cursor_mut().mode = CursorMode::Insert;
 }
 
-fn insert_mode_line_next(content: &mut Content) {
-    move_cursor_to_line_end(content);
-    new_line(content);
-    content.cursor.mode = CursorMode::Insert;
+fn insert_mode_line_start(buffer: &mut Buffer) {
+    buffer.cursor_mut().offset = 0;
+    buffer.cursor_mut().mode = CursorMode::Insert;
 }
 
-fn insert_mode_line_prev(content: &mut Content) {
-    if content.cursor.index == 0 {
-        content.cursor.offset = 0;
-        new_line(content);
-        move_up(content);
+fn insert_mode_line_next(buffer: &mut Buffer) {
+    move_cursor_to_line_end(buffer);
+    new_line(buffer);
+    buffer.cursor_mut().mode = CursorMode::Insert;
+}
+
+fn insert_mode_line_prev(buffer: &mut Buffer) {
+    if buffer.cursor().index == 0 {
+        buffer.cursor_mut().offset = 0;
+        new_line(buffer);
+        move_up(buffer);
     } else {
-        move_up(content);
-        insert_mode_line_next(content);
+        move_up(buffer);
+        insert_mode_line_next(buffer);
     }
 
-    content.cursor.mode = CursorMode::Insert;
+    buffer.cursor_mut().mode = CursorMode::Insert;
 }

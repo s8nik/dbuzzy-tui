@@ -5,7 +5,7 @@ use tui::{
     widgets::{Paragraph, Widget},
 };
 
-use crate::{buffer::Content, editor::Editor};
+use crate::editor::Editor;
 
 pub struct EditorWidget<'a>(&'a Editor<'a>);
 
@@ -16,13 +16,15 @@ impl<'a> EditorWidget<'a> {
 
     #[inline]
     pub fn text(&self) -> Text {
-        let Content { text, cursor } = self.0.current_buff().content();
-        let start_byte = text.line_to_byte(cursor.vscroll);
+        let buffer = self.0.current_buff();
+        let start_byte = buffer.text().line_to_byte(buffer.cursor().vscroll);
 
-        let end_index = cursor.vscroll + self.0.viewport().1 - 1;
-        let end_byte = text.line_to_byte(end_index.min(text.len_lines()));
+        let end_index = buffer.cursor().vscroll + self.0.viewport().1 - 1;
+        let end_byte = buffer
+            .text()
+            .line_to_byte(end_index.min(buffer.text().len_lines()));
 
-        Text::raw(text.slice(start_byte..end_byte))
+        Text::raw(buffer.text().slice(start_byte..end_byte))
     }
 }
 
