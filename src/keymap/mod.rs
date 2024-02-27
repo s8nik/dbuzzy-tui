@@ -40,7 +40,7 @@ impl Keymaps {
 
         let mut map = HashMap::<CursorMode, Bindings>::new();
         for (i, line) in config.lines().enumerate() {
-            let content = line.splitn(2, "#").next().unwrap_or(line);
+            let content = line.split('#').next().unwrap_or(line);
 
             if content.is_empty() {
                 continue;
@@ -50,9 +50,7 @@ impl Keymaps {
             let (mode, sequence) = split_once(definition, ' ', i);
 
             let cursor = CursorMode::from_str(mode).expect("valid cursor mode");
-            if !map.contains_key(&cursor) {
-                map.insert(cursor, Bindings::default());
-            }
+            map.entry(cursor).or_insert_with(Bindings::default);
 
             let root = map.get_mut(&cursor).expect("root");
             Self::parse(root, sequence, command);
@@ -65,7 +63,7 @@ impl Keymaps {
         let re = regex::Regex::new(r"<(.*?)>").expect("valid pattern");
 
         let mut specials: Vec<String> = re
-            .captures_iter(&sequence)
+            .captures_iter(sequence)
             .map(|capture| capture[1].to_string())
             .collect();
 
@@ -73,7 +71,7 @@ impl Keymaps {
         specials.retain(|x| !Modifiers::contain(&x.to_lowercase()));
 
         let mut keys: Vec<String> = re
-            .replace_all(&sequence, "")
+            .replace_all(sequence, "")
             .chars()
             .map(|c| c.to_string())
             .collect();

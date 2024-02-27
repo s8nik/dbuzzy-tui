@@ -5,7 +5,7 @@ use crossterm::event::{
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Modifiers {
-    pub control: bool,
+    pub ctr: bool,
     pub alt: bool,
     pub sup: bool,
     pub hyper: bool,
@@ -15,7 +15,7 @@ pub struct Modifiers {
 impl From<KeyModifiers> for Modifiers {
     fn from(modifiers: KeyModifiers) -> Self {
         Self {
-            control: modifiers.contains(KeyModifiers::CONTROL),
+            ctr: modifiers.contains(KeyModifiers::CONTROL),
             alt: modifiers.contains(KeyModifiers::ALT),
             sup: modifiers.contains(KeyModifiers::SUPER),
             hyper: modifiers.contains(KeyModifiers::HYPER),
@@ -49,7 +49,7 @@ impl Modifiers {
         };
 
         match position {
-            0 => self.control = value,
+            0 => self.ctr = value,
             1 => self.alt = value,
             2 => self.sup = value,
             3 => self.hyper = value,
