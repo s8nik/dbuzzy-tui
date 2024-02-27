@@ -1,6 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+mod insert;
+mod normal;
 
-use tui::buffer;
+use std::{collections::HashMap, sync::Arc};
 
 use crate::{
     buffer::Buffer,
@@ -98,8 +99,7 @@ impl<'a> Executor<'a> {
                     event: Event::Char('q'),
                     modifiers:
                         Modifiers {
-                            // shift: false,
-                            control: true,
+                            ctr: true,
                             // alt: false,
                             // sup: false,
                             // hyper: false,
