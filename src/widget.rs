@@ -17,14 +17,16 @@ impl<'a> EditorWidget<'a> {
     #[inline]
     pub fn text(&self) -> Text {
         let buffer = self.0.current_buff();
-        let start_byte = buffer.text().line_to_byte(buffer.cursor().vscroll);
+        let content = buffer.content();
 
-        let end_index = buffer.cursor().vscroll + self.0.viewport().1 - 1;
-        let end_byte = buffer
-            .text()
-            .line_to_byte(end_index.min(buffer.text().len_lines()));
+        let start_byte = content.text.line_to_byte(content.cursor.vscroll);
 
-        Text::raw(buffer.text().slice(start_byte..end_byte))
+        let end_index = content.cursor.vscroll + self.0.viewport().1 - 1;
+        let end_byte = content
+            .text
+            .line_to_byte(end_index.min(content.text.len_lines()));
+
+        Text::raw(content.text.slice(start_byte..end_byte))
     }
 }
 

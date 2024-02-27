@@ -50,7 +50,7 @@ impl Keymaps {
             let (mode, sequence) = split_once(definition, ' ', i);
 
             let cursor = CursorMode::from_str(mode).expect("valid cursor mode");
-            map.entry(cursor).or_insert_with(Bindings::default);
+            map.entry(cursor).or_default();
 
             let root = map.get_mut(&cursor).expect("root");
             Self::parse(root, sequence, command);

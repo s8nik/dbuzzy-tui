@@ -29,7 +29,7 @@ impl From<&[String]> for Modifiers {
         let mut modifiers = Modifiers::default();
 
         for name in values {
-            modifiers.set_by(&name, true);
+            modifiers.set_by(name, true);
         }
 
         modifiers

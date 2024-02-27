@@ -78,11 +78,12 @@ impl<'a> Editor<'a> {
 
         let bindings = self
             .keymaps
-            .get(&buffer.cursor().mode)
+            .get(&buffer.content().cursor.mode)
             .expect("keymap must be registered");
 
-        self.executor.execute(input, buffer, bindings);
-        buffer.cursor_mut().scroll(self.viewport.1);
+        let content = buffer.content_mut();
+        self.executor.execute(input, content, bindings);
+        content.cursor.scroll(self.viewport.1);
     }
 
     pub fn set_viewport(&mut self, width: u16, height: u16) {

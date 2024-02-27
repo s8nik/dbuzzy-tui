@@ -74,7 +74,7 @@ impl<B: Backend + Write> App<B> {
                 ui.render_widget(widget, ui.size());
             })?;
 
-            let cursor = self.editor.current_buff().cursor();
+            let cursor = &self.editor.current_buff().content().cursor;
 
             let x = cursor.offset as u16;
             let y = cursor.index as u16;

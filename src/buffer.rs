@@ -40,11 +40,16 @@ pub struct FileMeta {
 }
 
 #[derive(Default)]
+pub struct Content {
+    pub text: Rope,
+    pub cursor: Cursor,
+}
+
+#[derive(Default)]
 pub struct Buffer {
     id: BufferId,
     meta: FileMeta,
-    text: Rope,
-    cursor: Cursor,
+    content: Content,
 }
 
 impl Buffer {
@@ -65,7 +70,7 @@ impl Buffer {
         let file = File::open(path)?;
         let text = Rope::from_reader(BufReader::new(file))?;
 
-        buffer.text = text;
+        buffer.content.text = text;
         buffer.meta = FileMeta {
             path: Some(path.into()),
             readonly: metadata.permissions().readonly(),
@@ -82,20 +87,12 @@ impl Buffer {
         &self.meta
     }
 
-    pub fn cursor(&self) -> &Cursor {
-        &self.cursor
+    pub fn content(&self) -> &Content {
+        &self.content
     }
 
-    pub fn cursor_mut(&mut self) -> &mut Cursor {
-        &mut self.cursor
-    }
-
-    pub fn text(&self) -> &Rope {
-        &self.text
-    }
-
-    pub fn text_mut(&mut self) -> &mut Rope {
-        &mut self.text
+    pub fn content_mut(&mut self) -> &mut Content {
+        &mut self.content
     }
 
     pub fn save(&self) -> Result<()> {
@@ -103,7 +100,7 @@ impl Buffer {
 
         if let Some(path) = path.as_ref() {
             if !readonly {
-                self.text.write_to(File::create(path)?)?;
+                self.content.text.write_to(File::create(path)?)?;
             }
         }
 
