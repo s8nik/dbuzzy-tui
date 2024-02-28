@@ -61,6 +61,8 @@ impl Registry {
             command!(delete_char),
             command!(delete_char_backspace),
             command!(new_line),
+            command!(go_to_start_line),
+            command!(go_to_end_line),
         ];
 
         let mut map = HashMap::new();
@@ -91,24 +93,13 @@ pub struct Executor<'a> {
 
 impl<'a> Executor<'a> {
     pub fn execute(&mut self, input: Input, content: &mut Content, bindings: &'static Bindings) {
-        let keymap = match self.current {
-            Some(node) => Some(node),
-            None => bindings.get(input),
-        };
+        let is_insert_mode = content.cursor.mode == CursorMode::Insert;
 
-        if self.current.is_none() && content.cursor.mode == CursorMode::Insert {
+        if self.current.is_none() && is_insert_mode {
             match input {
                 Input {
                     event: Event::Char('q'),
-                    modifiers:
-                        Modifiers {
-                            ctr: true,
-                            // alt: false,
-                            // sup: false,
-                            // hyper: false,
-                            // meta: false,
-                            ..
-                        },
+                    modifiers: Modifiers { ctr: true, .. },
                 } => self.exit = true,
                 Input {
                     event: Event::Char(ch),
@@ -118,15 +109,20 @@ impl<'a> Executor<'a> {
             }
         }
 
-        if let Some(node) = keymap {
-            match node {
-                Keymap::Leaf(command) => {
-                    if let Some(command) = self.registry.get(command) {
-                        command.call(content);
-                    }
-                }
-                Keymap::Node(next) => self.current = next.get(input),
+        self.current = match self.current {
+            Some(node) => match node {
+                Keymap::Leaf(_) => self.current,
+                Keymap::Node(next) => next.get(input),
+            },
+            None => bindings.get(input),
+        };
+
+        if let Some(Keymap::Leaf(command)) = self.current {
+            if let Some(command) = self.registry.get(command) {
+                command.call(content);
             }
+
+            self.current = None;
         }
     }
 }

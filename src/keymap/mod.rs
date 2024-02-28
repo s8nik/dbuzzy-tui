@@ -9,6 +9,7 @@ use crate::{
     input::{Event, Input, Modifiers},
 };
 
+#[cfg_attr(test, derive(PartialEq))]
 #[derive(Debug, Default)]
 pub struct Bindings(BTreeMap<Input, Keymap>);
 
@@ -18,6 +19,7 @@ impl Bindings {
     }
 }
 
+#[cfg_attr(test, derive(PartialEq))]
 #[derive(Debug)]
 pub enum Keymap {
     Leaf(String),
@@ -128,4 +130,36 @@ fn split_once(slice: &str, sep: char, i: usize) -> (&str, &str) {
     };
 
     (first.trim(), second.trim())
+}
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn test_keymap() {
+        let keymap = super::Keymaps::init();
+
+        let normal = keymap.get(&super::CursorMode::Normal).unwrap();
+
+        let node = normal
+            .get(super::Input {
+                event: crate::input::Event::Char('g'),
+                ..Default::default()
+            })
+            .unwrap();
+
+        let super::Keymap::Node(bindings) = node else {
+            panic!("failed");
+        };
+
+        let leaf = bindings
+            .get(super::Input {
+                event: crate::input::Event::Char('e'),
+                ..Default::default()
+            })
+            .unwrap();
+
+        let expected = super::Keymap::Leaf("go_to_end_line".to_owned());
+        assert_eq!(leaf, &expected);
+    }
 }
