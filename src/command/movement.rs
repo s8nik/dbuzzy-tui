@@ -15,7 +15,7 @@ pub(super) fn move_back(Content { text, cursor }: &mut Content) {
         cursor.offset -= 1;
     } else if cursor.index > 0 {
         cursor.index -= 1;
-        cursor.offset = text.line(cursor.index).len_bytes();
+        cursor.offset = text.line(cursor.index).len_bytes() - 1;
     }
 }
 
@@ -34,7 +34,7 @@ pub(super) fn move_down(Content { text, cursor }: &mut Content) {
 }
 
 pub(super) fn insert_mode_line_end(Content { text, cursor }: &mut Content) {
-    cursor.offset = text.line(cursor.index).len_bytes();
+    cursor.offset = text.line(cursor.index).len_bytes() - 1;
     cursor.mode = CursorMode::Insert;
 }
 

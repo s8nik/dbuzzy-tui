@@ -22,5 +22,5 @@ insert <Left>: move_back
 insert <Right>: move_forward
 insert <Up>: move_up
 insert <Down>: move_down
-insert <Backspace>: delete_char
+insert <Backspace>: delete_char_backspace
 insert <Enter>: new_line

@@ -59,6 +59,7 @@ impl Registry {
             command!(insert_mode_line_next),
             command!(insert_mode_line_prev),
             command!(delete_char),
+            command!(delete_char_backspace),
             command!(new_line),
         ];
 
