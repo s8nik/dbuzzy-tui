@@ -6,7 +6,7 @@ use std::{collections::HashMap, sync::Arc};
 use crate::{
     buffer::Content,
     cursor::CursorMode,
-    input::{Event, Input, Modifiers},
+    input::Input,
     keymap::{Bindings, Keymap},
 };
 
@@ -84,26 +84,16 @@ impl Default for Registry {
 pub struct Executor<'a> {
     registry: Registry,
     current: Option<&'a Keymap>,
-    pub exit: bool,
 }
 
 impl<'a> Executor<'a> {
-    pub fn execute(&mut self, input: Input, content: &mut Content, bindings: &'static Bindings) {
-        let is_insert_mode = content.cursor.mode == CursorMode::Insert;
-
-        if self.current.is_none() && is_insert_mode {
-            match input {
-                Input {
-                    event: Event::Char('q'),
-                    modifiers: Modifiers { ctr: true, .. },
-                } => self.exit = true,
-                Input {
-                    event: Event::Char(ch),
-                    modifiers: _,
-                } => insert_char(content, ch),
-                _ => (),
-            }
-        }
+    pub fn execute(
+        &mut self,
+        input: Input,
+        content: &mut Content,
+        bindings: &'static Bindings,
+    ) -> bool {
+        let mut executed = false;
 
         self.current = match self.current {
             Some(node) => match node {
@@ -116,10 +106,17 @@ impl<'a> Executor<'a> {
         if let Some(Keymap::Leaf(command)) = self.current {
             if let Some(command) = self.registry.get(command) {
                 command.call(content);
+                executed = true;
             }
 
             self.current = None;
         }
+
+        executed
+    }
+
+    pub fn enter(content: &mut Content, ch: char) {
+        insert_char(content, ch);
     }
 }
 

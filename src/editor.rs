@@ -5,6 +5,7 @@ use anyhow::Result;
 use crate::{
     buffer::{Buffer, BufferId},
     command::Executor,
+    cursor::CursorMode,
     input::Input,
     keymap::Keymaps,
     widget::EditorWidget,
@@ -16,6 +17,7 @@ pub struct Editor<'a> {
     current: BufferId,
     viewport: (usize, usize),
     executor: Executor<'a>,
+    pub exit: bool,
 }
 
 impl<'a> Editor<'a> {
@@ -26,6 +28,7 @@ impl<'a> Editor<'a> {
             current: BufferId::MAX,
             viewport: (0, 0),
             executor: Executor::default(),
+            exit: false,
         }
     }
 
@@ -61,15 +64,21 @@ impl<'a> Editor<'a> {
         self.viewport
     }
 
-    pub fn exit(&self) -> bool {
-        self.executor.exit
-    }
-
     pub fn widget(&self) -> EditorWidget {
         EditorWidget::new(self)
     }
 
-    pub fn handle_event(&mut self, input: Input) {
+    pub fn handle_event(&mut self, event: crossterm::event::Event) -> bool {
+        if let crossterm::event::Event::Resize(w, h) = event {
+            self.set_viewport(w, h);
+            return true;
+        }
+
+        let crossterm::event::Event::Key(e) = event else {
+            return false;
+        };
+
+        let input = e.into();
         let buffer = self.buffers.get_mut(&self.current).expect("should exist");
 
         let bindings = self
@@ -78,8 +87,31 @@ impl<'a> Editor<'a> {
             .expect("keymap must be registered");
 
         let content = buffer.content_mut();
-        self.executor.execute(input, content, bindings);
+
+        let mut consumed = false;
+
+        // @todo: refactor
+        if content.cursor.mode == CursorMode::Insert {
+            match input {
+                Input {
+                    event: crate::input::Event::Char('q'),
+                    modifiers: crate::input::Modifiers { ctr: true, .. },
+                } => self.exit = true,
+                Input {
+                    event: crate::input::Event::Char(ch),
+                    modifiers: _,
+                } => {
+                    Executor::enter(content, ch);
+                    consumed = true;
+                }
+                _ => (),
+            }
+        }
+
+        let executed = self.executor.execute(input, content, bindings);
         content.cursor.scroll(self.viewport.1);
+
+        consumed || executed
     }
 
     pub fn set_viewport(&mut self, width: u16, height: u16) {

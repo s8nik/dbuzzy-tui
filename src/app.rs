@@ -1,7 +1,7 @@
-use std::{io::Write, time::Duration};
+use std::io::Write;
 
-use anyhow::Result;
-use crossterm::{execute, ExecutableCommand};
+use crossterm::{event::EventStream, execute, ExecutableCommand};
+use futures_util::StreamExt;
 use tui::{backend::Backend, Terminal};
 
 use crate::{cursor::CursorMode, editor::Editor};
@@ -12,7 +12,7 @@ pub struct App<B: Backend + Write> {
 }
 
 impl<B: Backend + Write> App<B> {
-    pub fn new(args: impl Iterator<Item = String>, backend: B) -> Result<Self> {
+    pub fn new(args: impl Iterator<Item = String>, backend: B) -> anyhow::Result<Self> {
         let mut editor = Editor::init();
 
         for filepath in args.skip(1) {
@@ -52,27 +52,30 @@ impl<B: Backend + Write> App<B> {
         }));
     }
 
-    pub fn run(&mut self) -> Result<()> {
+    pub async fn run(&mut self) -> anyhow::Result<()> {
         Self::setup_panic();
+
+        let mut reader = EventStream::new();
+
         loop {
-            if crossterm::event::poll(Duration::from_millis(200))? {
-                let event = crossterm::event::read()?;
+            let render = tokio::select! {
+                maybe_event = reader.next() => match maybe_event {
+                    Some(Ok(event)) => self.editor.handle_event(event),
+                    Some(Err(_)) => false, // @todo: log error?
+                    None => false,
+                },
+            };
 
-                if let crossterm::event::Event::Key(event) = event {
-                    self.editor.handle_event(event.into());
-                } else if let crossterm::event::Event::Resize(w, h) = event {
-                    self.editor.set_viewport(w, h);
-                }
-            }
-
-            if self.editor.exit() {
+            if self.editor.exit {
                 break;
             }
 
-            let widget = self.editor.widget();
-            self.terminal.draw(|ui| {
-                ui.render_widget(widget, ui.size());
-            })?;
+            if render {
+                let widget = self.editor.widget();
+                self.terminal.draw(|ui| {
+                    ui.render_widget(widget, ui.size());
+                })?;
+            }
 
             let cursor = &self.editor.current_buff().content().cursor;
 
