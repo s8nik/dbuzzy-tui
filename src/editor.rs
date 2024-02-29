@@ -33,10 +33,6 @@ impl<'a> Editor<'a> {
         self.buffers.get(&self.current).expect("should exist")
     }
 
-    pub fn current_buff_mut(&mut self) -> &mut Buffer {
-        self.buffers.get_mut(&self.current).expect("should exist")
-    }
-
     pub fn empty(&self) -> bool {
         self.current == BufferId::MAX
     }

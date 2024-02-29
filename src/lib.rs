@@ -1,8 +1,9 @@
 pub mod app;
-pub mod buffer;
-pub mod command;
-pub mod cursor;
-pub mod editor;
-pub mod input;
-pub mod keymap;
-pub mod widget;
+mod buffer;
+mod command;
+mod cursor;
+mod editor;
+mod input;
+mod keymap;
+mod logger;
+mod widget;

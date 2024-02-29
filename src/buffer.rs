@@ -83,10 +83,6 @@ impl Buffer {
         self.id
     }
 
-    pub fn meta(&self) -> &FileMeta {
-        &self.meta
-    }
-
     pub fn content(&self) -> &Content {
         &self.content
     }
@@ -95,15 +91,15 @@ impl Buffer {
         &mut self.content
     }
 
-    pub fn save(&self) -> Result<()> {
-        let FileMeta { path, readonly } = &self.meta;
+    // pub fn save(&self) -> Result<()> {
+    //     let FileMeta { path, readonly } = &self.meta;
 
-        if let Some(path) = path.as_ref() {
-            if !readonly {
-                self.content.text.write_to(File::create(path)?)?;
-            }
-        }
+    //     if let Some(path) = path.as_ref() {
+    //         if !readonly {
+    //             self.content.text.write_to(File::create(path)?)?;
+    //         }
+    //     }
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 }

@@ -32,10 +32,6 @@ impl Command {
         Self { name, callback }
     }
 
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
     pub fn call(&self, content: &mut Content) {
         (self.callback)(content)
     }
