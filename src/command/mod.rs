@@ -59,6 +59,8 @@ impl Registry {
             command!(new_line),
             command!(go_to_start_line),
             command!(go_to_end_line),
+            command!(go_to_start_curr_line),
+            command!(go_to_end_curr_line),
         ];
 
         let mut map = HashMap::new();

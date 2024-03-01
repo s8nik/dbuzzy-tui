@@ -57,3 +57,11 @@ pub(super) fn go_to_end_line(Content { text, cursor }: &mut Content) {
     cursor.index = text.len_lines() - 1;
     cursor.offset = 0;
 }
+
+pub(super) fn go_to_start_curr_line(content: &mut Content) {
+    content.cursor.offset = 0;
+}
+
+pub(super) fn go_to_end_curr_line(Content { text, cursor }: &mut Content) {
+    cursor.offset = text.line(cursor.index).len_bytes();
+}
