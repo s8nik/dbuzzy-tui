@@ -102,8 +102,7 @@ impl Keymaps {
         let event: Event = match key.as_str().try_into() {
             Ok(e) => e,
             Err(e) => {
-                // @todo: better loggs
-                println!("{e}");
+                log::error!("parse keys error: {e}");
                 return;
             }
         };

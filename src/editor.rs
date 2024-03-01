@@ -14,6 +14,7 @@ use crate::{
 pub struct Editor<'a> {
     buffers: HashMap<BufferId, Buffer>,
     keymaps: &'static Keymaps,
+    logger: BufferId,
     current: BufferId,
     viewport: (usize, usize),
     executor: Executor<'a>,
@@ -26,6 +27,7 @@ impl<'a> Editor<'a> {
             keymaps: Keymaps::init(),
             buffers: HashMap::new(),
             current: BufferId::MAX,
+            logger: BufferId::MAX,
             viewport: (0, 0),
             executor: Executor::default(),
             exit: false,
@@ -42,22 +44,24 @@ impl<'a> Editor<'a> {
 
     pub fn open(&mut self, filepath: impl AsRef<Path>) -> Result<()> {
         let buffer = Buffer::from_path(filepath)?;
-
-        self.add_buffer(buffer);
+        self.current = self.add_buffer(buffer);
 
         Ok(())
     }
 
     pub fn open_scratch(&mut self) {
         let buffer = Buffer::default();
-
-        self.add_buffer(buffer);
+        self.current = self.add_buffer(buffer);
     }
 
-    fn add_buffer(&mut self, buffer: Buffer) {
+    pub fn add_buffer(&mut self, buffer: Buffer) -> BufferId {
         let buffer_id = buffer.id();
         self.buffers.insert(buffer_id, buffer);
-        self.current = buffer_id;
+        buffer_id
+    }
+
+    pub fn set_logger(&mut self, buffer_id: BufferId) {
+        self.logger = buffer_id;
     }
 
     pub fn viewport(&self) -> (usize, usize) {
@@ -68,7 +72,11 @@ impl<'a> Editor<'a> {
         EditorWidget::new(self)
     }
 
-    pub fn handle_event(&mut self, event: crossterm::event::Event) -> bool {
+    pub fn set_viewport(&mut self, width: u16, height: u16) {
+        self.viewport = (width as usize, height as usize);
+    }
+
+    pub fn on_event(&mut self, event: crossterm::event::Event) -> bool {
         if let crossterm::event::Event::Resize(w, h) = event {
             self.set_viewport(w, h);
             return true;
@@ -114,7 +122,11 @@ impl<'a> Editor<'a> {
         consumed || executed
     }
 
-    pub fn set_viewport(&mut self, width: u16, height: u16) {
-        self.viewport = (width as usize, height as usize);
+    pub fn on_log(&mut self, log: ropey::Rope) -> bool {
+        if let Some(log_buffer) = self.buffers.get_mut(&self.logger) {
+            log_buffer.content_mut().text.append(log);
+        }
+
+        self.current == self.logger
     }
 }

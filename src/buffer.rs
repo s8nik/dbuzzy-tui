@@ -79,6 +79,17 @@ impl Buffer {
         Ok(buffer)
     }
 
+    pub fn logger() -> Self {
+        Self {
+            id: BufferId::next(),
+            meta: FileMeta {
+                path: None,
+                readonly: true,
+            },
+            content: Content::default(),
+        }
+    }
+
     pub fn id(&self) -> BufferId {
         self.id
     }

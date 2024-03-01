@@ -4,7 +4,7 @@ use crossterm::{event::EventStream, execute, ExecutableCommand};
 use futures_util::StreamExt;
 use tui::{backend::Backend, Terminal};
 
-use crate::{cursor::CursorMode, editor::Editor};
+use crate::{buffer::Buffer, cursor::CursorMode, editor::Editor};
 
 pub struct App<B: Backend + Write> {
     editor: Editor<'static>,
@@ -22,6 +22,10 @@ impl<B: Backend + Write> App<B> {
         if editor.empty() {
             editor.open_scratch();
         }
+
+        let logger_buffer = Buffer::logger();
+        let logger_id = editor.add_buffer(logger_buffer);
+        editor.set_logger(logger_id);
 
         let mut terminal = Terminal::new(backend).expect("terminal");
         let size = terminal.size()?;
@@ -55,15 +59,22 @@ impl<B: Backend + Write> App<B> {
     pub async fn run(&mut self) -> anyhow::Result<()> {
         Self::setup_panic();
 
+        let (log_tx, mut log_rx) = tokio::sync::mpsc::unbounded_channel();
+        crate::logger::enable(log_tx);
+
         let mut reader = EventStream::new();
 
         loop {
             let render = tokio::select! {
                 maybe_event = reader.next() => match maybe_event {
-                    Some(Ok(event)) => self.editor.handle_event(event),
-                    Some(Err(_)) => false, // @todo: log error?
+                    Some(Ok(event)) => self.editor.on_event(event),
+                    Some(Err(e)) => {
+                        log::error!("event error: {e}");
+                        false
+                    },
                     None => false,
                 },
+                Some(log) = log_rx.recv() => self.editor.on_log(log),
             };
 
             if self.editor.exit {
