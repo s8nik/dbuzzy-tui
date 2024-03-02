@@ -9,6 +9,7 @@ pub mod keymap;
 use anyhow::Result;
 
 use crate::{
+    client::widget::EditorWidget,
     editor::{
         buffer::{Buffer, BufferId},
         command::Executor,
@@ -16,7 +17,6 @@ use crate::{
         input::Input,
         keymap::Keymaps,
     },
-    widget::EditorWidget,
 };
 
 pub struct Editor<'a> {
