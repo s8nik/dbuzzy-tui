@@ -9,7 +9,7 @@ use std::{
 use anyhow::Result;
 use ropey::Rope;
 
-use crate::cursor::Cursor;
+use super::cursor::Cursor;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BufferId(NonZeroUsize);

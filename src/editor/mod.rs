@@ -1,13 +1,21 @@
 use std::{collections::HashMap, path::Path};
 
+pub mod buffer;
+pub mod command;
+pub mod cursor;
+pub mod input;
+pub mod keymap;
+
 use anyhow::Result;
 
 use crate::{
-    buffer::{Buffer, BufferId},
-    command::Executor,
-    cursor::CursorMode,
-    input::Input,
-    keymap::Keymaps,
+    editor::{
+        buffer::{Buffer, BufferId},
+        command::Executor,
+        cursor::CursorMode,
+        input::Input,
+        keymap::Keymaps,
+    },
     widget::EditorWidget,
 };
 
@@ -102,11 +110,11 @@ impl<'a> Editor<'a> {
         if content.cursor.mode == CursorMode::Insert {
             match input {
                 Input {
-                    event: crate::input::Event::Char('q'),
-                    modifiers: crate::input::Modifiers { ctr: true, .. },
+                    event: input::Event::Char('q'),
+                    modifiers: input::Modifiers { ctr: true, .. },
                 } => self.exit = true,
                 Input {
-                    event: crate::input::Event::Char(ch),
+                    event: input::Event::Char(ch),
                     modifiers: _,
                 } => {
                     Executor::enter(content, ch);

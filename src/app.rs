@@ -4,7 +4,7 @@ use crossterm::{event::EventStream, execute, ExecutableCommand};
 use futures_util::StreamExt;
 use tui::{backend::Backend, Terminal};
 
-use crate::{buffer::Buffer, cursor::CursorMode, editor::Editor};
+use crate::editor::{buffer::Buffer, cursor::CursorMode, Editor};
 
 pub struct App<B: Backend + Write> {
     editor: Editor<'static>,

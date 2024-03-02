@@ -3,15 +3,15 @@ mod transform;
 
 use std::{collections::HashMap, sync::Arc};
 
-use crate::{
+use movement::*;
+use transform::*;
+
+use super::{
     buffer::Content,
     cursor::CursorMode,
     input::Input,
     keymap::{Bindings, Keymap},
 };
-
-use movement::*;
-use transform::*;
 
 pub type Callback = fn(&mut Content);
 

@@ -4,7 +4,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::{
+use super::{
     cursor::CursorMode,
     input::{Event, Input, Modifiers},
 };
@@ -142,7 +142,7 @@ mod tests {
 
         let node = normal
             .get(super::Input {
-                event: crate::input::Event::Char('g'),
+                event: super::Event::Char('g'),
                 ..Default::default()
             })
             .unwrap();
@@ -153,7 +153,7 @@ mod tests {
 
         let leaf = bindings
             .get(super::Input {
-                event: crate::input::Event::Char('e'),
+                event: super::Event::Char('e'),
                 ..Default::default()
             })
             .unwrap();
