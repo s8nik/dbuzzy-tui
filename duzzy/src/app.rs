@@ -1,18 +1,18 @@
 use std::io::Write;
 
 use crossterm::{event::EventStream, execute, ExecutableCommand};
-use editor::{buffer::Buffer, cursor::CursorMode, workspace::Editor};
+use editor::{buffer::Buffer, cursor::CursorMode, workspace::Workspace};
 use futures_util::StreamExt;
 use tui::{backend::Backend, Terminal};
 
 pub struct App<B: Backend + Write> {
-    editor: Editor<'static>,
+    editor: Workspace<'static>,
     terminal: Terminal<B>,
 }
 
 impl<B: Backend + Write> App<B> {
     pub fn new(args: impl Iterator<Item = String>, backend: B) -> anyhow::Result<Self> {
-        let mut editor = Editor::init();
+        let mut editor = Workspace::init();
 
         for filepath in args.skip(1) {
             editor.open(filepath)?;

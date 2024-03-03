@@ -11,7 +11,7 @@ use crate::{
     widget::EditorWidget,
 };
 
-pub struct Editor<'a> {
+pub struct Workspace<'a> {
     buffers: HashMap<BufferId, Buffer>,
     keymaps: &'static Keymaps,
     logger: BufferId,
@@ -21,7 +21,7 @@ pub struct Editor<'a> {
     pub exit: bool,
 }
 
-impl<'a> Editor<'a> {
+impl<'a> Workspace<'a> {
     pub fn init() -> Self {
         Self {
             keymaps: Keymaps::init(),

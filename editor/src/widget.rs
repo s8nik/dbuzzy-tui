@@ -5,12 +5,12 @@ use tui::{
     widgets::{Paragraph, Widget},
 };
 
-use crate::workspace::Editor;
+use crate::workspace::Workspace;
 
-pub struct EditorWidget<'a>(&'a Editor<'a>);
+pub struct EditorWidget<'a>(&'a Workspace<'a>);
 
 impl<'a> EditorWidget<'a> {
-    pub fn new(editor: &'a Editor) -> Self {
+    pub fn new(editor: &'a Workspace) -> Self {
         Self(editor)
     }
 
