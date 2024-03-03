@@ -7,9 +7,9 @@ use std::{
 };
 
 use anyhow::Result;
+use crossterm::cursor::SetCursorStyle;
 use ropey::Rope;
-
-use super::cursor::Cursor;
+use strum::EnumString;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BufferId(NonZeroUsize);
@@ -40,16 +40,14 @@ pub struct FileMeta {
 }
 
 #[derive(Default)]
-pub struct Content {
-    pub text: Rope,
-    pub cursor: Cursor,
-}
-
-#[derive(Default)]
 pub struct Buffer {
     id: BufferId,
     meta: FileMeta,
-    content: Content,
+    text: Rope,
+    offset: usize,
+    index: usize,
+    vscroll: usize,
+    mode: CursorMode,
 }
 
 impl Buffer {
@@ -70,7 +68,7 @@ impl Buffer {
         let file = File::open(path)?;
         let text = Rope::from_reader(BufReader::new(file))?;
 
-        buffer.content.text = text;
+        buffer.text = text;
         buffer.meta = FileMeta {
             path: Some(path.into()),
             readonly: metadata.permissions().readonly(),
@@ -86,7 +84,11 @@ impl Buffer {
                 path: None,
                 readonly: true,
             },
-            content: Content::default(),
+            text: Rope::default(),
+            offset: 0,
+            index: 0,
+            vscroll: 0,
+            mode: CursorMode::Normal,
         }
     }
 
@@ -94,12 +96,19 @@ impl Buffer {
         self.id
     }
 
-    pub fn content(&self) -> &Content {
-        &self.content
+    pub fn position(&self, text: &Rope) -> usize {
+        let byte_index = text.line_to_byte(self.index);
+        self.offset + byte_index
     }
 
-    pub fn content_mut(&mut self) -> &mut Content {
-        &mut self.content
+    pub fn scroll(&mut self, max: usize) {
+        let upper_bound = self.vscroll + max - 1;
+
+        if self.index >= self.vscroll {
+            self.vscroll = (self.vscroll + self.index).saturating_sub(upper_bound);
+        } else if self.index < self.vscroll {
+            self.vscroll = self.index;
+        }
     }
 
     // pub fn save(&self) -> Result<()> {
@@ -113,4 +122,23 @@ impl Buffer {
 
     //     Ok(())
     // }
+}
+
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash, EnumString)]
+#[strum(serialize_all = "lowercase")]
+pub enum CursorMode {
+    Insert,
+    #[default]
+    Normal,
+    Visual,
+}
+
+impl CursorMode {
+    pub fn style(mode: CursorMode) -> SetCursorStyle {
+        match mode {
+            CursorMode::Insert => SetCursorStyle::BlinkingBar,
+            CursorMode::Normal => SetCursorStyle::BlinkingBlock,
+            CursorMode::Visual => SetCursorStyle::BlinkingBlock,
+        }
+    }
 }
