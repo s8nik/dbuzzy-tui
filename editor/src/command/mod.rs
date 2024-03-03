@@ -80,12 +80,12 @@ impl Default for Registry {
 }
 
 #[derive(Default)]
-pub struct Executor<'a> {
+pub struct CommandExecutor<'a> {
     registry: Registry,
     current: Option<&'a Keymap>,
 }
 
-impl<'a> Executor<'a> {
+impl<'a> CommandExecutor<'a> {
     pub fn execute(
         &mut self,
         input: Input,

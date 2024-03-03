@@ -1,34 +1,30 @@
 use std::io::Write;
 
 use crossterm::{event::EventStream, execute, ExecutableCommand};
-use editor::{buffer::Buffer, cursor::CursorMode, workspace::Workspace};
+use editor::{cursor::CursorMode, editor::Editor};
 use futures_util::StreamExt;
 use tui::{backend::Backend, Terminal};
 
 pub struct App<B: Backend + Write> {
-    editor: Workspace<'static>,
+    editor: Editor<'static>,
     terminal: Terminal<B>,
 }
 
 impl<B: Backend + Write> App<B> {
     pub fn new(args: impl Iterator<Item = String>, backend: B) -> anyhow::Result<Self> {
-        let mut editor = Workspace::init();
+        let mut terminal = Terminal::new(backend).expect("terminal");
+        let size = terminal.size()?;
+
+        let mut editor = Editor::init(size.width as usize, size.height as usize);
+        editor.open_logger();
 
         for filepath in args.skip(1) {
             editor.open(filepath)?;
         }
 
-        if editor.empty() {
+        if editor.workspace().empty() {
             editor.open_scratch();
         }
-
-        let logger_buffer = Buffer::logger();
-        let logger_id = editor.add_buffer(logger_buffer);
-        editor.set_logger(logger_id);
-
-        let mut terminal = Terminal::new(backend).expect("terminal");
-        let size = terminal.size()?;
-        editor.set_viewport(size.width, size.height);
 
         crossterm::terminal::enable_raw_mode().expect("enable raw mode");
         crossterm::execute!(
@@ -87,7 +83,7 @@ impl<B: Backend + Write> App<B> {
                 })?;
             }
 
-            let cursor = &self.editor.current_buff().content().cursor;
+            let cursor = &self.editor.workspace().current_buff().content().cursor;
 
             let x = cursor.offset as u16;
             let y = cursor.index as u16;
