@@ -6,12 +6,9 @@ use std::{collections::HashMap, sync::Arc};
 use movement::*;
 use transform::*;
 
-use super::{
-    buffer::Content,
-    cursor::CursorMode,
-    input::Input,
-    keymap::{Bindings, Keymap},
-};
+use crate::keymap::{Bindings, Keymap};
+
+use super::{buffer::Content, cursor::CursorMode, input::Input};
 
 pub type Callback = fn(&mut Content);
 

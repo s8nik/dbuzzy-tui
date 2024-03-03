@@ -1,4 +1,4 @@
-use crate::editor::{buffer::Content, cursor::CursorMode};
+use crate::core::{buffer::Content, cursor::CursorMode};
 
 pub(super) fn move_forward(Content { text, cursor }: &mut Content) {
     if cursor.offset < text.line(cursor.index).len_bytes() {

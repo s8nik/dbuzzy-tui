@@ -4,19 +4,18 @@ pub mod buffer;
 pub mod command;
 pub mod cursor;
 pub mod input;
-pub mod keymap;
 
 use anyhow::Result;
 
 use crate::{
     client::widget::EditorWidget,
-    editor::{
+    core::{
         buffer::{Buffer, BufferId},
         command::Executor,
         cursor::CursorMode,
         input::Input,
-        keymap::Keymaps,
     },
+    keymap::Keymaps,
 };
 
 pub struct Editor<'a> {

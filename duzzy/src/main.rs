@@ -1,5 +1,6 @@
-use duzzy::app::App;
 use tui::backend::CrosstermBackend;
+
+mod app;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -7,7 +8,7 @@ async fn main() -> anyhow::Result<()> {
 
     let backend = CrosstermBackend::new(stdout);
 
-    let mut app = App::new(std::env::args(), backend)?;
+    let mut app = app::App::new(std::env::args(), backend)?;
     app.run().await?;
 
     Ok(())

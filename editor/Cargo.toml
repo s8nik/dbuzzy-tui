@@ -1,0 +1,16 @@
+[package]
+name = "editor"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+
+[dependencies]
+log.workspace = true
+anyhow.workspace = true
+tokio.workspace = true
+tui.workspace = true
+crossterm.workspace = true
+
+regex = "1.9.3"
+ropey = "1.6.0"
+strum = { version = "0.24.1", features = ["derive"] }
