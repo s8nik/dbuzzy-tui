@@ -1,4 +1,4 @@
-use crate::editor::{buffer::Content, cursor::CursorMode};
+use crate::core::{buffer::Content, cursor::CursorMode};
 
 pub(super) fn insert_char(content: &mut Content, ch: char) {
     let pos = content.cursor.position(&content.text);

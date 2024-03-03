@@ -1,22 +1,20 @@
-[package]
-name = "duzzy-editor"
+[workspace]
+members = [
+  "editor",
+  "duzzy",
+]
+resolver = "2"
+
+[workspace.package]
 version = "0.1.0"
 edition = "2021"
+authors = ["Nikita S"]
 
-[dependencies]
+[workspace.dependencies]
 log = "0.4.21"
-regex = "1.9.3"
-ropey = "1.6.0"
 anyhow = "1.0.70"
 
-strum = { version = "0.24.1", features = ["derive"] }
+tokio = { version = "1.36.0", features = ["rt-multi-thread", "macros", "sync"] }
 
 crossterm = { version = "0.26.1", features = ["event-stream"] }
 tui = { version = "0.19.0", default-features = false, features = ["crossterm"] }
-
-futures-util = "0.3.30"
-tokio = { version = "1.36.0", features = ["rt-multi-thread", "macros", "sync"] }
-
-[lib]
-name = "duzzy"
-path = "src/lib.rs"

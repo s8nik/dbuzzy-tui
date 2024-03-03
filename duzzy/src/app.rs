@@ -1,10 +1,9 @@
 use std::io::Write;
 
 use crossterm::{event::EventStream, execute, ExecutableCommand};
+use editor::core::{buffer::Buffer, cursor::CursorMode, Editor};
 use futures_util::StreamExt;
 use tui::{backend::Backend, Terminal};
-
-use crate::editor::{buffer::Buffer, cursor::CursorMode, Editor};
 
 pub struct App<B: Backend + Write> {
     editor: Editor<'static>,
@@ -60,7 +59,7 @@ impl<B: Backend + Write> App<B> {
         Self::setup_panic();
 
         let (log_tx, mut log_rx) = tokio::sync::mpsc::unbounded_channel();
-        crate::logger::enable(log_tx);
+        editor::logger::enable(log_tx);
 
         let mut reader = EventStream::new();
 
