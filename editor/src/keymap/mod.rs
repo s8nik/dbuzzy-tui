@@ -4,7 +4,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::core::{
+use crate::{
     cursor::CursorMode,
     input::{Event, Input, Modifiers},
 };

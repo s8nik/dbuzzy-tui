@@ -1,7 +1,7 @@
 use std::io::Write;
 
 use crossterm::{event::EventStream, execute, ExecutableCommand};
-use editor::core::{buffer::Buffer, cursor::CursorMode, Editor};
+use editor::{buffer::Buffer, cursor::CursorMode, workspace::Editor};
 use futures_util::StreamExt;
 use tui::{backend::Backend, Terminal};
 

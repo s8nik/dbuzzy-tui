@@ -5,7 +5,7 @@ use tui::{
     widgets::{Paragraph, Widget},
 };
 
-use crate::core::Editor;
+use crate::workspace::Editor;
 
 pub struct EditorWidget<'a>(&'a Editor<'a>);
 
