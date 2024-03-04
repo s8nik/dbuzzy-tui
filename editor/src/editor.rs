@@ -2,15 +2,15 @@ use std::path::Path;
 
 use crate::{
     buffer::{Buffer, BufferId},
-    command::CommandExecutor,
+    commands::CommandExecutor,
     keymap::Keymaps,
     widget::EditorWidget,
     workspace::Workspace,
 };
 
 pub struct Editor<'a> {
-    workspace: Workspace,
-    keymaps: &'static Keymaps,
+    pub workspace: Workspace,
+    pub keymaps: &'static Keymaps,
     executor: CommandExecutor<'a>,
 }
 
@@ -26,7 +26,7 @@ impl<'a> Editor<'a> {
     pub fn open(&mut self, filepath: impl AsRef<Path>) -> anyhow::Result<()> {
         let buffer = Buffer::from_path(filepath)?;
         self.open_impl(buffer, |workspace, buffer_id| {
-            workspace.set_current(buffer_id)
+            workspace.current = buffer_id;
         });
 
         Ok(())
@@ -35,14 +35,14 @@ impl<'a> Editor<'a> {
     pub fn open_scratch(&mut self) {
         let buffer = Buffer::default();
         self.open_impl(buffer, |workspace, buffer_id| {
-            workspace.set_current(buffer_id)
+            workspace.current = buffer_id;
         });
     }
 
     pub fn open_logger(&mut self) {
         let buffer = Buffer::logger();
         self.open_impl(buffer, |workspace, buffer_id| {
-            workspace.set_logger(buffer_id)
+            workspace.logger = buffer_id;
         });
     }
 
@@ -51,65 +51,42 @@ impl<'a> Editor<'a> {
         set_buff_id(&mut self.workspace, buffer_id)
     }
 
-    pub fn workspace(&self) -> &Workspace {
-        &self.workspace
-    }
-
     pub fn widget(&self) -> EditorWidget {
-        EditorWidget::new(&self)
+        EditorWidget::new(self)
     }
 
-    // pub fn on_event(&mut self, event: crossterm::event::Event) -> bool {
-    //     if let crossterm::event::Event::Resize(w, h) = event {
-    //         self.set_viewport(w, h);
-    //         return true;
-    //     }
+    pub fn on_event(&mut self, event: crossterm::event::Event) -> bool {
+        if let crossterm::event::Event::Resize(w, h) = event {
+            self.workspace.viewport.update(w as usize, h as usize);
+            return true;
+        }
 
-    //     let crossterm::event::Event::Key(e) = event else {
-    //         return false;
-    //     };
+        let crossterm::event::Event::Key(e) = event else {
+            return false;
+        };
 
-    //     let input = e.into();
-    //     let buffer = self.buffers.get_mut(&self.current).expect("should exist");
+        let input = e.into();
 
-    //     let bindings = self
-    //         .keymaps
-    //         .get(&buffer.content().cursor.mode)
-    //         .expect("keymap must be registered");
+        let Some(buffer) = current!(self.workspace) else {
+            log::error!("no active buffer");
+            return false;
+        };
 
-    //     let content = buffer.content_mut();
+        let bindings = self
+            .keymaps
+            .get(&buffer.cursor_mode())
+            .expect("keymap must be registered");
 
-    //     let mut consumed = false;
+        // @todo: return an enum
+        // @todo: update vscroll
+        self.executor.execute(input, &mut self.workspace, bindings)
+    }
 
-    //     // @todo: refactor
-    //     if content.cursor.mode == CursorMode::Insert {
-    //         match input {
-    //             Input {
-    //                 event: crate::input::Event::Char('q'),
-    //                 modifiers: crate::input::Modifiers { ctr: true, .. },
-    //             } => self.exit = true,
-    //             Input {
-    //                 event: crate::input::Event::Char(ch),
-    //                 modifiers: _,
-    //             } => {
-    //                 CommandExecutor::enter(content, ch);
-    //                 consumed = true;
-    //             }
-    //             _ => (),
-    //         }
-    //     }
+    pub fn on_log(&mut self, log: ropey::Rope) -> bool {
+        if let Some(log_buffer) = current_mut!(self.workspace, logger) {
+            log_buffer.text_mut().append(log);
+        }
 
-    //     let executed = self.executor.execute(input, content, bindings);
-    //     content.cursor.scroll(self.viewport.1);
-
-    //     consumed || executed
-    // }
-
-    // pub fn on_log(&mut self, log: ropey::Rope) -> bool {
-    //     if let Some(log_buffer) = self.buffers.get_mut(&self.logger) {
-    //         log_buffer.content_mut().text.append(log);
-    //     }
-
-    //     self.current == self.logger
-    // }
+        self.workspace.is_current_logger()
+    }
 }

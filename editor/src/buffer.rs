@@ -130,12 +130,13 @@ impl Buffer {
     }
 
     pub fn update_vscroll(&mut self, max: usize) {
+        let lower_bound = self.vscroll;
         let upper_bound = self.vscroll + max - 1;
 
-        if self.index >= self.vscroll {
-            self.vscroll = (self.vscroll + self.index).saturating_sub(upper_bound);
-        } else if self.index < self.vscroll {
-            self.vscroll = self.index;
+        if self.index >= upper_bound {
+            self.vscroll += self.index - upper_bound;
+        } else if self.index < lower_bound {
+            self.vscroll -= lower_bound - self.index;
         }
     }
 

@@ -16,25 +16,6 @@ use super::input::Input;
 
 pub type Callback = fn(&mut Workspace);
 
-macro_rules! command {
-    ($fun: ident) => {{
-        let name = stringify!($fun);
-        let command = Command::new(
-            name.to_string(),
-            |workspace: &mut Workspace| match workspace.current_buff_mut() {
-                Some(buffer) => $fun(buffer),
-                None => log::warn!("buffer is None, skipping command execution."),
-            },
-        );
-        command
-    }};
-    ($fun: ident, with_workspace) => {{
-        let name = stringify!($fun);
-        let command = Command::new(name.to_string(), $fun);
-        command
-    }};
-}
-
 pub struct Command {
     name: String,
     callback: Callback,
@@ -105,9 +86,31 @@ impl<'a> CommandExecutor<'a> {
     pub fn execute(
         &mut self,
         input: Input,
-        content: &mut Workspace,
+        workspace: &mut Workspace,
         bindings: &'static Bindings,
     ) -> bool {
+        let Some(buffer) = current_mut!(workspace) else {
+            log::error!("no active buffer");
+            return false;
+        };
+
+        if buffer.cursor_mode() == CursorMode::Insert {
+            match input {
+                Input {
+                    event: crate::input::Event::Char('q'),
+                    modifiers: crate::input::Modifiers { ctr: true, .. },
+                } => std::process::exit(0), // @note: for now
+                Input {
+                    event: crate::input::Event::Char(ch),
+                    modifiers: _,
+                } => {
+                    insert_char(buffer, ch);
+                    return true;
+                }
+                _ => (),
+            }
+        }
+
         let mut executed = false;
 
         self.current = match self.current {
@@ -120,7 +123,7 @@ impl<'a> CommandExecutor<'a> {
 
         if let Some(Keymap::Leaf(command)) = self.current {
             if let Some(command) = self.registry.get(command) {
-                command.call(content);
+                command.call(workspace);
                 executed = true;
             }
 
@@ -128,10 +131,6 @@ impl<'a> CommandExecutor<'a> {
         }
 
         executed
-    }
-
-    pub fn enter(buffer: &mut Buffer, ch: char) {
-        insert_char(buffer, ch);
     }
 }
 

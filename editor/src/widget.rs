@@ -16,9 +16,7 @@ impl<'a> EditorWidget<'a> {
 
     #[inline]
     pub fn text(&self) -> Option<Text> {
-        let workspace = self.0.workspace();
-
-        let Some(buffer) = workspace.current_buff() else {
+        let Some(buffer) = current!(self.0.workspace) else {
             return None;
         };
 
@@ -27,7 +25,7 @@ impl<'a> EditorWidget<'a> {
 
         let start_byte = text.line_to_byte(vscroll);
 
-        let end_index = vscroll + workspace.viewport().y - 1;
+        let end_index = vscroll + self.0.workspace.viewport.y - 1;
         let end_byte = text.line_to_byte(end_index.min(buffer.len_lines()));
 
         Some(Text::raw(text.slice(start_byte..end_byte)))

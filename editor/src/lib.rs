@@ -1,5 +1,8 @@
+#[macro_use]
+pub mod macros;
+
 pub mod buffer;
-pub mod command;
+pub mod commands;
 pub mod editor;
 pub mod input;
 pub mod keymap;

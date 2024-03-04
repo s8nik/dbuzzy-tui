@@ -1,7 +1,7 @@
 use std::io::Write;
 
 use crossterm::{event::EventStream, execute, ExecutableCommand};
-use editor::{cursor::CursorMode, editor::Editor};
+use editor::{buffer::CursorMode, editor::Editor};
 use futures_util::StreamExt;
 use tui::{backend::Backend, Terminal};
 
@@ -22,7 +22,7 @@ impl<B: Backend + Write> App<B> {
             editor.open(filepath)?;
         }
 
-        if editor.workspace().empty() {
+        if editor.workspace.empty() {
             editor.open_scratch();
         }
 
@@ -72,9 +72,9 @@ impl<B: Backend + Write> App<B> {
                 Some(log) = log_rx.recv() => self.editor.on_log(log),
             };
 
-            if self.editor.exit {
-                break;
-            }
+            // if self.editor.exit {
+            //     break;
+            // }
 
             if render {
                 let widget = self.editor.widget();
@@ -83,17 +83,20 @@ impl<B: Backend + Write> App<B> {
                 })?;
             }
 
-            let cursor = &self.editor.workspace().current_buff().content().cursor;
+            if let Some(buffer) = editor::current!(self.editor.workspace) {
+                let x = buffer.offset() as u16;
+                let y = buffer.index() as u16;
 
-            let x = cursor.offset as u16;
-            let y = cursor.index as u16;
-
-            self.terminal.set_cursor(x, y)?;
-            execute!(self.terminal.backend_mut(), CursorMode::style(cursor.mode))?;
-            self.terminal.show_cursor()?;
+                self.terminal.set_cursor(x, y)?;
+                execute!(
+                    self.terminal.backend_mut(),
+                    CursorMode::style(buffer.cursor_mode())
+                )?;
+                self.terminal.show_cursor()?;
+            }
         }
 
-        Ok(())
+        // Ok(())
     }
 }
 
