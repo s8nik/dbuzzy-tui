@@ -1,49 +1,53 @@
-use crate::{buffer::Content, cursor::CursorMode};
+use crate::buffer::{Buffer, CursorMode};
 
-pub(super) fn insert_char(content: &mut Content, ch: char) {
-    let pos = content.cursor.position(&content.text);
-    content.text.insert_char(pos, ch);
+pub(super) fn insert_char(buffer: &mut Buffer, ch: char) {
+    let pos = buffer.position();
+    buffer.text_mut().insert_char(pos, ch);
 
-    super::move_forward(content);
+    super::move_forward(buffer);
 }
 
-pub(super) fn new_line(content: &mut Content) {
-    let pos = content.cursor.position(&content.text);
-    content.text.insert_char(pos, '\n');
+pub(super) fn new_line(buffer: &mut Buffer) {
+    let pos = buffer.position();
+    buffer.text_mut().insert_char(pos, '\n');
 
-    super::move_down(content);
-    content.cursor.offset = 0;
+    super::move_down(buffer);
+    buffer.update_offset(0)
 }
 
-pub(super) fn delete_char(content: &mut Content) {
-    let pos = content.cursor.position(&content.text);
-    if pos < content.text.len_chars() {
-        content.text.remove(pos..pos + 1);
+pub(super) fn delete_char(buffer: &mut Buffer) {
+    let pos = buffer.position();
+
+    if pos < buffer.text().len_chars() {
+        buffer.text_mut().remove(pos..pos + 1);
     }
 }
 
-pub(super) fn delete_char_backspace(content: &mut Content) {
-    let pos = content.cursor.position(&content.text);
+pub(super) fn delete_char_backspace(buffer: &mut Buffer) {
+    let pos = buffer.position();
+
     if pos > 0 {
-        super::move_back(content);
-        content.text.remove(pos - 1..pos);
+        super::move_back(buffer);
+        buffer.text_mut().remove(pos - 1..pos);
     }
 }
 
-pub(super) fn insert_mode_line_next(content: &mut Content) {
-    let line_start_byte = content.text.line_to_byte(content.cursor.index + 1);
-    content.text.insert_char(line_start_byte, '\n');
+pub(super) fn insert_mode_line_next(buffer: &mut Buffer) {
+    let index = buffer.index();
+    let line_start_byte = buffer.text().line_to_byte(index + 1);
+    buffer.text_mut().insert_char(line_start_byte, '\n');
 
-    super::move_down(content);
+    super::move_down(buffer);
 
-    content.cursor.offset = 0;
-    content.cursor.mode = CursorMode::Insert;
+    buffer.update_offset(0);
+    buffer.update_cursor_mode(CursorMode::Insert);
 }
 
-pub(super) fn insert_mode_line_prev(content: &mut Content) {
-    let line_start_byte = content.text.line_to_byte(content.cursor.index);
-    content.text.insert_char(line_start_byte, '\n');
+pub(super) fn insert_mode_line_prev(buffer: &mut Buffer) {
+    let index = buffer.index();
+    let line_start_byte = buffer.text().line_to_byte(index);
+    buffer.text_mut().insert_char(line_start_byte, '\n');
 
-    content.cursor.offset = 0;
-    content.cursor.mode = CursorMode::Insert;
+    buffer.update_offset(0);
+    buffer.update_cursor_mode(CursorMode::Insert);
 }

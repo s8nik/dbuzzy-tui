@@ -6,16 +6,32 @@ use std::{collections::HashMap, sync::Arc};
 use movement::*;
 use transform::*;
 
-use crate::keymap::{Bindings, Keymap};
+use crate::{
+    buffer::{Buffer, CursorMode},
+    keymap::{Bindings, Keymap},
+    workspace::Workspace,
+};
 
-use super::{buffer::Content, cursor::CursorMode, input::Input};
+use super::input::Input;
 
-pub type Callback = fn(&mut Content);
+pub type Callback = fn(&mut Workspace);
 
 macro_rules! command {
     ($fun: ident) => {{
         let name = stringify!($fun);
-        Command::new(name.to_string(), $fun)
+        let command = Command::new(
+            name.to_string(),
+            |workspace: &mut Workspace| match workspace.current_buff_mut() {
+                Some(buffer) => $fun(buffer),
+                None => log::warn!("buffer is None, skipping command execution."),
+            },
+        );
+        command
+    }};
+    ($fun: ident, with_workspace) => {{
+        let name = stringify!($fun);
+        let command = Command::new(name.to_string(), $fun);
+        command
     }};
 }
 
@@ -29,7 +45,7 @@ impl Command {
         Self { name, callback }
     }
 
-    pub fn call(&self, content: &mut Content) {
+    pub fn call(&self, content: &mut Workspace) {
         (self.callback)(content)
     }
 }
@@ -89,7 +105,7 @@ impl<'a> CommandExecutor<'a> {
     pub fn execute(
         &mut self,
         input: Input,
-        content: &mut Content,
+        content: &mut Workspace,
         bindings: &'static Bindings,
     ) -> bool {
         let mut executed = false;
@@ -114,15 +130,15 @@ impl<'a> CommandExecutor<'a> {
         executed
     }
 
-    pub fn enter(content: &mut Content, ch: char) {
-        insert_char(content, ch);
+    pub fn enter(buffer: &mut Buffer, ch: char) {
+        insert_char(buffer, ch);
     }
 }
 
-fn insert_mode(content: &mut Content) {
-    content.cursor.mode = CursorMode::Insert;
+fn insert_mode(buffer: &mut Buffer) {
+    buffer.update_cursor_mode(CursorMode::Insert);
 }
 
-fn normal_mode(content: &mut Content) {
-    content.cursor.mode = CursorMode::Normal;
+fn normal_mode(buffer: &mut Buffer) {
+    buffer.update_cursor_mode(CursorMode::Normal);
 }

@@ -1,66 +1,78 @@
-use crate::{buffer::Content, cursor::CursorMode};
+use crate::buffer::{Buffer, CursorMode};
 
-pub(super) fn move_forward(Content { text, cursor }: &mut Content) {
-    if cursor.offset < text.line(cursor.index).len_bytes() {
-        cursor.offset += 1;
-    } else if cursor.index < text.len_lines() - 1 {
-        cursor.index += 1;
-        cursor.offset = 0;
+pub(super) fn move_forward(buffer: &mut Buffer) {
+    let offset = buffer.offset();
+    let index = buffer.index();
+
+    if offset < buffer.line_len_bytes() {
+        buffer.update_offset(offset + 1);
+    } else if index < buffer.len_lines() - 1 {
+        buffer.update_offset(0);
+        buffer.update_index(index + 1);
     }
 }
 
-pub(super) fn move_back(Content { text, cursor }: &mut Content) {
-    if cursor.offset > 0 {
-        cursor.offset -= 1;
-    } else if cursor.index > 0 {
-        cursor.index -= 1;
-        cursor.offset = text.line(cursor.index).len_bytes() - 1;
+pub(super) fn move_back(buffer: &mut Buffer) {
+    let offset = buffer.offset();
+    let index = buffer.index();
+
+    if offset > 0 {
+        buffer.update_offset(offset - 1);
+    } else if index > 0 {
+        buffer.update_index(index - 1);
+        buffer.update_offset(buffer.line_len_bytes() - 1);
     }
 }
 
-pub(super) fn move_up(Content { text, cursor }: &mut Content) {
-    if cursor.index > 0 {
-        cursor.index -= 1;
-        cursor.offset = cursor.offset.min(text.line(cursor.index).len_bytes());
+pub(super) fn move_up(buffer: &mut Buffer) {
+    let offset = buffer.offset();
+    let index = buffer.index();
+
+    if index > 0 {
+        buffer.update_index(index - 1);
+        buffer.update_offset(offset.min(buffer.line_len_bytes()))
     }
 }
 
-pub(super) fn move_down(Content { text, cursor }: &mut Content) {
-    if cursor.index < text.len_lines() - 1 {
-        cursor.index += 1;
-        cursor.offset = cursor.offset.min(text.line(cursor.index).len_bytes());
+pub(super) fn move_down(buffer: &mut Buffer) {
+    let offset = buffer.offset();
+    let index = buffer.index();
+
+    if index < buffer.len_lines() - 1 {
+        buffer.update_index(index + 1);
+        buffer.update_offset(offset.min(buffer.line_len_bytes()))
     }
 }
 
-pub(super) fn insert_mode_line_end(Content { text, cursor }: &mut Content) {
-    cursor.offset = text.line(cursor.index).len_bytes();
+pub(super) fn insert_mode_line_end(buffer: &mut Buffer) {
+    buffer.update_offset(buffer.line_len_bytes());
 
-    if cursor.index < text.len_lines() - 1 {
-        cursor.offset -= 1;
+    if buffer.index() < buffer.len_lines() - 1 {
+        buffer.update_offset(buffer.offset() - 1);
     }
 
-    cursor.mode = CursorMode::Insert;
+    buffer.update_cursor_mode(CursorMode::Insert);
 }
 
-pub(super) fn insert_mode_line_start(content: &mut Content) {
-    content.cursor.offset = 0;
-    content.cursor.mode = CursorMode::Insert;
+pub(super) fn insert_mode_line_start(buffer: &mut Buffer) {
+    buffer.update_offset(0);
+    buffer.update_cursor_mode(CursorMode::Insert);
 }
 
-pub(super) fn go_to_start_line(Content { cursor, .. }: &mut Content) {
-    cursor.index = 0;
-    cursor.offset = 0;
+pub(super) fn go_to_start_line(buffer: &mut Buffer) {
+    buffer.update_index(0);
+    buffer.update_offset(0);
 }
 
-pub(super) fn go_to_end_line(Content { text, cursor }: &mut Content) {
-    cursor.index = text.len_lines() - 1;
-    cursor.offset = 0;
+pub(super) fn go_to_end_line(buffer: &mut Buffer) {
+    buffer.update_index(buffer.len_lines() - 1);
+    buffer.update_offset(0);
 }
 
-pub(super) fn go_to_start_curr_line(content: &mut Content) {
-    content.cursor.offset = 0;
+pub(super) fn go_to_start_curr_line(buffer: &mut Buffer) {
+    buffer.update_offset(0)
 }
 
-pub(super) fn go_to_end_curr_line(Content { text, cursor }: &mut Content) {
-    cursor.offset = text.line(cursor.index).len_bytes();
+pub(super) fn go_to_end_curr_line(buffer: &mut Buffer) {
+    buffer.update_offset(buffer.line_len_bytes());
 }

@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    cursor::CursorMode,
+    buffer::CursorMode,
     input::{Event, Input, Modifiers},
 };
 

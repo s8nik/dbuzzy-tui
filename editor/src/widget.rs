@@ -22,15 +22,15 @@ impl<'a> EditorWidget<'a> {
             return None;
         };
 
-        let content = buffer.content();
-        let start_byte = content.text.line_to_byte(content.cursor.vscroll);
+        let text = buffer.text();
+        let vscroll = buffer.vscroll();
 
-        let end_index = content.cursor.vscroll + workspace.viewport().y - 1;
-        let end_byte = content
-            .text
-            .line_to_byte(end_index.min(content.text.len_lines()));
+        let start_byte = text.line_to_byte(vscroll);
 
-        Some(Text::raw(content.text.slice(start_byte..end_byte)))
+        let end_index = vscroll + workspace.viewport().y - 1;
+        let end_byte = text.line_to_byte(end_index.min(buffer.len_lines()));
+
+        Some(Text::raw(text.slice(start_byte..end_byte)))
     }
 }
 

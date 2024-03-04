@@ -96,12 +96,40 @@ impl Buffer {
         self.id
     }
 
-    pub fn position(&self, text: &Rope) -> usize {
-        let byte_index = text.line_to_byte(self.index);
+    pub fn text(&self) -> &Rope {
+        &self.text
+    }
+
+    pub fn text_mut(&mut self) -> &mut Rope {
+        &mut self.text
+    }
+
+    pub fn position(&self) -> usize {
+        let byte_index = self.text.line_to_byte(self.index);
         self.offset + byte_index
     }
 
-    pub fn scroll(&mut self, max: usize) {
+    pub fn offset(&self) -> usize {
+        self.offset
+    }
+
+    pub fn update_offset(&mut self, offset: usize) {
+        self.offset = offset
+    }
+
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
+    pub fn update_index(&mut self, index: usize) {
+        self.index = index;
+    }
+
+    pub fn vscroll(&self) -> usize {
+        self.vscroll
+    }
+
+    pub fn update_vscroll(&mut self, max: usize) {
         let upper_bound = self.vscroll + max - 1;
 
         if self.index >= self.vscroll {
@@ -111,6 +139,23 @@ impl Buffer {
         }
     }
 
+    pub fn cursor_mode(&self) -> CursorMode {
+        self.mode
+    }
+
+    pub fn update_cursor_mode(&mut self, mode: CursorMode) {
+        self.mode = mode;
+    }
+
+    pub fn line_len_bytes(&self) -> usize {
+        self.text.line(self.index).len_bytes()
+    }
+
+    pub fn len_lines(&self) -> usize {
+        self.text.len_lines()
+    }
+
+    // @todo: use it later
     // pub fn save(&self) -> Result<()> {
     //     let FileMeta { path, readonly } = &self.meta;
 
