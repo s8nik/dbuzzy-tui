@@ -7,7 +7,6 @@ use std::{
 };
 
 use anyhow::Result;
-use crossterm::cursor::SetCursorStyle;
 use ropey::Rope;
 use strum::EnumString;
 
@@ -155,19 +154,6 @@ impl Buffer {
     pub fn len_lines(&self) -> usize {
         self.text.len_lines()
     }
-
-    // @todo: use it later
-    // pub fn save(&self) -> Result<()> {
-    //     let FileMeta { path, readonly } = &self.meta;
-
-    //     if let Some(path) = path.as_ref() {
-    //         if !readonly {
-    //             self.content.text.write_to(File::create(path)?)?;
-    //         }
-    //     }
-
-    //     Ok(())
-    // }
 }
 
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash, EnumString)]
@@ -177,14 +163,4 @@ pub enum CursorMode {
     #[default]
     Normal,
     Visual,
-}
-
-impl CursorMode {
-    pub fn style(mode: CursorMode) -> SetCursorStyle {
-        match mode {
-            CursorMode::Insert => SetCursorStyle::BlinkingBar,
-            CursorMode::Normal => SetCursorStyle::BlinkingBlock,
-            CursorMode::Visual => SetCursorStyle::BlinkingBlock,
-        }
-    }
 }

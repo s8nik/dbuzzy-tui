@@ -2,52 +2,53 @@ use std::collections::HashMap;
 
 use crate::buffer::{Buffer, BufferId};
 
+#[derive(Default)]
 pub struct Workspace {
-    pub buffers: HashMap<BufferId, Buffer>,
-    pub current: BufferId,
-    pub logger: BufferId,
-    pub viewport: Viewport,
-    pub exit: bool,
+    pub(crate) buffers: HashMap<BufferId, Buffer>,
+    current: BufferId,
+    logger: BufferId,
 }
 
 impl Workspace {
-    pub fn init(width: usize, height: usize) -> Self {
-        Self {
-            current: BufferId::MAX,
-            logger: BufferId::MAX,
-            buffers: HashMap::new(),
-            exit: false,
-            viewport: Viewport {
-                x: width,
-                y: height,
-            },
-        }
+    pub fn current(&self) -> &Buffer {
+        self.buffers.get(&self.current).expect("current buff")
     }
 
-    pub fn empty(&self) -> bool {
-        self.current == BufferId::MAX
+    pub fn current_mut(&mut self) -> &mut Buffer {
+        self.buffers
+            .get_mut(&self.current)
+            .expect("current mut buff")
     }
 
-    pub fn is_current_logger(&self) -> bool {
+    pub fn logger(&mut self) -> Option<&mut Buffer> {
+        self.buffers.get_mut(&self.logger)
+    }
+
+    pub fn set_current(&mut self, id: BufferId) {
+        self.current = id
+    }
+
+    pub fn set_logger(&mut self, id: BufferId) {
+        self.logger = id
+    }
+
+    pub fn logger_active(&self) -> bool {
         self.current == self.logger
     }
-
-    pub fn add_buffer(&mut self, buffer: Buffer) -> BufferId {
-        let buffer_id = buffer.id();
-        self.buffers.insert(buffer_id, buffer);
-        buffer_id
-    }
 }
 
-#[derive(Default)]
-pub struct Viewport {
-    pub x: usize,
-    pub y: usize,
-}
+#[macro_export]
+macro_rules! add_buffer {
+    ($workspace:expr, $buffer:expr $(, $flag:ident)* ) => {
+        let id = $buffer.id();
+        $workspace.buffers.insert(id, $buffer);
 
-impl Viewport {
-    pub fn update(&mut self, x: usize, y: usize) {
-        self.x = x;
-        self.y = y;
-    }
+        $(
+            match stringify!($flag) {
+                "current" => $workspace.set_current(id),
+                "logger" => $workspace.set_logger(id),
+                _ => (),
+            }
+        )?
+    };
 }

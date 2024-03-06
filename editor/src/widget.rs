@@ -1,3 +1,4 @@
+use crossterm::cursor::SetCursorStyle;
 use tui::{
     buffer::Buffer,
     layout::Rect,
@@ -5,9 +6,30 @@ use tui::{
     widgets::{Paragraph, Widget},
 };
 
-use crate::editor::Editor;
+use crate::{buffer::CursorMode, editor::Editor};
 
-pub struct EditorWidget<'a>(&'a Editor<'a>);
+#[derive(Default)]
+pub struct Viewport {
+    pub width: usize,
+    pub height: usize,
+}
+
+pub struct Cursor {
+    pub x: u16,
+    pub y: u16,
+    pub mode: CursorMode,
+}
+
+impl Cursor {
+    pub fn style(&self) -> SetCursorStyle {
+        match self.mode {
+            CursorMode::Insert => SetCursorStyle::BlinkingBar,
+            CursorMode::Normal | CursorMode::Visual => SetCursorStyle::BlinkingBlock,
+        }
+    }
+}
+
+pub struct EditorWidget<'a>(&'a Editor);
 
 impl<'a> EditorWidget<'a> {
     pub fn new(editor: &'a Editor) -> Self {
@@ -16,16 +38,14 @@ impl<'a> EditorWidget<'a> {
 
     #[inline]
     pub fn text(&self) -> Option<Text> {
-        let Some(buffer) = current!(self.0.workspace) else {
-            return None;
-        };
+        let buffer = self.0.workspace.current();
 
         let text = buffer.text();
         let vscroll = buffer.vscroll();
 
         let start_byte = text.line_to_byte(vscroll);
 
-        let end_index = vscroll + self.0.workspace.viewport.y - 1;
+        let end_index = vscroll + self.0.viewport.height - 1;
         let end_byte = text.line_to_byte(end_index.min(buffer.len_lines()));
 
         Some(Text::raw(text.slice(start_byte..end_byte)))
