@@ -8,6 +8,9 @@ use transform::*;
 
 use crate::{
     buffer::{Buffer, CursorMode},
+    input::Input,
+    keymap::{Keymap, Keymaps},
+    renderer::EventOutcome,
     workspace::Workspace,
 };
 
@@ -80,63 +83,67 @@ impl CommandRegistry {
     }
 }
 
-// #[derive(Default)]
-// pub struct CommandExecutor<'a> {
-//     registry: Registry,
-//     current: Option<&'a Keymap>,
-// }
+impl Default for CommandRegistry {
+    fn default() -> Self {
+        Self::register()
+    }
+}
 
-// impl<'a> CommandExecutor<'a> {
-//     pub fn execute(
-//         &mut self,
-//         input: Input,
-//         workspace: &mut Workspace,
-//         bindings: &'static Bindings,
-//     ) -> bool {
-//         let Some(buffer) = current_mut!(workspace) else {
-//             log::error!("no active buffer");
-//             return false;
-//         };
+#[derive(Default)]
+pub struct CommandResolver {
+    registry: CommandRegistry,
+    current: Option<&'static Keymap>,
+}
 
-//         if buffer.cursor_mode() == CursorMode::Insert {
-//             match input {
-//                 Input {
-//                     event: crate::input::Event::Char('q'),
-//                     modifiers: crate::input::Modifiers { ctr: true, .. },
-//                 } => std::process::exit(0), // @note: for now
-//                 Input {
-//                     event: crate::input::Event::Char(ch),
-//                     modifiers: _,
-//                 } => {
-//                     insert_char(buffer, ch);
-//                     return true;
-//                 }
-//                 _ => (),
-//             }
-//         }
+impl CommandResolver {
+    pub fn reset(&mut self) {
+        self.current = None;
+    }
 
-//         let mut executed = false;
+    pub fn resolve(
+        &mut self,
+        keymaps: &'static Keymaps,
+        workspace: &Workspace,
+        input: Input,
+    ) -> Option<Arc<Command>> {
+        let buffer = workspace.current();
 
-//         self.current = match self.current {
-//             Some(node) => match node {
-//                 Keymap::Leaf(_) => self.current,
-//                 Keymap::Node(next) => next.get(input),
-//             },
-//             None => bindings.get(input),
-//         };
+        let bindings = keymaps
+            .get(&buffer.cursor_mode())
+            .expect("keymap must be registered");
 
-//         if let Some(Keymap::Leaf(command)) = self.current {
-//             if let Some(command) = self.registry.get(command) {
-//                 command.call(workspace);
-//                 executed = true;
-//             }
+        self.current = match self.current {
+            Some(node) => match node {
+                Keymap::Leaf(_) => self.current,
+                Keymap::Node(next) => next.get(input),
+            },
+            None => bindings.get(input),
+        };
 
-//             self.current = None;
-//         }
+        if let Some(Keymap::Leaf(command)) = self.current {
+            return self.registry.get(command);
+        }
 
-//         executed
-//     }
-// }
+        None
+    }
+}
+
+pub fn insert_mode_on_key(buffer: &mut Buffer, input: Input) -> EventOutcome {
+    match input {
+        Input {
+            event: crate::input::Event::Char('q'),
+            modifiers: crate::input::Modifiers { ctr: true, .. },
+        } => EventOutcome::Exit,
+        Input {
+            event: crate::input::Event::Char(ch),
+            modifiers: _,
+        } => {
+            insert_char(buffer, ch);
+            EventOutcome::Render(true)
+        }
+        _ => EventOutcome::Render(false),
+    }
+}
 
 fn insert_mode(buffer: &mut Buffer) {
     buffer.update_cursor_mode(CursorMode::Insert);

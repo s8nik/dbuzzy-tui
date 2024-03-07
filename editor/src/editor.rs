@@ -2,8 +2,8 @@ use std::path::Path;
 
 use crate::{
     add_buffer,
-    buffer::Buffer,
-    command::CommandRegistry,
+    buffer::{Buffer, CursorMode},
+    command::{insert_mode_on_key, CommandResolver},
     keymap::Keymaps,
     renderer::{Cursor, EventOutcome, Renderer, Viewport},
     workspace::Workspace,
@@ -13,7 +13,7 @@ pub struct Editor {
     pub(crate) workspace: Workspace,
     pub(crate) viewport: Viewport,
     keymaps: &'static Keymaps,
-    registry: CommandRegistry,
+    resolver: CommandResolver,
 }
 
 impl Editor {
@@ -26,7 +26,7 @@ impl Editor {
         Self {
             workspace,
             keymaps: Keymaps::init(),
-            registry: CommandRegistry::register(),
+            resolver: CommandResolver::default(),
             viewport: Viewport { width, height },
         }
     }
@@ -59,38 +59,6 @@ impl Editor {
         Cursor { x, y, mode }
     }
 
-    // @todo:
-    // 0. finish find/exec command & logs
-    // 1. widget -> render
-    // 2. refactoring of keymap (register keymaps in the file)
-    // 3. clean up in command
-    // pub fn on_event(&mut self, event: crossterm::event::Event) -> bool {
-    //     if let crossterm::event::Event::Resize(w, h) = event {
-    //         self.viewport.update(w as usize, h as usize);
-    //         return true;
-    //     }
-
-    //     let crossterm::event::Event::Key(e) = event else {
-    //         return false;
-    //     };
-
-    //     let input = e.into();
-
-    //     let Some(buffer) = self.current() else {
-    //         log::error!("no active buffer");
-    //         return false;
-    //     };
-
-    //     let bindings = self
-    //         .keymaps
-    //         .get(&buffer.cursor_mode())
-    //         .expect("keymap must be registered");
-
-    //     // @todo: return an enum
-    //     // @todo: update vscroll
-    //     self.executor.execute(input, &mut self.workspace, bindings)
-    // }
-
     pub fn on_event(&mut self, event: crossterm::event::Event) -> EventOutcome {
         if let crossterm::event::Event::Resize(width, height) = event {
             self.viewport.update(width as _, height as _);
@@ -101,7 +69,17 @@ impl Editor {
             return EventOutcome::Render(false);
         };
 
-        // let input = e.into();
+        let mode = self.workspace.current().cursor_mode();
+
+        let input = e.into();
+        let command = self.resolver.resolve(self.keymaps, &self.workspace, input);
+
+        if let Some(command) = command {
+            command.call(&mut self.workspace);
+            self.resolver.reset();
+        } else if mode == CursorMode::Insert {
+            insert_mode_on_key(self.workspace.current_mut(), input)
+        }
 
         EventOutcome::Render(true)
     }
