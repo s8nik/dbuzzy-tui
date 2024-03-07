@@ -5,7 +5,7 @@ use crate::{
     buffer::Buffer,
     command::CommandRegistry,
     keymap::Keymaps,
-    widget::{Cursor, EditorWidget, Viewport},
+    renderer::{Cursor, EventOutcome, Renderer, Viewport},
     workspace::Workspace,
 };
 
@@ -42,8 +42,8 @@ impl Editor {
         add_buffer!(self.workspace, Buffer::default(), current);
     }
 
-    pub fn widget(&self) -> EditorWidget {
-        EditorWidget::new(self)
+    pub fn widget(&self) -> Renderer<'_> {
+        Renderer::new(self)
     }
 
     pub fn cursor(&self) -> Cursor {
@@ -90,6 +90,21 @@ impl Editor {
     //     // @todo: update vscroll
     //     self.executor.execute(input, &mut self.workspace, bindings)
     // }
+
+    pub fn on_event(&mut self, event: crossterm::event::Event) -> EventOutcome {
+        if let crossterm::event::Event::Resize(width, height) = event {
+            self.viewport.update(width as _, height as _);
+            return EventOutcome::Render(true);
+        }
+
+        let crossterm::event::Event::Key(e) = event else {
+            return EventOutcome::Render(false);
+        };
+
+        // let input = e.into();
+
+        EventOutcome::Render(true)
+    }
 
     pub fn on_log(&mut self, log: ropey::Rope) -> bool {
         if let Some(buffer) = self.workspace.logger() {

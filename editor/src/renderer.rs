@@ -14,10 +14,23 @@ pub struct Viewport {
     pub height: usize,
 }
 
+impl Viewport {
+    pub fn update(&mut self, width: usize, height: usize) {
+        self.width = width;
+        self.height = height;
+    }
+}
+
 pub struct Cursor {
     pub x: u16,
     pub y: u16,
     pub mode: CursorMode,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EventOutcome {
+    Render(bool),
+    Exit,
 }
 
 impl Cursor {
@@ -29,9 +42,9 @@ impl Cursor {
     }
 }
 
-pub struct EditorWidget<'a>(&'a Editor);
+pub struct Renderer<'a>(&'a Editor);
 
-impl<'a> EditorWidget<'a> {
+impl<'a> Renderer<'a> {
     pub fn new(editor: &'a Editor) -> Self {
         Self(editor)
     }
@@ -52,7 +65,7 @@ impl<'a> EditorWidget<'a> {
     }
 }
 
-impl<'a> Widget for EditorWidget<'a> {
+impl<'a> Widget for Renderer<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         match self.text() {
             Some(text) => {
