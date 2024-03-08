@@ -6,19 +6,29 @@ use std::{collections::HashMap, sync::Arc};
 use movement::*;
 use transform::*;
 
-use crate::keymap::{Bindings, Keymap};
+use crate::{
+    buffer::{Buffer, CursorMode},
+    input::Input,
+    keymap::{Keymap, Keymaps},
+    renderer::EventOutcome,
+    workspace::Workspace,
+};
 
-use super::{buffer::Content, cursor::CursorMode, input::Input};
-
-pub type Callback = fn(&mut Content);
+pub type Callback = fn(&mut Workspace);
 
 macro_rules! command {
     ($fun: ident) => {{
         let name = stringify!($fun);
+        let command = Command::new(name.to_string(), |workspace: &mut Workspace| {
+            $fun(workspace.current_mut())
+        });
+        command
+    }};
+    ($fun: ident, with_workspace) => {{
+        let name = stringify!($fun);
         Command::new(name.to_string(), $fun)
     }};
 }
-
 pub struct Command {
     name: String,
     callback: Callback,
@@ -29,16 +39,16 @@ impl Command {
         Self { name, callback }
     }
 
-    pub fn call(&self, content: &mut Content) {
+    pub fn call(&self, content: &mut Workspace) {
         (self.callback)(content)
     }
 }
 
-pub struct Registry {
+pub struct CommandRegistry {
     commands: HashMap<Arc<str>, Arc<Command>>,
 }
 
-impl Registry {
+impl CommandRegistry {
     pub fn register() -> Self {
         let commands = vec![
             command!(insert_mode),
@@ -73,26 +83,34 @@ impl Registry {
     }
 }
 
-impl Default for Registry {
+impl Default for CommandRegistry {
     fn default() -> Self {
         Self::register()
     }
 }
 
 #[derive(Default)]
-pub struct Executor<'a> {
-    registry: Registry,
-    current: Option<&'a Keymap>,
+pub struct CommandResolver {
+    registry: CommandRegistry,
+    current: Option<&'static Keymap>,
 }
 
-impl<'a> Executor<'a> {
-    pub fn execute(
+impl CommandResolver {
+    pub fn reset(&mut self) {
+        self.current = None;
+    }
+
+    pub fn resolve(
         &mut self,
+        keymaps: &'static Keymaps,
+        workspace: &Workspace,
         input: Input,
-        content: &mut Content,
-        bindings: &'static Bindings,
-    ) -> bool {
-        let mut executed = false;
+    ) -> Option<Arc<Command>> {
+        let buffer = workspace.current();
+
+        let bindings = keymaps
+            .get(&buffer.cursor_mode())
+            .expect("keymap must be registered");
 
         self.current = match self.current {
             Some(node) => match node {
@@ -103,26 +121,34 @@ impl<'a> Executor<'a> {
         };
 
         if let Some(Keymap::Leaf(command)) = self.current {
-            if let Some(command) = self.registry.get(command) {
-                command.call(content);
-                executed = true;
-            }
-
-            self.current = None;
+            return self.registry.get(command);
         }
 
-        executed
-    }
-
-    pub fn enter(content: &mut Content, ch: char) {
-        insert_char(content, ch);
+        None
     }
 }
 
-fn insert_mode(content: &mut Content) {
-    content.cursor.mode = CursorMode::Insert;
+pub fn insert_mode_on_key(buffer: &mut Buffer, input: Input) -> EventOutcome {
+    match input {
+        Input {
+            event: crate::input::Event::Char('q'),
+            modifiers: crate::input::Modifiers { ctr: true, .. },
+        } => EventOutcome::Exit,
+        Input {
+            event: crate::input::Event::Char(ch),
+            modifiers: _,
+        } => {
+            insert_char(buffer, ch);
+            EventOutcome::Render(true)
+        }
+        _ => EventOutcome::Render(false),
+    }
 }
 
-fn normal_mode(content: &mut Content) {
-    content.cursor.mode = CursorMode::Normal;
+fn insert_mode(buffer: &mut Buffer) {
+    buffer.update_cursor_mode(CursorMode::Insert);
+}
+
+fn normal_mode(buffer: &mut Buffer) {
+    buffer.update_cursor_mode(CursorMode::Normal);
 }

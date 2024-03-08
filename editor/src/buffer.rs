@@ -8,8 +8,7 @@ use std::{
 
 use anyhow::Result;
 use ropey::Rope;
-
-use super::cursor::Cursor;
+use strum::EnumString;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BufferId(NonZeroUsize);
@@ -40,16 +39,14 @@ pub struct FileMeta {
 }
 
 #[derive(Default)]
-pub struct Content {
-    pub text: Rope,
-    pub cursor: Cursor,
-}
-
-#[derive(Default)]
 pub struct Buffer {
     id: BufferId,
     meta: FileMeta,
-    content: Content,
+    text: Rope,
+    offset: usize,
+    index: usize,
+    vscroll: usize,
+    mode: CursorMode,
 }
 
 impl Buffer {
@@ -70,7 +67,7 @@ impl Buffer {
         let file = File::open(path)?;
         let text = Rope::from_reader(BufReader::new(file))?;
 
-        buffer.content.text = text;
+        buffer.text = text;
         buffer.meta = FileMeta {
             path: Some(path.into()),
             readonly: metadata.permissions().readonly(),
@@ -86,7 +83,11 @@ impl Buffer {
                 path: None,
                 readonly: true,
             },
-            content: Content::default(),
+            text: Rope::default(),
+            offset: 0,
+            index: 0,
+            vscroll: 0,
+            mode: CursorMode::Normal,
         }
     }
 
@@ -94,23 +95,71 @@ impl Buffer {
         self.id
     }
 
-    pub fn content(&self) -> &Content {
-        &self.content
+    pub fn text(&self) -> &Rope {
+        &self.text
     }
 
-    pub fn content_mut(&mut self) -> &mut Content {
-        &mut self.content
+    pub fn text_mut(&mut self) -> &mut Rope {
+        &mut self.text
     }
 
-    // pub fn save(&self) -> Result<()> {
-    //     let FileMeta { path, readonly } = &self.meta;
+    pub fn position(&self) -> usize {
+        let byte_index = self.text.line_to_byte(self.index);
+        self.offset + byte_index
+    }
 
-    //     if let Some(path) = path.as_ref() {
-    //         if !readonly {
-    //             self.content.text.write_to(File::create(path)?)?;
-    //         }
-    //     }
+    pub fn offset(&self) -> usize {
+        self.offset
+    }
 
-    //     Ok(())
-    // }
+    pub fn update_offset(&mut self, offset: usize) {
+        self.offset = offset
+    }
+
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
+    pub fn update_index(&mut self, index: usize) {
+        self.index = index;
+    }
+
+    pub fn vscroll(&self) -> usize {
+        self.vscroll
+    }
+
+    pub fn update_vscroll(&mut self, max: usize) {
+        let upper_bound = self.vscroll + max - 1;
+
+        if self.index < self.vscroll {
+            self.vscroll = self.index;
+        } else if self.index > upper_bound {
+            self.vscroll = self.index - max + 1;
+        }
+    }
+
+    pub fn cursor_mode(&self) -> CursorMode {
+        self.mode
+    }
+
+    pub fn update_cursor_mode(&mut self, mode: CursorMode) {
+        self.mode = mode;
+    }
+
+    pub fn line_len_bytes(&self) -> usize {
+        self.text.line(self.index).len_bytes()
+    }
+
+    pub fn len_lines(&self) -> usize {
+        self.text.len_lines()
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash, EnumString)]
+#[strum(serialize_all = "lowercase")]
+pub enum CursorMode {
+    Insert,
+    #[default]
+    Normal,
+    Visual,
 }

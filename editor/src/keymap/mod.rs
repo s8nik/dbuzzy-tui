@@ -4,8 +4,8 @@ use std::{
     str::FromStr,
 };
 
-use crate::core::{
-    cursor::CursorMode,
+use crate::{
+    buffer::CursorMode,
     input::{Event, Input, Modifiers},
 };
 

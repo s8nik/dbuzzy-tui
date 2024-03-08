@@ -1,34 +1,41 @@
 use std::io::Write;
 
 use crossterm::{event::EventStream, execute, ExecutableCommand};
-use editor::core::{buffer::Buffer, cursor::CursorMode, Editor};
+use editor::{editor::Editor, renderer::EventOutcome};
 use futures_util::StreamExt;
 use tui::{backend::Backend, Terminal};
 
 pub struct App<B: Backend + Write> {
-    editor: Editor<'static>,
+    editor: Editor,
     terminal: Terminal<B>,
 }
 
 impl<B: Backend + Write> App<B> {
     pub fn new(args: impl Iterator<Item = String>, backend: B) -> anyhow::Result<Self> {
-        let mut editor = Editor::init();
-
-        for filepath in args.skip(1) {
-            editor.open(filepath)?;
-        }
-
-        if editor.empty() {
-            editor.open_scratch();
-        }
-
-        let logger_buffer = Buffer::logger();
-        let logger_id = editor.add_buffer(logger_buffer);
-        editor.set_logger(logger_id);
-
         let mut terminal = Terminal::new(backend).expect("terminal");
         let size = terminal.size()?;
-        editor.set_viewport(size.width, size.height);
+
+        let mut editor = Editor::init(size.width as usize, size.height as usize);
+
+        let mut opened = 0;
+        let mut failed = 0;
+
+        for arg in args.skip(1) {
+            if let Err(e) = editor.open_file(&*arg) {
+                log::error!("{e}");
+                failed += 1;
+            } else {
+                opened += 1;
+            }
+        }
+
+        if failed > 0 {
+            log::info!("Failed to open {failed} documents");
+        }
+
+        if opened == 0 {
+            editor.open_scratch();
+        }
 
         crossterm::terminal::enable_raw_mode().expect("enable raw mode");
         crossterm::execute!(
@@ -63,37 +70,38 @@ impl<B: Backend + Write> App<B> {
 
         let mut reader = EventStream::new();
 
+        // first render
+        let widget = self.editor.widget();
+        self.terminal.draw(|ui| {
+            ui.render_widget(widget, ui.size());
+        })?;
+
         loop {
-            let render = tokio::select! {
-                maybe_event = reader.next() => match maybe_event {
-                    Some(Ok(event)) => self.editor.on_event(event),
-                    Some(Err(e)) => {
+            let outcome = tokio::select! {
+                Some(event) = reader.next() => match event {
+                    Ok(event) => self.editor.on_event(event),
+                    Err(e) => {
                         log::error!("event error: {e}");
-                        false
+                        continue;
                     },
-                    None => false,
                 },
                 Some(log) = log_rx.recv() => self.editor.on_log(log),
             };
 
-            if self.editor.exit {
-                break;
-            }
+            match outcome {
+                EventOutcome::Exit => break,
+                EventOutcome::Render(is_needed) if is_needed => {
+                    let widget = self.editor.widget();
+                    self.terminal.draw(|ui| {
+                        ui.render_widget(widget, ui.size());
+                    })?;
+                }
+                _ => (),
+            };
 
-            if render {
-                let widget = self.editor.widget();
-                self.terminal.draw(|ui| {
-                    ui.render_widget(widget, ui.size());
-                })?;
-            }
-
-            let cursor = &self.editor.current_buff().content().cursor;
-
-            let x = cursor.offset as u16;
-            let y = cursor.index as u16;
-
-            self.terminal.set_cursor(x, y)?;
-            execute!(self.terminal.backend_mut(), CursorMode::style(cursor.mode))?;
+            let cursor = self.editor.cursor();
+            self.terminal.set_cursor(cursor.x, cursor.y)?;
+            execute!(self.terminal.backend_mut(), cursor.style())?;
             self.terminal.show_cursor()?;
         }
 
