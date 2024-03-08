@@ -70,15 +70,20 @@ impl<B: Backend + Write> App<B> {
 
         let mut reader = EventStream::new();
 
+        // first render
+        let widget = self.editor.widget();
+        self.terminal.draw(|ui| {
+            ui.render_widget(widget, ui.size());
+        })?;
+
         loop {
             let outcome = tokio::select! {
-                maybe_event = reader.next() => match maybe_event {
-                    Some(Ok(event)) => self.editor.on_event(event),
-                    Some(Err(e)) => {
+                Some(event) = reader.next() => match event {
+                    Ok(event) => self.editor.on_event(event),
+                    Err(e) => {
                         log::error!("event error: {e}");
-                        EventOutcome::Render(false)
+                        continue;
                     },
-                    None => EventOutcome::Render(false),
                 },
                 Some(log) = log_rx.recv() => self.editor.on_log(log),
             };
