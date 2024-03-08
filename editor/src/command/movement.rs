@@ -74,5 +74,5 @@ pub(super) fn go_to_start_curr_line(buffer: &mut Buffer) {
 }
 
 pub(super) fn go_to_end_curr_line(buffer: &mut Buffer) {
-    buffer.update_offset(buffer.line_len_bytes());
+    buffer.update_offset(buffer.line_len_bytes() - 1);
 }

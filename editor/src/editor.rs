@@ -50,13 +50,19 @@ impl Editor {
         let buffer = self.workspace.current();
         let mode = buffer.cursor_mode();
 
-        let index = buffer.index();
-        let vscroll = buffer.vscroll();
+        let mut x = buffer.offset();
+        let mut y = buffer.index();
 
-        let x = self.viewport.width.min(index.saturating_sub(vscroll)) as u16;
-        let y = buffer.index() as u16;
+        x = x.min(self.viewport.width - 1);
+        y = y
+            .saturating_sub(buffer.vscroll())
+            .min(self.viewport.height - 1);
 
-        Cursor { x, y, mode }
+        Cursor {
+            x: x as _,
+            y: y as _,
+            mode,
+        }
     }
 
     pub fn on_event(&mut self, event: crossterm::event::Event) -> EventOutcome {
@@ -74,21 +80,31 @@ impl Editor {
         let input = e.into();
         let command = self.resolver.resolve(self.keymaps, &self.workspace, input);
 
-        if let Some(command) = command {
+        let outcome = if let Some(command) = command {
             command.call(&mut self.workspace);
             self.resolver.reset();
+
+            EventOutcome::Render(true)
         } else if mode == CursorMode::Insert {
             insert_mode_on_key(self.workspace.current_mut(), input)
+        } else {
+            EventOutcome::Render(false)
+        };
+
+        if let EventOutcome::Render(true) = outcome {
+            self.workspace
+                .current_mut()
+                .update_vscroll(self.viewport.height);
         }
 
-        EventOutcome::Render(true)
+        outcome
     }
 
-    pub fn on_log(&mut self, log: ropey::Rope) -> bool {
+    pub fn on_log(&mut self, log: ropey::Rope) -> EventOutcome {
         if let Some(buffer) = self.workspace.logger() {
             buffer.text_mut().append(log);
         }
 
-        self.workspace.logger_active()
+        EventOutcome::Render(self.workspace.logger_active())
     }
 }

@@ -1,7 +1,7 @@
 use std::io::Write;
 
 use crossterm::{event::EventStream, execute, ExecutableCommand};
-use editor::editor::Editor;
+use editor::{editor::Editor, renderer::EventOutcome};
 use futures_util::StreamExt;
 use tui::{backend::Backend, Terminal};
 
@@ -71,31 +71,28 @@ impl<B: Backend + Write> App<B> {
         let mut reader = EventStream::new();
 
         loop {
-            let render = tokio::select! {
+            let outcome = tokio::select! {
                 maybe_event = reader.next() => match maybe_event {
-                    Some(Ok(_event)) => {
-                        // self.editor.on_event(event)
-                        todo!();
-                    },
+                    Some(Ok(event)) => self.editor.on_event(event),
                     Some(Err(e)) => {
                         log::error!("event error: {e}");
-                        false
+                        EventOutcome::Render(false)
                     },
-                    None => false,
+                    None => EventOutcome::Render(false),
                 },
                 Some(log) = log_rx.recv() => self.editor.on_log(log),
             };
 
-            // if self.editor.exit {
-            //     break;
-            // }
-
-            if render {
-                let widget = self.editor.widget();
-                self.terminal.draw(|ui| {
-                    ui.render_widget(widget, ui.size());
-                })?;
-            }
+            match outcome {
+                EventOutcome::Exit => break,
+                EventOutcome::Render(is_needed) if is_needed => {
+                    let widget = self.editor.widget();
+                    self.terminal.draw(|ui| {
+                        ui.render_widget(widget, ui.size());
+                    })?;
+                }
+                _ => (),
+            };
 
             let cursor = self.editor.cursor();
             self.terminal.set_cursor(cursor.x, cursor.y)?;
@@ -103,7 +100,7 @@ impl<B: Backend + Write> App<B> {
             self.terminal.show_cursor()?;
         }
 
-        // Ok(())
+        Ok(())
     }
 }
 
