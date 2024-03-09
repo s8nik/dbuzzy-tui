@@ -1,16 +1,17 @@
+pub mod insert;
 mod movement;
+mod switch;
 mod transform;
 
 use std::{collections::HashMap, sync::Arc};
 
 use movement::*;
+use switch::*;
 use transform::*;
 
 use crate::{
-    buffer::{Buffer, CursorMode},
     input::Input,
     keymap::{Keymap, Keymaps},
-    renderer::EventOutcome,
     workspace::Workspace,
 };
 
@@ -145,29 +146,4 @@ impl CommandFinder {
 
         None
     }
-}
-
-pub fn insert_mode_on_key(buffer: &mut Buffer, input: Input) -> EventOutcome {
-    match input {
-        Input {
-            event: crate::input::Event::Char('q'),
-            modifiers: crate::input::Modifiers { ctr: true, .. },
-        } => EventOutcome::Exit,
-        Input {
-            event: crate::input::Event::Char(ch),
-            modifiers: _,
-        } => {
-            insert_char(buffer, ch);
-            EventOutcome::Render(true)
-        }
-        _ => EventOutcome::Render(false),
-    }
-}
-
-fn insert_mode(buffer: &mut Buffer) {
-    buffer.update_cursor_mode(CursorMode::Insert);
-}
-
-fn normal_mode(buffer: &mut Buffer) {
-    buffer.update_cursor_mode(CursorMode::Normal);
 }
