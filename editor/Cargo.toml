@@ -13,4 +13,3 @@ crossterm.workspace = true
 
 regex = "1.9.3"
 ropey = "1.6.0"
-strum = { version = "0.24.1", features = ["derive"] }

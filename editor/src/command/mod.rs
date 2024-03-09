@@ -16,18 +16,7 @@ use crate::{
 
 pub type Callback = fn(&mut Workspace);
 
-macro_rules! command {
-    ($type: expr, $fun: ident) => {{
-        Command::new($type, |workspace: &mut Workspace| {
-            $fun(workspace.current_mut())
-        })
-    }};
-    ($type: expr, $fun: ident, workspace) => {{
-        Command::new($type, $fun)
-    }};
-}
-
-#[derive(Clone, Copy, Hash, Eq, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, PartialOrd)]
 pub enum CommandType {
     InsertMode,
     NormalMode,
@@ -69,6 +58,17 @@ pub struct CommandRegistry {
 
 impl CommandRegistry {
     pub fn register() -> Self {
+        macro_rules! command {
+            ($type: expr, $fun: ident) => {{
+                Command::new($type, |workspace: &mut Workspace| {
+                    $fun(workspace.current_mut())
+                })
+            }};
+            ($type: expr, $fun: ident, workspace) => {{
+                Command::new($type, $fun)
+            }};
+        }
+
         let commands = vec![
             command!(CommandType::InsertMode, insert_mode),
             command!(CommandType::NormalMode, normal_mode),

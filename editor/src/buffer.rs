@@ -8,7 +8,6 @@ use std::{
 
 use anyhow::Result;
 use ropey::Rope;
-use strum::EnumString;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BufferId(NonZeroUsize);
@@ -155,8 +154,7 @@ impl Buffer {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash, EnumString)]
-#[strum(serialize_all = "lowercase")]
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum CursorMode {
     Insert,
     #[default]

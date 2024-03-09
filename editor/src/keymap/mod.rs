@@ -1,11 +1,11 @@
 use std::{
     collections::{BTreeMap, HashMap},
     ops::Deref,
-    str::FromStr,
 };
 
 use crate::{
     buffer::CursorMode,
+    command::CommandType,
     input::{Event, Input, Modifiers},
 };
 
@@ -19,10 +19,21 @@ impl Bindings {
     }
 }
 
+impl From<Vec<(&str, CommandType)>> for Bindings {
+    fn from(mappings: Vec<(&str, CommandType)>) -> Self {
+        let mut bindings = Bindings::default();
+        for (sequence, command_type) in mappings {
+            Keymaps::parse(&mut bindings, sequence, command_type);
+        }
+
+        bindings
+    }
+}
+
 #[cfg_attr(test, derive(PartialEq))]
 #[derive(Debug)]
 pub enum Keymap {
-    Leaf(String),
+    Leaf(CommandType),
     Node(Bindings),
 }
 
@@ -37,31 +48,50 @@ impl Keymaps {
 
 impl Keymaps {
     pub fn init() -> &'static Self {
-        let bytes = include_bytes!("default");
-        let config = String::from_utf8_lossy(bytes);
-
         let mut map = HashMap::<CursorMode, Bindings>::new();
-        for (i, line) in config.lines().enumerate() {
-            let content = line.split('#').next().unwrap_or(line);
 
-            if content.is_empty() {
-                continue;
-            }
-
-            let (definition, command) = split_once(content, ':', i);
-            let (mode, sequence) = split_once(definition, ' ', i);
-
-            let cursor = CursorMode::from_str(mode).expect("valid cursor mode");
-            map.entry(cursor).or_default();
-
-            let root = map.get_mut(&cursor).expect("root");
-            Self::parse(root, sequence, command);
-        }
+        map.insert(CursorMode::Normal, Self::normal_mode());
+        map.insert(CursorMode::Insert, Self::insert_mode());
 
         Box::leak(Box::new(Keymaps(map)))
     }
 
-    fn parse(root: &mut Bindings, sequence: &str, command: &str) {
+    fn normal_mode() -> Bindings {
+        let mappings = vec![
+            ("i", CommandType::InsertMode),
+            ("h", CommandType::MoveBack),
+            ("j", CommandType::MoveDown),
+            ("k", CommandType::MoveUp),
+            ("l", CommandType::MoveForward),
+            ("A", CommandType::InsertModeLineEnd),
+            ("I", CommandType::InsertModeLineStart),
+            ("o", CommandType::InsertModeLineNext),
+            ("O", CommandType::InsertModeLinePrev),
+            ("d", CommandType::DeleteChar),
+            ("gg", CommandType::GoToStartLine),
+            ("ge", CommandType::GoToEndLine),
+            ("gl", CommandType::GoToEndCurrLine),
+            ("gh", CommandType::GoToStartCurrLine),
+        ];
+
+        mappings.into()
+    }
+
+    fn insert_mode() -> Bindings {
+        let mappings = vec![
+            ("<Esc>", CommandType::NormalMode),
+            ("<Left>", CommandType::MoveBack),
+            ("<Right>", CommandType::MoveForward),
+            ("<Up>", CommandType::MoveUp),
+            ("<Down>", CommandType::MoveDown),
+            ("<Backspace>", CommandType::DeleteCharBackspace),
+            ("<Enter>", CommandType::NewLine),
+        ];
+
+        mappings.into()
+    }
+
+    fn parse(root: &mut Bindings, sequence: &str, command_type: CommandType) {
         let re = regex::Regex::new(r"<(.*?)>").expect("valid pattern");
 
         let mut specials: Vec<String> = re
@@ -86,14 +116,14 @@ impl Keymaps {
         });
         keys.reverse();
 
-        Self::parse_keys(root, modifiers, keys, command);
+        Self::parse_keys(root, modifiers, keys, command_type);
     }
 
     fn parse_keys(
         parent: &mut Bindings,
         modifiers: Modifiers,
         mut keys: Vec<String>,
-        command: &str,
+        command_type: CommandType,
     ) {
         let Some(key) = keys.pop() else {
             return;
@@ -110,29 +140,22 @@ impl Keymaps {
         let input = Input { event, modifiers };
 
         if keys.is_empty() {
-            parent.0.insert(input, Keymap::Leaf(command.to_owned()));
+            parent.0.insert(input, Keymap::Leaf(command_type));
         } else {
             if let Some(Keymap::Node(ref mut child)) = parent.0.get_mut(&input) {
-                return Self::parse_keys(child, modifiers, keys, command);
+                return Self::parse_keys(child, modifiers, keys, command_type);
             }
 
             let mut child = Bindings::default();
-            Self::parse_keys(&mut child, modifiers, keys, command);
+            Self::parse_keys(&mut child, modifiers, keys, command_type);
             parent.0.insert(input, Keymap::Node(child));
         }
     }
 }
 
-fn split_once(slice: &str, sep: char, i: usize) -> (&str, &str) {
-    let Some((first, second)) = slice.split_once(sep) else {
-        panic!("invalid format at line: {}", i);
-    };
-
-    (first.trim(), second.trim())
-}
-
 #[cfg(test)]
 mod tests {
+    use crate::command::CommandType;
 
     #[test]
     fn test_keymap() {
@@ -158,7 +181,7 @@ mod tests {
             })
             .unwrap();
 
-        let expected = super::Keymap::Leaf("go_to_end_line".to_owned());
+        let expected = super::Keymap::Leaf(CommandType::GoToEndLine);
         assert_eq!(leaf, &expected);
     }
 }
