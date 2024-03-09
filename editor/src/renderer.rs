@@ -29,7 +29,8 @@ pub struct Cursor {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EventOutcome {
-    Render(bool),
+    Render,
+    Ignore,
     Exit,
 }
 
