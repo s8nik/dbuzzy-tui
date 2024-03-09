@@ -8,7 +8,7 @@ authors.workspace = true
 log.workspace = true
 anyhow.workspace = true
 tokio.workspace = true
-tui.workspace = true
+ratatui.workspace = true
 crossterm.workspace = true
 
 futures-util = "0.3.30"

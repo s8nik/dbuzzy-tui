@@ -3,7 +3,7 @@ use std::io::Write;
 use crossterm::{event::EventStream, execute, ExecutableCommand};
 use editor::{editor::Editor, renderer::EventOutcome};
 use futures_util::StreamExt;
-use tui::{backend::Backend, Terminal};
+use ratatui::{backend::Backend, Terminal};
 
 pub struct App<B: Backend + Write> {
     editor: Editor,

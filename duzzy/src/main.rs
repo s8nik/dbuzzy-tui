@@ -1,4 +1,4 @@
-use tui::backend::CrosstermBackend;
+use ratatui::backend::CrosstermBackend;
 
 mod app;
 
