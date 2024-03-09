@@ -2,8 +2,8 @@ use std::path::Path;
 
 use crate::{
     add_buffer,
-    buffer::{Buffer, CursorMode},
-    command::{insert_mode_on_key, CommandResolver},
+    buffer::Buffer,
+    command::{insert, CommandFinder},
     keymap::Keymaps,
     renderer::{Cursor, EventOutcome, Renderer, Viewport},
     workspace::Workspace,
@@ -13,7 +13,7 @@ pub struct Editor {
     pub(crate) workspace: Workspace,
     pub(crate) viewport: Viewport,
     keymaps: &'static Keymaps,
-    resolver: CommandResolver,
+    command: CommandFinder,
 }
 
 impl Editor {
@@ -26,7 +26,7 @@ impl Editor {
         Self {
             workspace,
             keymaps: Keymaps::init(),
-            resolver: CommandResolver::default(),
+            command: CommandFinder::default(),
             viewport: Viewport { width, height },
         }
     }
@@ -68,30 +68,29 @@ impl Editor {
     pub fn on_event(&mut self, event: crossterm::event::Event) -> EventOutcome {
         if let crossterm::event::Event::Resize(width, height) = event {
             self.viewport.update(width as _, height as _);
-            return EventOutcome::Render(true);
+            return EventOutcome::Render;
         }
 
         let crossterm::event::Event::Key(e) = event else {
-            return EventOutcome::Render(false);
+            return EventOutcome::Ignore;
         };
 
-        let mode = self.workspace.current().cursor_mode();
+        let is_insert = self.workspace.current().is_insert();
 
         let input = e.into();
-        let command = self.resolver.resolve(self.keymaps, &self.workspace, input);
+        let command = self.command.find(self.keymaps, &self.workspace, input);
 
-        let outcome = if let Some(command) = command {
-            command.call(&mut self.workspace);
-            self.resolver.reset();
-
-            EventOutcome::Render(true)
-        } else if mode == CursorMode::Insert {
-            insert_mode_on_key(self.workspace.current_mut(), input)
-        } else {
-            EventOutcome::Render(false)
+        let outcome = match command {
+            Some(command) => {
+                command.call(&mut self.workspace);
+                self.command.reset();
+                EventOutcome::Render
+            }
+            None if is_insert => insert::on_key(self.workspace.current_mut(), input),
+            _ => EventOutcome::Ignore,
         };
 
-        if let EventOutcome::Render(true) = outcome {
+        if let EventOutcome::Render = outcome {
             self.workspace
                 .current_mut()
                 .update_vscroll(self.viewport.height);
@@ -105,6 +104,9 @@ impl Editor {
             buffer.text_mut().append(log);
         }
 
-        EventOutcome::Render(self.workspace.logger_active())
+        match self.workspace.logger_active() {
+            true => EventOutcome::Render,
+            false => EventOutcome::Ignore,
+        }
     }
 }

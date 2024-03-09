@@ -8,7 +8,6 @@ use std::{
 
 use anyhow::Result;
 use ropey::Rope;
-use strum::EnumString;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BufferId(NonZeroUsize);
@@ -153,10 +152,17 @@ impl Buffer {
     pub fn len_lines(&self) -> usize {
         self.text.len_lines()
     }
+
+    pub fn is_insert(&self) -> bool {
+        self.mode == CursorMode::Insert
+    }
+
+    pub fn is_normal(&self) -> bool {
+        self.mode == CursorMode::Normal
+    }
 }
 
-#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash, EnumString)]
-#[strum(serialize_all = "lowercase")]
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum CursorMode {
     Insert,
     #[default]

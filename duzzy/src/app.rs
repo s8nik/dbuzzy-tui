@@ -90,7 +90,7 @@ impl<B: Backend + Write> App<B> {
 
             match outcome {
                 EventOutcome::Exit => break,
-                EventOutcome::Render(is_needed) if is_needed => {
+                EventOutcome::Render => {
                     let widget = self.editor.widget();
                     self.terminal.draw(|ui| {
                         ui.render_widget(widget, ui.size());
