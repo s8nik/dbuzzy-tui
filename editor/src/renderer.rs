@@ -1,5 +1,5 @@
 use crossterm::cursor::SetCursorStyle;
-use tui::{
+use ratatui::{
     buffer::Buffer,
     layout::Rect,
     text::Text,
