@@ -119,7 +119,7 @@ impl CommandFinder {
         self.current = None;
     }
 
-    pub fn resolve(
+    pub fn find(
         &mut self,
         keymaps: &'static Keymaps,
         workspace: &Workspace,

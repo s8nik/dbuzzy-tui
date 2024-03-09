@@ -13,7 +13,7 @@ pub struct Editor {
     pub(crate) workspace: Workspace,
     pub(crate) viewport: Viewport,
     keymaps: &'static Keymaps,
-    resolver: CommandFinder,
+    command: CommandFinder,
 }
 
 impl Editor {
@@ -26,7 +26,7 @@ impl Editor {
         Self {
             workspace,
             keymaps: Keymaps::init(),
-            resolver: CommandFinder::default(),
+            command: CommandFinder::default(),
             viewport: Viewport { width, height },
         }
     }
@@ -78,11 +78,11 @@ impl Editor {
         let mode = self.workspace.current().cursor_mode();
 
         let input = e.into();
-        let command = self.resolver.resolve(self.keymaps, &self.workspace, input);
+        let command = self.command.find(self.keymaps, &self.workspace, input);
 
         let outcome = if let Some(command) = command {
             command.call(&mut self.workspace);
-            self.resolver.reset();
+            self.command.reset();
 
             EventOutcome::Render(true)
         } else if mode == CursorMode::Insert {
