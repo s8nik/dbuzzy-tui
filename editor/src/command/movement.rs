@@ -1,4 +1,4 @@
-use crate::buffer::{Buffer, CursorMode};
+use crate::buffer::Buffer;
 
 pub(super) fn move_forward(buffer: &mut Buffer) {
     let offset = buffer.offset();
@@ -42,21 +42,6 @@ pub(super) fn move_down(buffer: &mut Buffer) {
         buffer.update_index(index + 1);
         buffer.update_offset(offset.min(buffer.line_len_bytes()))
     }
-}
-
-pub(super) fn insert_mode_line_end(buffer: &mut Buffer) {
-    buffer.update_offset(buffer.line_len_bytes());
-
-    if buffer.index() < buffer.len_lines() - 1 {
-        buffer.update_offset(buffer.offset() - 1);
-    }
-
-    buffer.update_cursor_mode(CursorMode::Insert);
-}
-
-pub(super) fn insert_mode_line_start(buffer: &mut Buffer) {
-    buffer.update_offset(0);
-    buffer.update_cursor_mode(CursorMode::Insert);
 }
 
 pub(super) fn go_to_start_line(buffer: &mut Buffer) {

@@ -1,4 +1,4 @@
-use crate::buffer::{Buffer, CursorMode};
+use crate::buffer::Buffer;
 
 pub(super) fn insert_char(buffer: &mut Buffer, ch: char) {
     let pos = buffer.position();
@@ -30,24 +30,4 @@ pub(super) fn delete_char_backspace(buffer: &mut Buffer) {
         super::move_back(buffer);
         buffer.text_mut().remove(pos - 1..pos);
     }
-}
-
-pub(super) fn insert_mode_line_next(buffer: &mut Buffer) {
-    let index = buffer.index();
-    let line_start_byte = buffer.text().line_to_byte(index + 1);
-    buffer.text_mut().insert_char(line_start_byte, '\n');
-
-    super::move_down(buffer);
-
-    buffer.update_offset(0);
-    buffer.update_cursor_mode(CursorMode::Insert);
-}
-
-pub(super) fn insert_mode_line_prev(buffer: &mut Buffer) {
-    let index = buffer.index();
-    let line_start_byte = buffer.text().line_to_byte(index);
-    buffer.text_mut().insert_char(line_start_byte, '\n');
-
-    buffer.update_offset(0);
-    buffer.update_cursor_mode(CursorMode::Insert);
 }
