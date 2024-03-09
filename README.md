@@ -1,2 +1,4 @@
-# duzzy-editor
-A simple text editor widget for tui-rs. Includes basic functionality and easy integration. Currently a work-in-progress.
+# dbuzzy-tui
+### Attempting to Write a Database Management Tool in Terminal using Ratatui
+
+At present, my primary focus is on developing a custom editor crate to further enhance the capabilities of dbuzzy-tui.
