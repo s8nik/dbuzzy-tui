@@ -3,7 +3,7 @@ use std::path::Path;
 use crate::{
     add_buffer,
     buffer::{Buffer, CursorMode},
-    command::{insert_mode_on_key, CommandResolver},
+    command::{insert_mode_on_key, CommandFinder},
     keymap::Keymaps,
     renderer::{Cursor, EventOutcome, Renderer, Viewport},
     workspace::Workspace,
@@ -13,7 +13,7 @@ pub struct Editor {
     pub(crate) workspace: Workspace,
     pub(crate) viewport: Viewport,
     keymaps: &'static Keymaps,
-    resolver: CommandResolver,
+    resolver: CommandFinder,
 }
 
 impl Editor {
@@ -26,7 +26,7 @@ impl Editor {
         Self {
             workspace,
             keymaps: Keymaps::init(),
-            resolver: CommandResolver::default(),
+            resolver: CommandFinder::default(),
             viewport: Viewport { width, height },
         }
     }

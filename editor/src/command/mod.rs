@@ -109,12 +109,12 @@ impl Default for CommandRegistry {
 }
 
 #[derive(Default)]
-pub struct CommandResolver {
+pub struct CommandFinder {
     registry: CommandRegistry,
     current: Option<&'static Keymap>,
 }
 
-impl CommandResolver {
+impl CommandFinder {
     pub fn reset(&mut self) {
         self.current = None;
     }
