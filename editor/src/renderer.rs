@@ -54,8 +54,8 @@ impl<'a> Renderer<'a> {
     pub fn text(&self) -> Option<Text> {
         let buffer = self.0.workspace.current();
 
-        let text = buffer.text();
-        let vscroll = buffer.vscroll();
+        let text = &buffer.text;
+        let vscroll = buffer.vscroll;
 
         let start_byte = text.line_to_byte(vscroll);
 
