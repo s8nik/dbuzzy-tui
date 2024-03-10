@@ -27,7 +27,7 @@ impl BufferId {
 
 impl Default for BufferId {
     fn default() -> Self {
-        BufferId::next()
+        Self::next()
     }
 }
 
@@ -37,7 +37,6 @@ pub struct FileMeta {
     pub readonly: bool,
 }
 
-#[derive(Default)]
 pub struct Buffer {
     id: BufferId,
     meta: FileMeta,
@@ -46,7 +45,9 @@ pub struct Buffer {
     pub offset: usize,
     pub index: usize,
     pub vscroll: usize,
-    pub mode: CursorMode,
+
+    mode: CursorMode,
+    available_modes: Vec<CursorMode>,
 }
 
 impl Buffer {
@@ -88,11 +89,27 @@ impl Buffer {
             index: 0,
             vscroll: 0,
             mode: CursorMode::Normal,
+            available_modes: vec![CursorMode::Normal, CursorMode::Visual],
         }
     }
 
     pub fn id(&self) -> BufferId {
         self.id
+    }
+
+    pub fn cursor_mode(&self) -> CursorMode {
+        self.mode
+    }
+
+    pub fn update_cursor_mode(&mut self, mode: CursorMode) -> anyhow::Result<()> {
+        anyhow::ensure!(
+            self.available_modes.contains(&mode),
+            "Cursor mode: {mode} is not available for this buffer",
+        );
+
+        self.mode = mode;
+
+        Ok(())
     }
 
     pub fn position(&self) -> usize {
@@ -110,8 +127,8 @@ impl Buffer {
         }
     }
 
-    pub fn line_len_bytes(&self) -> usize {
-        self.text.line(self.index).len_bytes()
+    pub fn len_bytes(&self, index: usize) -> usize {
+        self.text.line(index).len_bytes()
     }
 
     pub fn len_lines(&self) -> usize {
@@ -127,10 +144,34 @@ impl Buffer {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
+impl Default for Buffer {
+    fn default() -> Self {
+        Self {
+            id: BufferId::default(),
+            meta: FileMeta::default(),
+            text: Rope::default(),
+            offset: 0,
+            index: 0,
+            vscroll: 0,
+            mode: CursorMode::Normal,
+            available_modes: vec![CursorMode::Insert, CursorMode::Normal, CursorMode::Visual],
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum CursorMode {
     Insert,
-    #[default]
     Normal,
     Visual,
+}
+
+impl std::fmt::Display for CursorMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CursorMode::Insert => write!(f, "insert"),
+            CursorMode::Normal => write!(f, "normal"),
+            CursorMode::Visual => write!(f, "visual"),
+        }
+    }
 }
