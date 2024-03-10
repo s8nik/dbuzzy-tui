@@ -51,7 +51,6 @@ impl Keymaps {
         let mut map = HashMap::<CursorMode, Bindings>::new();
 
         map.insert(CursorMode::Normal, Self::normal_mode());
-        map.insert(CursorMode::Insert, Self::insert_mode());
 
         Box::leak(Box::new(Keymaps(map)))
     }
@@ -59,10 +58,10 @@ impl Keymaps {
     fn normal_mode() -> Bindings {
         let mappings = vec![
             ("i", CmdType::InsertMode),
-            ("h", CmdType::MoveBack),
+            ("h", CmdType::MoveLeft),
             ("j", CmdType::MoveDown),
             ("k", CmdType::MoveUp),
-            ("l", CmdType::MoveForward),
+            ("l", CmdType::MoveRight),
             ("A", CmdType::InsertModeLineEnd),
             ("I", CmdType::InsertModeLineStart),
             ("o", CmdType::InsertModeLineNext),
@@ -72,20 +71,6 @@ impl Keymaps {
             ("ge", CmdType::GoToBottomLine),
             ("gl", CmdType::GoToLineEnd),
             ("gh", CmdType::GoToLineStart),
-        ];
-
-        mappings.into()
-    }
-
-    fn insert_mode() -> Bindings {
-        let mappings = vec![
-            ("<Esc>", CmdType::NormalMode),
-            ("<Left>", CmdType::MoveBack),
-            ("<Right>", CmdType::MoveForward),
-            ("<Up>", CmdType::MoveUp),
-            ("<Down>", CmdType::MoveDown),
-            ("<Backspace>", CmdType::DeleteCharBackspace),
-            ("<Enter>", CmdType::NewLine),
         ];
 
         mappings.into()

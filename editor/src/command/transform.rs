@@ -4,7 +4,7 @@ pub(super) fn insert_char(buffer: &mut Buffer, ch: char) {
     let pos = buffer.position();
     buffer.text.insert_char(pos, ch);
 
-    super::move_cursor(buffer, super::movement::CursorMove::Forward);
+    buffer.offset += 1;
 }
 
 pub(super) fn new_line(buffer: &mut Buffer) {
@@ -23,11 +23,11 @@ pub(super) fn delete_char(buffer: &mut Buffer) {
     }
 }
 
-pub(super) fn delete_char_backspace(buffer: &mut Buffer) {
+pub(super) fn backspace(buffer: &mut Buffer) {
     let pos = buffer.position();
 
     if pos > 0 {
-        super::move_cursor(buffer, super::movement::CursorMove::Back);
+        super::move_cursor(buffer, super::movement::CursorMove::Left);
         buffer.text.remove(pos - 1..pos);
     }
 }

@@ -20,18 +20,15 @@ pub type Callback = fn(&mut Workspace);
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, PartialOrd)]
 pub enum CmdType {
     InsertMode,
-    NormalMode,
-    MoveBack,
+    MoveLeft,
     MoveDown,
     MoveUp,
-    MoveForward,
+    MoveRight,
     InsertModeLineEnd,
     InsertModeLineStart,
     InsertModeLineNext,
     InsertModeLinePrev,
     DeleteChar,
-    DeleteCharBackspace,
-    NewLine,
     GoToTopLine,
     GoToBottomLine,
     GoToLineStart,
@@ -72,18 +69,15 @@ impl CommandRegistry {
 
         let commands = vec![
             cmd!(CmdType::InsertMode, insert_mode),
-            cmd!(CmdType::NormalMode, normal_mode),
-            cmd!(CmdType::MoveBack, move_cursor, CursorMove::Back),
+            cmd!(CmdType::MoveLeft, move_cursor, CursorMove::Left),
             cmd!(CmdType::MoveDown, move_cursor, CursorMove::Down(1)),
             cmd!(CmdType::MoveUp, move_cursor, CursorMove::Up(1)),
-            cmd!(CmdType::MoveForward, move_cursor, CursorMove::Forward),
+            cmd!(CmdType::MoveRight, move_cursor, CursorMove::Right),
             cmd!(CmdType::InsertModeLineEnd, insert_mode_line_end),
             cmd!(CmdType::InsertModeLineStart, insert_mode_line_start),
             cmd!(CmdType::InsertModeLineNext, insert_mode_line_next),
             cmd!(CmdType::InsertModeLinePrev, insert_mode_line_prev),
             cmd!(CmdType::DeleteChar, delete_char),
-            cmd!(CmdType::DeleteCharBackspace, delete_char_backspace),
-            cmd!(CmdType::NewLine, new_line),
             cmd!(CmdType::GoToTopLine, move_cursor, CursorMove::Top),
             cmd!(CmdType::GoToBottomLine, move_cursor, CursorMove::Bottom),
             cmd!(CmdType::GoToLineEnd, move_cursor, CursorMove::LineEnd),
@@ -128,9 +122,9 @@ impl CommandFinder {
     ) -> Option<Arc<Command>> {
         let buffer = workspace.current();
 
-        let bindings = keymaps
-            .get(&buffer.cursor_mode())
-            .expect("keymap must be registered");
+        let Some(bindings) = keymaps.get(&buffer.cursor_mode()) else {
+            return None;
+        };
 
         self.current = match self.current {
             Some(node) => match node {
