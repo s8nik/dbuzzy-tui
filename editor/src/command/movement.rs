@@ -1,63 +1,75 @@
 use crate::buffer::Buffer;
 
-pub(super) fn move_forward(buffer: &mut Buffer) {
-    let offset = buffer.offset();
-    let index = buffer.index();
+enum Direction {
+    Up,
+    Down,
+    Back,
+    Forward,
+}
 
-    if offset < buffer.line_len_bytes() {
-        buffer.update_offset(offset + 1);
-    } else if index < buffer.len_lines() - 1 {
-        buffer.update_offset(0);
-        buffer.update_index(index + 1);
-    }
+pub(super) fn move_forward(buffer: &mut Buffer) {
+    move_impl(buffer, Direction::Forward)
 }
 
 pub(super) fn move_back(buffer: &mut Buffer) {
-    let offset = buffer.offset();
-    let index = buffer.index();
-
-    if offset > 0 {
-        buffer.update_offset(offset - 1);
-    } else if index > 0 {
-        buffer.update_index(index - 1);
-        buffer.update_offset(buffer.line_len_bytes() - 1);
-    }
+    move_impl(buffer, Direction::Back)
 }
 
 pub(super) fn move_up(buffer: &mut Buffer) {
-    let offset = buffer.offset();
-    let index = buffer.index();
-
-    if index > 0 {
-        buffer.update_index(index - 1);
-        buffer.update_offset(offset.min(buffer.line_len_bytes()))
-    }
+    move_impl(buffer, Direction::Up)
 }
 
 pub(super) fn move_down(buffer: &mut Buffer) {
-    let offset = buffer.offset();
-    let index = buffer.index();
+    move_impl(buffer, Direction::Down)
+}
 
-    if index < buffer.len_lines() - 1 {
-        buffer.update_index(index + 1);
-        buffer.update_offset(offset.min(buffer.line_len_bytes()))
+fn move_impl(buffer: &mut Buffer, direction: Direction) {
+    match direction {
+        Direction::Up => {
+            if buffer.index > 0 {
+                buffer.index -= 1;
+                buffer.offset = buffer.offset.min(buffer.line_len_bytes());
+            }
+        }
+        Direction::Down => {
+            if buffer.index < buffer.len_lines() - 1 {
+                buffer.index += 1;
+                buffer.offset = buffer.offset.min(buffer.line_len_bytes());
+            }
+        }
+        Direction::Back => {
+            if buffer.offset > 0 {
+                buffer.offset -= 1;
+            } else if buffer.index > 0 {
+                buffer.index -= 1;
+                buffer.offset = buffer.line_len_bytes() - 1;
+            }
+        }
+        Direction::Forward => {
+            if buffer.offset < buffer.line_len_bytes() {
+                buffer.offset += 1;
+            } else if buffer.index < buffer.len_lines() - 1 {
+                buffer.offset = 0;
+                buffer.index += 1;
+            }
+        }
     }
 }
 
 pub(super) fn go_to_start_line(buffer: &mut Buffer) {
-    buffer.update_index(0);
-    buffer.update_offset(0);
+    buffer.index = 0;
+    buffer.offset = 0;
 }
 
 pub(super) fn go_to_end_line(buffer: &mut Buffer) {
-    buffer.update_index(buffer.len_lines() - 1);
-    buffer.update_offset(0);
+    buffer.index = buffer.len_lines() - 1;
+    buffer.offset = 0;
 }
 
 pub(super) fn go_to_start_curr_line(buffer: &mut Buffer) {
-    buffer.update_offset(0)
+    buffer.offset = 0
 }
 
 pub(super) fn go_to_end_curr_line(buffer: &mut Buffer) {
-    buffer.update_offset(buffer.line_len_bytes() - 1);
+    buffer.offset = buffer.line_len_bytes() - 1;
 }
