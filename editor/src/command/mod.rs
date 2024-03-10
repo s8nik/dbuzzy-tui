@@ -68,15 +68,15 @@ impl CommandRegistry {
         }
 
         let commands = vec![
-            cmd!(CmdType::InsertMode, insert_mode),
+            cmd!(CmdType::InsertMode, switch_mode, Switch::Inplace),
             cmd!(CmdType::MoveLeft, move_cursor, CursorMove::Left),
             cmd!(CmdType::MoveDown, move_cursor, CursorMove::Down(1)),
             cmd!(CmdType::MoveUp, move_cursor, CursorMove::Up(1)),
             cmd!(CmdType::MoveRight, move_cursor, CursorMove::Right),
-            cmd!(CmdType::InsertModeLineEnd, insert_mode_line_end),
-            cmd!(CmdType::InsertModeLineStart, insert_mode_line_start),
-            cmd!(CmdType::InsertModeLineNext, insert_mode_line_next),
-            cmd!(CmdType::InsertModeLinePrev, insert_mode_line_prev),
+            cmd!(CmdType::InsertModeLineEnd, switch_mode, Switch::LineEnd),
+            cmd!(CmdType::InsertModeLineStart, switch_mode, Switch::LineStart),
+            cmd!(CmdType::InsertModeLineNext, switch_mode, Switch::LineNext),
+            cmd!(CmdType::InsertModeLinePrev, switch_mode, Switch::LinePrev),
             cmd!(CmdType::DeleteChar, delete_char),
             cmd!(CmdType::GoToTopLine, move_cursor, CursorMove::Top),
             cmd!(CmdType::GoToBottomLine, move_cursor, CursorMove::Bottom),

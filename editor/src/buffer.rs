@@ -101,15 +101,10 @@ impl Buffer {
         self.mode
     }
 
-    pub fn update_cursor_mode(&mut self, mode: CursorMode) -> anyhow::Result<()> {
-        anyhow::ensure!(
-            self.available_modes.contains(&mode),
-            "Cursor mode: {mode} is not available for this buffer",
-        );
-
-        self.mode = mode;
-
-        Ok(())
+    pub fn update_cursor_mode(&mut self, mode: CursorMode) {
+        if self.available_modes.contains(&mode) {
+            self.mode = mode;
+        }
     }
 
     pub fn position(&self) -> usize {

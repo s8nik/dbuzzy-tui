@@ -1,5 +1,5 @@
 use crate::{
-    buffer::Buffer,
+    buffer::{Buffer, CursorMode},
     input::{Event, Input, Modifiers},
     renderer::EventOutcome,
 };
@@ -26,7 +26,7 @@ pub fn on_key(buffer: &mut Buffer, input: Input) -> EventOutcome {
         }
         Input {
             event: Event::Esc, ..
-        } => super::switch::normal_mode(buffer),
+        } => buffer.update_cursor_mode(CursorMode::Normal),
         Input {
             event: Event::Left, ..
         } => super::movement::move_cursor(buffer, CursorMove::Left),
