@@ -41,11 +41,12 @@ pub struct FileMeta {
 pub struct Buffer {
     id: BufferId,
     meta: FileMeta,
-    text: Rope,
-    offset: usize,
-    index: usize,
-    vscroll: usize,
-    mode: CursorMode,
+
+    pub text: Rope,
+    pub offset: usize,
+    pub index: usize,
+    pub vscroll: usize,
+    pub mode: CursorMode,
 }
 
 impl Buffer {
@@ -94,37 +95,9 @@ impl Buffer {
         self.id
     }
 
-    pub fn text(&self) -> &Rope {
-        &self.text
-    }
-
-    pub fn text_mut(&mut self) -> &mut Rope {
-        &mut self.text
-    }
-
     pub fn position(&self) -> usize {
         let byte_index = self.text.line_to_byte(self.index);
         self.offset + byte_index
-    }
-
-    pub fn offset(&self) -> usize {
-        self.offset
-    }
-
-    pub fn update_offset(&mut self, offset: usize) {
-        self.offset = offset
-    }
-
-    pub fn index(&self) -> usize {
-        self.index
-    }
-
-    pub fn update_index(&mut self, index: usize) {
-        self.index = index;
-    }
-
-    pub fn vscroll(&self) -> usize {
-        self.vscroll
     }
 
     pub fn update_vscroll(&mut self, max: usize) {
@@ -135,14 +108,6 @@ impl Buffer {
         } else if self.index > upper_bound {
             self.vscroll = self.index - max + 1;
         }
-    }
-
-    pub fn cursor_mode(&self) -> CursorMode {
-        self.mode
-    }
-
-    pub fn update_cursor_mode(&mut self, mode: CursorMode) {
-        self.mode = mode;
     }
 
     pub fn line_len_bytes(&self) -> usize {
