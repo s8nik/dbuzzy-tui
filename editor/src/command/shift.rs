@@ -18,7 +18,7 @@ pub(super) fn shift_cursor(buffer: &mut Buffer, direction: Shift) {
     let (new_offset, new_index) = match direction {
         Shift::Up(n) => {
             let index = index.saturating_sub(n);
-            let offset = offset.min(buffer.len_bytes(index) - 1);
+            let offset = offset.min(buffer.len_bytes(index).saturating_sub(1));
             (offset, index)
         }
         Shift::Down(n) => {
@@ -42,7 +42,7 @@ pub(super) fn shift_cursor(buffer: &mut Buffer, direction: Shift) {
         Shift::Top => (0, 0),
         Shift::Bottom => (0, buffer.len_lines() - 1),
         Shift::LineStart => (0, index),
-        Shift::LineEnd => (buffer.len_bytes(index) - 1, index),
+        Shift::LineEnd => (buffer.len_bytes(index).saturating_sub(1), index),
     };
 
     buffer.offset = new_offset;

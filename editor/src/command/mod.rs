@@ -1,3 +1,4 @@
+mod control;
 mod edit;
 pub mod insert;
 mod shift;
@@ -5,6 +6,7 @@ mod switch;
 
 use std::{collections::HashMap, sync::Arc};
 
+use control::*;
 use edit::*;
 use shift::*;
 use switch::*;
@@ -33,6 +35,8 @@ pub enum CmdType {
     GoToBottomLine,
     GoToLineStart,
     GoToLineEnd,
+    // @todo: eventually it will be a logger widget
+    OpenCloseLog,
 }
 
 pub struct Command {
@@ -57,13 +61,13 @@ pub struct CommandRegistry {
 impl CommandRegistry {
     pub fn register() -> Self {
         macro_rules! cmd {
+            (workspace, $type:expr, $fun:ident) => {{
+                Command::new($type, $fun)
+            }};
             ($type:expr, $fun:ident $(, $($arg:expr),*)?) => {{
                 Command::new($type, |workspace: &mut Workspace| {
                     $fun(workspace.current_mut(), $($($arg),*)?)
                 })
-            }};
-            ($type:expr, $fun:ident $(, $($arg:expr),*)?, workspace) => {{
-                Command::new($type, $fun)
             }};
         }
 
@@ -82,6 +86,7 @@ impl CommandRegistry {
             cmd!(CmdType::GoToBottomLine, shift_cursor, Shift::Bottom),
             cmd!(CmdType::GoToLineEnd, shift_cursor, Shift::LineEnd),
             cmd!(CmdType::GoToLineStart, shift_cursor, Shift::LineStart),
+            cmd!(workspace, CmdType::OpenCloseLog, open_close_logger),
         ];
 
         let mut map = HashMap::new();

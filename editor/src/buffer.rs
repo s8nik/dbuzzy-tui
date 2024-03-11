@@ -31,12 +31,13 @@ impl Default for BufferId {
     }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct FileMeta {
     pub path: Option<PathBuf>,
     pub readonly: bool,
 }
 
+#[derive(Debug)]
 pub struct Buffer {
     id: BufferId,
     meta: FileMeta,
