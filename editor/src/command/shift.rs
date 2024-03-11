@@ -1,6 +1,6 @@
 use crate::buffer::Buffer;
 
-pub enum CursorMove {
+pub enum Shift {
     Up(usize),
     Down(usize),
     Left,
@@ -11,27 +11,27 @@ pub enum CursorMove {
     LineEnd,
 }
 
-pub(super) fn move_cursor(buffer: &mut Buffer, direction: CursorMove) {
+pub(super) fn shift_cursor(buffer: &mut Buffer, direction: Shift) {
     let offset = buffer.offset;
     let index = buffer.index;
 
     let (new_offset, new_index) = match direction {
-        CursorMove::Up(n) => {
+        Shift::Up(n) => {
             let index = index.saturating_sub(n);
             let offset = offset.min(buffer.len_bytes(index) - 1);
             (offset, index)
         }
-        CursorMove::Down(n) => {
+        Shift::Down(n) => {
             let index = (index + n).min(buffer.len_lines() - 1);
             let offset = offset.min(buffer.len_bytes(index).saturating_sub(1));
             (offset, index)
         }
-        CursorMove::Left => match (offset > 0, index > 0) {
+        Shift::Left => match (offset > 0, index > 0) {
             (true, _) => (offset - 1, index),
             (false, true) => (buffer.len_bytes(index - 1) - 1, index - 1),
             _ => (offset, index),
         },
-        CursorMove::Right => match (
+        Shift::Right => match (
             offset < buffer.len_bytes(index).saturating_sub(1),
             index < buffer.len_lines().saturating_sub(1),
         ) {
@@ -39,10 +39,10 @@ pub(super) fn move_cursor(buffer: &mut Buffer, direction: CursorMove) {
             (false, true) => (0, (index + 1).min(buffer.len_lines() - 1)),
             (false, false) => ((offset + 1).min(buffer.len_bytes(index)), index),
         },
-        CursorMove::Top => (0, 0),
-        CursorMove::Bottom => (0, buffer.len_lines() - 1),
-        CursorMove::LineStart => (0, index),
-        CursorMove::LineEnd => (buffer.len_bytes(index) - 1, index),
+        Shift::Top => (0, 0),
+        Shift::Bottom => (0, buffer.len_lines() - 1),
+        Shift::LineStart => (0, index),
+        Shift::LineEnd => (buffer.len_bytes(index) - 1, index),
     };
 
     buffer.offset = new_offset;

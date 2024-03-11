@@ -32,7 +32,7 @@ fn switch_line_end(buffer: &mut Buffer) {
 fn switch_line_next(buffer: &mut Buffer) {
     let line_start_byte = buffer.text.line_to_byte(buffer.index + 1);
     buffer.text.insert_char(line_start_byte, '\n');
-    super::move_cursor(buffer, super::movement::CursorMove::Down(1));
+    super::shift_cursor(buffer, super::shift::Shift::Down(1));
 }
 
 fn switch_line_prev(buffer: &mut Buffer) {

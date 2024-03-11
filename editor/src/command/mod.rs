@@ -1,13 +1,13 @@
+mod edit;
 pub mod insert;
-mod movement;
+mod shift;
 mod switch;
-mod transform;
 
 use std::{collections::HashMap, sync::Arc};
 
-use movement::*;
+use edit::*;
+use shift::*;
 use switch::*;
-use transform::*;
 
 use crate::{
     input::Input,
@@ -69,19 +69,19 @@ impl CommandRegistry {
 
         let commands = vec![
             cmd!(CmdType::InsertMode, switch_mode, Switch::Inplace),
-            cmd!(CmdType::MoveLeft, move_cursor, CursorMove::Left),
-            cmd!(CmdType::MoveDown, move_cursor, CursorMove::Down(1)),
-            cmd!(CmdType::MoveUp, move_cursor, CursorMove::Up(1)),
-            cmd!(CmdType::MoveRight, move_cursor, CursorMove::Right),
+            cmd!(CmdType::MoveLeft, shift_cursor, Shift::Left),
+            cmd!(CmdType::MoveDown, shift_cursor, Shift::Down(1)),
+            cmd!(CmdType::MoveUp, shift_cursor, Shift::Up(1)),
+            cmd!(CmdType::MoveRight, shift_cursor, Shift::Right),
             cmd!(CmdType::InsertModeLineEnd, switch_mode, Switch::LineEnd),
             cmd!(CmdType::InsertModeLineStart, switch_mode, Switch::LineStart),
             cmd!(CmdType::InsertModeLineNext, switch_mode, Switch::LineNext),
             cmd!(CmdType::InsertModeLinePrev, switch_mode, Switch::LinePrev),
             cmd!(CmdType::DeleteChar, delete_char),
-            cmd!(CmdType::GoToTopLine, move_cursor, CursorMove::Top),
-            cmd!(CmdType::GoToBottomLine, move_cursor, CursorMove::Bottom),
-            cmd!(CmdType::GoToLineEnd, move_cursor, CursorMove::LineEnd),
-            cmd!(CmdType::GoToLineStart, move_cursor, CursorMove::LineStart),
+            cmd!(CmdType::GoToTopLine, shift_cursor, Shift::Top),
+            cmd!(CmdType::GoToBottomLine, shift_cursor, Shift::Bottom),
+            cmd!(CmdType::GoToLineEnd, shift_cursor, Shift::LineEnd),
+            cmd!(CmdType::GoToLineStart, shift_cursor, Shift::LineStart),
         ];
 
         let mut map = HashMap::new();

@@ -4,7 +4,7 @@ use crate::{
     renderer::EventOutcome,
 };
 
-use super::movement::CursorMove;
+use super::shift::Shift;
 
 pub fn on_key(buffer: &mut Buffer, input: Input) -> EventOutcome {
     if let Input {
@@ -22,40 +22,40 @@ pub fn on_key(buffer: &mut Buffer, input: Input) -> EventOutcome {
             event: Event::Char(ch),
             ..
         } => {
-            super::transform::insert_char(buffer, ch);
+            super::edit::insert_char(buffer, ch);
         }
         Input {
             event: Event::Esc, ..
         } => buffer.update_cursor_mode(CursorMode::Normal),
         Input {
             event: Event::Left, ..
-        } => super::movement::move_cursor(buffer, CursorMove::Left),
+        } => super::shift::shift_cursor(buffer, Shift::Left),
         Input {
             event: Event::Right,
             ..
-        } => super::movement::move_cursor(buffer, CursorMove::Right),
+        } => super::shift::shift_cursor(buffer, Shift::Right),
         Input {
             event: Event::Up, ..
-        } => super::movement::move_cursor(buffer, CursorMove::Up(1)),
+        } => super::shift::shift_cursor(buffer, Shift::Up(1)),
         Input {
             event: Event::Down, ..
-        } => super::movement::move_cursor(buffer, CursorMove::Down(1)),
+        } => super::shift::shift_cursor(buffer, Shift::Down(1)),
         Input {
             event: Event::Backspace,
             ..
-        } => super::transform::backspace(buffer),
+        } => super::edit::backspace(buffer),
         Input {
             event: Event::Enter,
             ..
-        } => super::transform::new_line(buffer),
+        } => super::edit::new_line(buffer),
         Input {
             event: Event::PageUp,
             ..
-        } => super::movement::move_cursor(buffer, CursorMove::Top),
+        } => super::shift::shift_cursor(buffer, Shift::Top),
         Input {
             event: Event::PageDown,
             ..
-        } => super::movement::move_cursor(buffer, CursorMove::Bottom),
+        } => super::shift::shift_cursor(buffer, Shift::Bottom),
         _ => outcome = EventOutcome::Ignore,
     }
 

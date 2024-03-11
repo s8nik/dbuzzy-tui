@@ -11,7 +11,7 @@ pub(super) fn new_line(buffer: &mut Buffer) {
     let pos = buffer.position();
     buffer.text.insert_char(pos, '\n');
 
-    super::move_cursor(buffer, super::movement::CursorMove::Down(1));
+    super::shift_cursor(buffer, super::shift::Shift::Down(1));
     buffer.offset = 0;
 }
 
@@ -27,7 +27,7 @@ pub(super) fn backspace(buffer: &mut Buffer) {
     let pos = buffer.position();
 
     if pos > 0 {
-        super::move_cursor(buffer, super::movement::CursorMove::Left);
+        super::shift_cursor(buffer, super::shift::Shift::Left);
         buffer.text.remove(pos - 1..pos);
     }
 }
