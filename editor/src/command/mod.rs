@@ -1,13 +1,13 @@
+mod edit;
 pub mod insert;
-mod movement;
+mod shift;
 mod switch;
-mod transform;
 
 use std::{collections::HashMap, sync::Arc};
 
-use movement::*;
+use edit::*;
+use shift::*;
 use switch::*;
-use transform::*;
 
 use crate::{
     input::Input,
@@ -18,33 +18,30 @@ use crate::{
 pub type Callback = fn(&mut Workspace);
 
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, PartialOrd)]
-pub enum CommandType {
+pub enum CmdType {
     InsertMode,
-    NormalMode,
-    MoveBack,
+    MoveLeft,
     MoveDown,
     MoveUp,
-    MoveForward,
+    MoveRight,
     InsertModeLineEnd,
     InsertModeLineStart,
     InsertModeLineNext,
     InsertModeLinePrev,
     DeleteChar,
-    DeleteCharBackspace,
-    NewLine,
-    GoToStartLine,
-    GoToEndLine,
-    GoToStartCurrLine,
-    GoToEndCurrLine,
+    GoToTopLine,
+    GoToBottomLine,
+    GoToLineStart,
+    GoToLineEnd,
 }
 
 pub struct Command {
-    type_: CommandType,
+    type_: CmdType,
     callback: Callback,
 }
 
 impl Command {
-    pub fn new(type_: CommandType, callback: Callback) -> Self {
+    pub fn new(type_: CmdType, callback: Callback) -> Self {
         Self { type_, callback }
     }
 
@@ -54,40 +51,37 @@ impl Command {
 }
 
 pub struct CommandRegistry {
-    commands: HashMap<CommandType, Arc<Command>>,
+    commands: HashMap<CmdType, Arc<Command>>,
 }
 
 impl CommandRegistry {
     pub fn register() -> Self {
-        macro_rules! command {
-            ($type: expr, $fun: ident) => {{
+        macro_rules! cmd {
+            ($type:expr, $fun:ident $(, $($arg:expr),*)?) => {{
                 Command::new($type, |workspace: &mut Workspace| {
-                    $fun(workspace.current_mut())
+                    $fun(workspace.current_mut(), $($($arg),*)?)
                 })
             }};
-            ($type: expr, $fun: ident, workspace) => {{
+            ($type:expr, $fun:ident $(, $($arg:expr),*)?, workspace) => {{
                 Command::new($type, $fun)
             }};
         }
 
         let commands = vec![
-            command!(CommandType::InsertMode, insert_mode),
-            command!(CommandType::NormalMode, normal_mode),
-            command!(CommandType::MoveBack, move_back),
-            command!(CommandType::MoveDown, move_down),
-            command!(CommandType::MoveUp, move_up),
-            command!(CommandType::MoveForward, move_forward),
-            command!(CommandType::InsertModeLineEnd, insert_mode_line_end),
-            command!(CommandType::InsertModeLineStart, insert_mode_line_start),
-            command!(CommandType::InsertModeLineNext, insert_mode_line_next),
-            command!(CommandType::InsertModeLinePrev, insert_mode_line_prev),
-            command!(CommandType::DeleteChar, delete_char),
-            command!(CommandType::DeleteCharBackspace, delete_char_backspace),
-            command!(CommandType::NewLine, new_line),
-            command!(CommandType::GoToStartLine, go_to_start_line),
-            command!(CommandType::GoToEndLine, go_to_end_line),
-            command!(CommandType::GoToStartCurrLine, go_to_start_curr_line),
-            command!(CommandType::GoToEndCurrLine, go_to_end_curr_line),
+            cmd!(CmdType::InsertMode, switch_mode, Switch::Inplace),
+            cmd!(CmdType::MoveLeft, shift_cursor, Shift::Left),
+            cmd!(CmdType::MoveDown, shift_cursor, Shift::Down(1)),
+            cmd!(CmdType::MoveUp, shift_cursor, Shift::Up(1)),
+            cmd!(CmdType::MoveRight, shift_cursor, Shift::Right),
+            cmd!(CmdType::InsertModeLineEnd, switch_mode, Switch::LineEnd),
+            cmd!(CmdType::InsertModeLineStart, switch_mode, Switch::LineStart),
+            cmd!(CmdType::InsertModeLineNext, switch_mode, Switch::LineNext),
+            cmd!(CmdType::InsertModeLinePrev, switch_mode, Switch::LinePrev),
+            cmd!(CmdType::DeleteChar, delete_char),
+            cmd!(CmdType::GoToTopLine, shift_cursor, Shift::Top),
+            cmd!(CmdType::GoToBottomLine, shift_cursor, Shift::Bottom),
+            cmd!(CmdType::GoToLineEnd, shift_cursor, Shift::LineEnd),
+            cmd!(CmdType::GoToLineStart, shift_cursor, Shift::LineStart),
         ];
 
         let mut map = HashMap::new();
@@ -98,7 +92,7 @@ impl CommandRegistry {
         Self { commands: map }
     }
 
-    pub fn get(&self, type_: &CommandType) -> Option<Arc<Command>> {
+    pub fn get(&self, type_: &CmdType) -> Option<Arc<Command>> {
         self.commands.get(type_).cloned()
     }
 }
@@ -128,9 +122,9 @@ impl CommandFinder {
     ) -> Option<Arc<Command>> {
         let buffer = workspace.current();
 
-        let bindings = keymaps
-            .get(&buffer.cursor_mode())
-            .expect("keymap must be registered");
+        let Some(bindings) = keymaps.get(&buffer.cursor_mode()) else {
+            return None;
+        };
 
         self.current = match self.current {
             Some(node) => match node {

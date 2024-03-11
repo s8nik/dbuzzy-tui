@@ -27,7 +27,7 @@ impl BufferId {
 
 impl Default for BufferId {
     fn default() -> Self {
-        BufferId::next()
+        Self::next()
     }
 }
 
@@ -37,15 +37,17 @@ pub struct FileMeta {
     pub readonly: bool,
 }
 
-#[derive(Default)]
 pub struct Buffer {
     id: BufferId,
     meta: FileMeta,
-    text: Rope,
-    offset: usize,
-    index: usize,
-    vscroll: usize,
+
+    pub text: Rope,
+    pub offset: usize,
+    pub index: usize,
+    pub vscroll: usize,
+
     mode: CursorMode,
+    available_modes: Vec<CursorMode>,
 }
 
 impl Buffer {
@@ -87,6 +89,7 @@ impl Buffer {
             index: 0,
             vscroll: 0,
             mode: CursorMode::Normal,
+            available_modes: vec![CursorMode::Normal, CursorMode::Visual],
         }
     }
 
@@ -94,37 +97,19 @@ impl Buffer {
         self.id
     }
 
-    pub fn text(&self) -> &Rope {
-        &self.text
+    pub fn cursor_mode(&self) -> CursorMode {
+        self.mode
     }
 
-    pub fn text_mut(&mut self) -> &mut Rope {
-        &mut self.text
+    pub fn update_cursor_mode(&mut self, mode: CursorMode) {
+        if self.available_modes.contains(&mode) {
+            self.mode = mode;
+        }
     }
 
     pub fn position(&self) -> usize {
         let byte_index = self.text.line_to_byte(self.index);
         self.offset + byte_index
-    }
-
-    pub fn offset(&self) -> usize {
-        self.offset
-    }
-
-    pub fn update_offset(&mut self, offset: usize) {
-        self.offset = offset
-    }
-
-    pub fn index(&self) -> usize {
-        self.index
-    }
-
-    pub fn update_index(&mut self, index: usize) {
-        self.index = index;
-    }
-
-    pub fn vscroll(&self) -> usize {
-        self.vscroll
     }
 
     pub fn update_vscroll(&mut self, max: usize) {
@@ -137,16 +122,8 @@ impl Buffer {
         }
     }
 
-    pub fn cursor_mode(&self) -> CursorMode {
-        self.mode
-    }
-
-    pub fn update_cursor_mode(&mut self, mode: CursorMode) {
-        self.mode = mode;
-    }
-
-    pub fn line_len_bytes(&self) -> usize {
-        self.text.line(self.index).len_bytes()
+    pub fn len_bytes(&self, index: usize) -> usize {
+        self.text.line(index).len_bytes()
     }
 
     pub fn len_lines(&self) -> usize {
@@ -162,10 +139,34 @@ impl Buffer {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
+impl Default for Buffer {
+    fn default() -> Self {
+        Self {
+            id: BufferId::default(),
+            meta: FileMeta::default(),
+            text: Rope::default(),
+            offset: 0,
+            index: 0,
+            vscroll: 0,
+            mode: CursorMode::Normal,
+            available_modes: vec![CursorMode::Insert, CursorMode::Normal, CursorMode::Visual],
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum CursorMode {
     Insert,
-    #[default]
     Normal,
     Visual,
+}
+
+impl std::fmt::Display for CursorMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CursorMode::Insert => write!(f, "insert"),
+            CursorMode::Normal => write!(f, "normal"),
+            CursorMode::Visual => write!(f, "visual"),
+        }
+    }
 }

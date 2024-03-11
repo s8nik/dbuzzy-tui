@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     buffer::CursorMode,
-    command::CommandType,
+    command::CmdType,
     input::{Event, Input, Modifiers},
 };
 
@@ -19,8 +19,8 @@ impl Bindings {
     }
 }
 
-impl From<Vec<(&str, CommandType)>> for Bindings {
-    fn from(mappings: Vec<(&str, CommandType)>) -> Self {
+impl From<Vec<(&str, CmdType)>> for Bindings {
+    fn from(mappings: Vec<(&str, CmdType)>) -> Self {
         let mut bindings = Bindings::default();
         for (sequence, command_type) in mappings {
             Keymaps::parse(&mut bindings, sequence, command_type);
@@ -33,7 +33,7 @@ impl From<Vec<(&str, CommandType)>> for Bindings {
 #[cfg_attr(test, derive(PartialEq))]
 #[derive(Debug)]
 pub enum Keymap {
-    Leaf(CommandType),
+    Leaf(CmdType),
     Node(Bindings),
 }
 
@@ -51,47 +51,32 @@ impl Keymaps {
         let mut map = HashMap::<CursorMode, Bindings>::new();
 
         map.insert(CursorMode::Normal, Self::normal_mode());
-        map.insert(CursorMode::Insert, Self::insert_mode());
 
         Box::leak(Box::new(Keymaps(map)))
     }
 
     fn normal_mode() -> Bindings {
         let mappings = vec![
-            ("i", CommandType::InsertMode),
-            ("h", CommandType::MoveBack),
-            ("j", CommandType::MoveDown),
-            ("k", CommandType::MoveUp),
-            ("l", CommandType::MoveForward),
-            ("A", CommandType::InsertModeLineEnd),
-            ("I", CommandType::InsertModeLineStart),
-            ("o", CommandType::InsertModeLineNext),
-            ("O", CommandType::InsertModeLinePrev),
-            ("d", CommandType::DeleteChar),
-            ("gg", CommandType::GoToStartLine),
-            ("ge", CommandType::GoToEndLine),
-            ("gl", CommandType::GoToEndCurrLine),
-            ("gh", CommandType::GoToStartCurrLine),
+            ("i", CmdType::InsertMode),
+            ("h", CmdType::MoveLeft),
+            ("j", CmdType::MoveDown),
+            ("k", CmdType::MoveUp),
+            ("l", CmdType::MoveRight),
+            ("A", CmdType::InsertModeLineEnd),
+            ("I", CmdType::InsertModeLineStart),
+            ("o", CmdType::InsertModeLineNext),
+            ("O", CmdType::InsertModeLinePrev),
+            ("d", CmdType::DeleteChar),
+            ("gg", CmdType::GoToTopLine),
+            ("ge", CmdType::GoToBottomLine),
+            ("gl", CmdType::GoToLineEnd),
+            ("gh", CmdType::GoToLineStart),
         ];
 
         mappings.into()
     }
 
-    fn insert_mode() -> Bindings {
-        let mappings = vec![
-            ("<Esc>", CommandType::NormalMode),
-            ("<Left>", CommandType::MoveBack),
-            ("<Right>", CommandType::MoveForward),
-            ("<Up>", CommandType::MoveUp),
-            ("<Down>", CommandType::MoveDown),
-            ("<Backspace>", CommandType::DeleteCharBackspace),
-            ("<Enter>", CommandType::NewLine),
-        ];
-
-        mappings.into()
-    }
-
-    fn parse(root: &mut Bindings, sequence: &str, command_type: CommandType) {
+    fn parse(root: &mut Bindings, sequence: &str, command_type: CmdType) {
         let re = regex::Regex::new(r"<(.*?)>").expect("valid pattern");
 
         let mut specials: Vec<String> = re
@@ -123,7 +108,7 @@ impl Keymaps {
         parent: &mut Bindings,
         modifiers: Modifiers,
         mut keys: Vec<String>,
-        command_type: CommandType,
+        command_type: CmdType,
     ) {
         let Some(key) = keys.pop() else {
             return;
@@ -155,7 +140,7 @@ impl Keymaps {
 
 #[cfg(test)]
 mod tests {
-    use crate::command::CommandType;
+    use crate::command::CmdType;
 
     #[test]
     fn test_keymap() {
@@ -181,7 +166,7 @@ mod tests {
             })
             .unwrap();
 
-        let expected = super::Keymap::Leaf(CommandType::GoToEndLine);
+        let expected = super::Keymap::Leaf(CmdType::GoToBottomLine);
         assert_eq!(leaf, &expected);
     }
 }

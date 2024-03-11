@@ -50,12 +50,12 @@ impl Editor {
         let buffer = self.workspace.current();
         let mode = buffer.cursor_mode();
 
-        let mut x = buffer.offset();
-        let mut y = buffer.index();
+        let mut x = buffer.offset;
+        let mut y = buffer.index;
 
         x = x.min(self.viewport.width - 1);
         y = y
-            .saturating_sub(buffer.vscroll())
+            .saturating_sub(buffer.vscroll)
             .min(self.viewport.height - 1);
 
         Cursor {
@@ -101,7 +101,7 @@ impl Editor {
 
     pub fn on_log(&mut self, log: ropey::Rope) -> EventOutcome {
         if let Some(buffer) = self.workspace.logger() {
-            buffer.text_mut().append(log);
+            buffer.text.append(log);
         }
 
         match self.workspace.logger_active() {
