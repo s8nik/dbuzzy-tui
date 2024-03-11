@@ -21,6 +21,7 @@ impl Editor {
         let mut workspace = Workspace::default();
 
         // init logger
+        // @note: remove it later
         add_buffer!(workspace, Buffer::logger(), logger);
 
         Self {

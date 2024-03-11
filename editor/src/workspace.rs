@@ -24,11 +24,19 @@ impl Workspace {
         self.buffers.get_mut(&self.logger)
     }
 
-    pub fn set_current(&mut self, id: BufferId) {
+    pub fn current_id(&self) -> BufferId {
+        self.current
+    }
+
+    pub fn set_current_id(&mut self, id: BufferId) {
         self.current = id
     }
 
-    pub fn set_logger(&mut self, id: BufferId) {
+    pub fn logger_id(&self) -> BufferId {
+        self.logger
+    }
+
+    pub fn set_logger_id(&mut self, id: BufferId) {
         self.logger = id
     }
 
@@ -45,8 +53,8 @@ macro_rules! add_buffer {
 
         $(
             match stringify!($flag) {
-                "current" => $workspace.set_current(id),
-                "logger" => $workspace.set_logger(id),
+                "current" => $workspace.set_current_id(id),
+                "logger" => $workspace.set_logger_id(id),
                 _ => (),
             }
         )?

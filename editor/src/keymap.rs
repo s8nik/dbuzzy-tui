@@ -71,6 +71,7 @@ impl Keymaps {
             ("ge", CmdType::GoToBottomLine),
             ("gl", CmdType::GoToLineEnd),
             ("gh", CmdType::GoToLineStart),
+            ("g0", CmdType::OpenCloseLog),
         ];
 
         mappings.into()
