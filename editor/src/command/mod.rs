@@ -50,7 +50,7 @@ impl Command {
     }
 
     pub fn call(&self, content: &mut Workspace) {
-        (self.callback)(content)
+        (self.callback)(content);
     }
 }
 

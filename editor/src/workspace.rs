@@ -24,20 +24,20 @@ impl Workspace {
         self.buffers.get_mut(&self.logger)
     }
 
-    pub fn current_id(&self) -> BufferId {
+    pub const fn current_id(&self) -> BufferId {
         self.current
     }
 
     pub fn set_current_id(&mut self, id: BufferId) {
-        self.current = id
+        self.current = id;
     }
 
-    pub fn logger_id(&self) -> BufferId {
+    pub const fn logger_id(&self) -> BufferId {
         self.logger
     }
 
     pub fn set_logger_id(&mut self, id: BufferId) {
-        self.logger = id
+        self.logger = id;
     }
 
     pub fn logger_active(&self) -> bool {

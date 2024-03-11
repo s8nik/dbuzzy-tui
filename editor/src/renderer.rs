@@ -35,7 +35,7 @@ pub enum EventOutcome {
 }
 
 impl Cursor {
-    pub fn style(&self) -> SetCursorStyle {
+    pub const fn style(&self) -> SetCursorStyle {
         match self.mode {
             CursorMode::Insert => SetCursorStyle::BlinkingBar,
             CursorMode::Normal | CursorMode::Visual => SetCursorStyle::BlinkingBlock,
@@ -46,7 +46,7 @@ impl Cursor {
 pub struct Renderer<'a>(&'a Editor);
 
 impl<'a> Renderer<'a> {
-    pub fn new(editor: &'a Editor) -> Self {
+    pub const fn new(editor: &'a Editor) -> Self {
         Self(editor)
     }
 

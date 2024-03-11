@@ -17,7 +17,7 @@ pub(super) fn switch_mode(buffer: &mut Buffer, switch: Switch) {
         _ => (),
     };
 
-    buffer.update_cursor_mode(CursorMode::Insert)
+    buffer.update_cursor_mode(CursorMode::Insert);
 }
 
 fn switch_line_end(buffer: &mut Buffer) {

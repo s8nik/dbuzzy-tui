@@ -43,7 +43,7 @@ impl Editor {
         add_buffer!(self.workspace, Buffer::default(), current);
     }
 
-    pub fn widget(&self) -> Renderer<'_> {
+    pub const fn widget(&self) -> Renderer<'_> {
         Renderer::new(self)
     }
 

@@ -94,11 +94,11 @@ impl Buffer {
         }
     }
 
-    pub fn id(&self) -> BufferId {
+    pub const fn id(&self) -> BufferId {
         self.id
     }
 
-    pub fn cursor_mode(&self) -> CursorMode {
+    pub const fn cursor_mode(&self) -> CursorMode {
         self.mode
     }
 
@@ -165,9 +165,9 @@ pub enum CursorMode {
 impl std::fmt::Display for CursorMode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CursorMode::Insert => write!(f, "insert"),
-            CursorMode::Normal => write!(f, "normal"),
-            CursorMode::Visual => write!(f, "visual"),
+            Self::Insert => write!(f, "insert"),
+            Self::Normal => write!(f, "normal"),
+            Self::Visual => write!(f, "visual"),
         }
     }
 }

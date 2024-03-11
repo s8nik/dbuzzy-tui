@@ -16,5 +16,5 @@ pub(super) fn open_close_logger(workspace: &mut Workspace) {
     }
 
     let id = workspace.logger_id();
-    workspace.set_current_id(id)
+    workspace.set_current_id(id);
 }
