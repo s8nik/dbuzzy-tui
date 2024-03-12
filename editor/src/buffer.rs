@@ -13,8 +13,6 @@ use ropey::Rope;
 pub struct BufferId(NonZeroUsize);
 
 impl BufferId {
-    pub const MAX: Self = Self(unsafe { NonZeroUsize::new_unchecked(usize::MAX) });
-
     pub fn next() -> Self {
         pub static IDS: AtomicUsize = AtomicUsize::new(1);
 
@@ -133,10 +131,6 @@ impl Buffer {
 
     pub fn is_insert(&self) -> bool {
         self.mode == CursorMode::Insert
-    }
-
-    pub fn is_normal(&self) -> bool {
-        self.mode == CursorMode::Normal
     }
 }
 

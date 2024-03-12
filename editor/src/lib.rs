@@ -6,10 +6,11 @@
 )]
 mod workspace;
 
-pub mod buffer;
-pub mod command;
+mod buffer;
+mod command;
 pub mod editor;
-pub mod input;
-pub mod keymap;
+mod history;
+mod input;
+mod keymap;
 pub mod logger;
 pub mod renderer;

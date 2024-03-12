@@ -24,10 +24,6 @@ impl Workspace {
         self.buffers.get_mut(&self.logger)
     }
 
-    pub const fn current_id(&self) -> BufferId {
-        self.current
-    }
-
     pub fn set_current_id(&mut self, id: BufferId) {
         self.current = id;
     }
