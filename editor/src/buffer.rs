@@ -2,7 +2,8 @@ use std::{
     fs::File,
     io::BufReader,
     num::NonZeroUsize,
-    path::{Path, PathBuf},
+    path::Path,
+    path::PathBuf,
     sync::atomic::{AtomicUsize, Ordering},
 };
 
@@ -40,13 +41,43 @@ pub struct Buffer {
     id: BufferId,
     meta: FileMeta,
 
-    pub text: Rope,
-    pub offset: usize,
-    pub index: usize,
-    pub vscroll: usize,
+    pub(super) text: Rope,
+    pub(super) offset: usize,
+    pub(super) index: usize,
+    vscroll: usize,
 
     mode: CursorMode,
     available_modes: Vec<CursorMode>,
+}
+
+#[macro_export]
+macro_rules! eval {
+    ($e:expr) => {
+        $e
+    };
+}
+
+#[macro_export]
+macro_rules! cursor {
+    ($buffer:expr) => {{
+        ($buffer.index, $buffer.offset)
+    }};
+    ($buffer:expr, index $value:expr) => {{
+        $buffer.index = $value;
+    }};
+    ($buffer:expr, index $op:tt $value:expr) => {{
+        $buffer.index = crate::eval!($buffer.index $op $value);
+    }};
+    ($buffer:expr, offset $value:expr) => {{
+        $buffer.offset = $value;
+    }};
+    ($buffer:expr, offset $op:tt $value:expr) => {{
+        $buffer.offset = crate::eval!($buffer.offset $op $value);
+    }};
+    ($buffer:expr, index $index:expr, offset $offset:expr) => {{
+        $buffer.index = $index;
+        $buffer.offset = $offset;
+    }};
 }
 
 impl Buffer {
@@ -107,8 +138,12 @@ impl Buffer {
     }
 
     pub fn position(&self) -> usize {
-        let byte_index = self.text.line_to_byte(self.index);
+        let byte_index = self.len_bytes(self.index);
         self.offset + byte_index
+    }
+
+    pub const fn vscroll(&self) -> usize {
+        self.vscroll
     }
 
     pub fn update_vscroll(&mut self, max: usize) {
@@ -163,5 +198,27 @@ impl std::fmt::Display for CursorMode {
             Self::Normal => write!(f, "normal"),
             Self::Visual => write!(f, "visual"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cursor_macro() {
+        let mut buffer = Buffer::default();
+
+        cursor!(buffer, index + 5);
+
+        assert_eq!((5, 0), cursor!(buffer));
+
+        cursor!(buffer, offset + 10);
+
+        assert_eq!((5, 10), cursor!(buffer));
+
+        cursor!(buffer, index 15, offset 20);
+
+        assert_eq!((15, 20), cursor!(buffer));
     }
 }

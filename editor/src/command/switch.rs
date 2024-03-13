@@ -1,4 +1,7 @@
-use crate::buffer::{Buffer, CursorMode};
+use crate::{
+    buffer::{Buffer, CursorMode},
+    cursor,
+};
 
 pub enum Switch {
     Inplace,
@@ -10,7 +13,7 @@ pub enum Switch {
 
 pub(super) fn switch_mode(buffer: &mut Buffer, switch: Switch) {
     match switch {
-        Switch::LineStart => buffer.offset = 0,
+        Switch::LineStart => cursor!(buffer, offset 0),
         Switch::LineEnd => switch_line_end(buffer),
         Switch::LineNext => switch_line_next(buffer),
         Switch::LinePrev => switch_line_prev(buffer),
@@ -21,11 +24,10 @@ pub(super) fn switch_mode(buffer: &mut Buffer, switch: Switch) {
 }
 
 fn switch_line_end(buffer: &mut Buffer) {
-    let index = buffer.index;
-    buffer.offset = buffer.len_bytes(index);
+    cursor!(buffer, offset buffer.len_bytes(buffer.index));
 
-    if index < buffer.len_lines() - 1 {
-        buffer.offset -= 1;
+    if buffer.index < buffer.len_lines() - 1 {
+        cursor!(buffer, offset - 1);
     }
 }
 
@@ -38,5 +40,5 @@ fn switch_line_next(buffer: &mut Buffer) {
 fn switch_line_prev(buffer: &mut Buffer) {
     let line_start_byte = buffer.text.line_to_byte(buffer.index);
     buffer.text.insert_char(line_start_byte, '\n');
-    buffer.offset = 0;
+    cursor!(buffer, offset 0);
 }

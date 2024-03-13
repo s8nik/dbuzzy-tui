@@ -55,7 +55,7 @@ impl<'a> Renderer<'a> {
         let buffer = self.0.workspace.current();
 
         let text = &buffer.text;
-        let vscroll = buffer.vscroll;
+        let vscroll = buffer.vscroll();
 
         let start_byte = text.line_to_byte(vscroll);
 

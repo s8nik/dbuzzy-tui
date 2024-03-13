@@ -4,6 +4,7 @@ use crate::{
     add_buffer,
     buffer::Buffer,
     command::{insert, CommandFinder},
+    cursor,
     keymap::Keymaps,
     renderer::{Cursor, EventOutcome, Renderer, Viewport},
     workspace::Workspace,
@@ -51,12 +52,11 @@ impl Editor {
         let buffer = self.workspace.current();
         let mode = buffer.cursor_mode();
 
-        let mut x = buffer.offset;
-        let mut y = buffer.index;
+        let (mut x, mut y) = cursor!(buffer);
 
         x = x.min(self.viewport.width - 1);
         y = y
-            .saturating_sub(buffer.vscroll)
+            .saturating_sub(buffer.vscroll())
             .min(self.viewport.height - 1);
 
         Cursor {

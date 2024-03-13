@@ -1,4 +1,4 @@
-use crate::buffer::Buffer;
+use crate::{buffer::Buffer, cursor};
 
 pub enum Shift {
     Up(usize),
@@ -12,8 +12,7 @@ pub enum Shift {
 }
 
 pub(super) fn shift_cursor(buffer: &mut Buffer, direction: Shift) {
-    let offset = buffer.offset;
-    let index = buffer.index;
+    let (index, offset) = cursor!(buffer);
 
     let (new_offset, new_index) = match direction {
         Shift::Up(n) => {
@@ -45,6 +44,5 @@ pub(super) fn shift_cursor(buffer: &mut Buffer, direction: Shift) {
         Shift::LineEnd => (buffer.len_bytes(index).saturating_sub(1), index),
     };
 
-    buffer.offset = new_offset;
-    buffer.index = new_index;
+    cursor!(buffer, index new_index, offset new_offset);
 }
