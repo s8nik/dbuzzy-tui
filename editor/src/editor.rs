@@ -52,7 +52,7 @@ impl Editor {
         let buffer = self.workspace.current();
         let mode = buffer.cursor_mode();
 
-        let (mut x, mut y) = cursor!(buffer);
+        let (mut y, mut x) = cursor!(buffer);
 
         x = x.min(self.viewport.width - 1);
         y = y

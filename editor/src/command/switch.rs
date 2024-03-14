@@ -27,7 +27,7 @@ fn switch_line_end(buffer: &mut Buffer) {
     cursor!(buffer, offset buffer.len_bytes(buffer.index));
 
     if buffer.index < buffer.len_lines() - 1 {
-        cursor!(buffer, offset - 1);
+        cursor!(buffer, offset -= 1);
     }
 }
 

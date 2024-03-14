@@ -51,13 +51,6 @@ pub struct Buffer {
 }
 
 #[macro_export]
-macro_rules! eval {
-    ($e:expr) => {
-        $e
-    };
-}
-
-#[macro_export]
 macro_rules! cursor {
     ($buffer:expr) => {{
         ($buffer.index, $buffer.offset)
@@ -66,13 +59,21 @@ macro_rules! cursor {
         $buffer.index = $value;
     }};
     ($buffer:expr, index $op:tt $value:expr) => {{
-        $buffer.index = crate::eval!($buffer.index $op $value);
+        match stringify!($op) {
+            "+=" => $buffer.index += $value,
+            "-=" => $buffer.index -= $value,
+            _ => unreachable!(),
+        };
     }};
     ($buffer:expr, offset $value:expr) => {{
         $buffer.offset = $value;
     }};
     ($buffer:expr, offset $op:tt $value:expr) => {{
-        $buffer.offset = crate::eval!($buffer.offset $op $value);
+        match stringify!($op) {
+            "+=" => $buffer.offset += $value,
+            "-=" => $buffer.offset -= $value,
+            _ => unreachable!(),
+        };
     }};
     ($buffer:expr, index $index:expr, offset $offset:expr) => {{
         $buffer.index = $index;
@@ -138,7 +139,7 @@ impl Buffer {
     }
 
     pub fn position(&self) -> usize {
-        let byte_index = self.len_bytes(self.index);
+        let byte_index = self.text.line_to_byte(self.index);
         self.offset + byte_index
     }
 
@@ -209,11 +210,11 @@ mod tests {
     fn test_cursor_macro() {
         let mut buffer = Buffer::default();
 
-        cursor!(buffer, index + 5);
+        cursor!(buffer, index += 5);
 
         assert_eq!((5, 0), cursor!(buffer));
 
-        cursor!(buffer, offset + 10);
+        cursor!(buffer, offset += 10);
 
         assert_eq!((5, 10), cursor!(buffer));
 

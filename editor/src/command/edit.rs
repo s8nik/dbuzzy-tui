@@ -3,7 +3,7 @@ use crate::{buffer::Buffer, cursor};
 pub(super) fn insert_char(buffer: &mut Buffer, ch: char) {
     let pos = buffer.position();
     buffer.text.insert_char(pos, ch);
-    cursor!(buffer, offset + 1);
+    cursor!(buffer, offset += 1);
 }
 
 pub(super) fn new_line(buffer: &mut Buffer) {
