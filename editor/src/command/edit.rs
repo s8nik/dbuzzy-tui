@@ -1,9 +1,10 @@
-use crate::{buffer::Buffer, cursor};
+use crate::{buffer::Buffer, cursor, workspace::Document};
 
-pub(super) fn insert_char(buffer: &mut Buffer, ch: char) {
-    let pos = buffer.position();
-    buffer.text.insert_char(pos, ch);
-    cursor!(buffer, offset += 1);
+pub(super) fn insert_char(doc: &mut Document, ch: char) {
+    let mut buf = doc.buf_mut();
+    let pos = buf.position();
+    buf.text.insert_char(pos, ch);
+    cursor!(buf, offset += 1);
 }
 
 pub(super) fn new_line(buffer: &mut Buffer) {

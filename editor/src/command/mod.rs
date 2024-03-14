@@ -125,7 +125,7 @@ impl CommandFinder {
         workspace: &Workspace,
         input: Input,
     ) -> Option<Arc<Command>> {
-        let buffer = workspace.current();
+        let buffer = workspace.current_doc();
 
         let Some(bindings) = keymaps.get(&buffer.cursor_mode()) else {
             return None;

@@ -1,13 +1,11 @@
 use std::path::Path;
 
 use crate::{
-    add_buffer,
-    buffer::Buffer,
     command::{insert, CommandFinder},
     cursor,
     keymap::Keymaps,
     renderer::{Cursor, EventOutcome, Renderer, Viewport},
-    workspace::Workspace,
+    workspace::{Document, Workspace},
 };
 
 pub struct Editor {
@@ -23,7 +21,7 @@ impl Editor {
 
         // init logger
         // @note: remove it later
-        add_buffer!(workspace, Buffer::logger(), logger);
+        workspace.init_logger();
 
         Self {
             workspace,
@@ -34,14 +32,15 @@ impl Editor {
     }
 
     pub fn open_file(&mut self, filepath: impl AsRef<Path>) -> anyhow::Result<()> {
-        let buffer = Buffer::from_path(filepath)?;
-        add_buffer!(self.workspace, buffer, current);
+        let document = Document::from_path(filepath)?;
+        self.workspace.add_document(document, true);
 
         Ok(())
     }
 
     pub fn open_scratch(&mut self) {
-        add_buffer!(self.workspace, Buffer::default(), current);
+        let document = Document::default();
+        self.workspace.add_document(document, true);
     }
 
     pub const fn widget(&self) -> Renderer<'_> {
@@ -49,7 +48,7 @@ impl Editor {
     }
 
     pub fn cursor(&self) -> Cursor {
-        let buffer = self.workspace.current();
+        let buffer = self.workspace.current().buf();
         let mode = buffer.cursor_mode();
 
         let (mut y, mut x) = cursor!(buffer);
@@ -76,7 +75,8 @@ impl Editor {
             return EventOutcome::Ignore;
         };
 
-        let is_insert = self.workspace.current().is_insert();
+        let buffer = self.workspace.current_mut().buf_mut();
+        let is_insert = buffer.is_insert();
 
         let input = e.into();
         let command = self.command.find(self.keymaps, &self.workspace, input);
@@ -87,22 +87,20 @@ impl Editor {
                 self.command.reset();
                 EventOutcome::Render
             }
-            None if is_insert => insert::on_key(self.workspace.current_mut(), input),
+            None if is_insert => insert::on_key(buffer, input),
             _ => EventOutcome::Ignore,
         };
 
         if let EventOutcome::Render = outcome {
-            self.workspace
-                .current_mut()
-                .update_vscroll(self.viewport.height);
+            buffer.update_vscroll(self.viewport.height);
         }
 
         outcome
     }
 
     pub fn on_log(&mut self, log: ropey::Rope) -> EventOutcome {
-        if let Some(buffer) = self.workspace.logger() {
-            buffer.text.append(log);
+        if let Some(doc) = self.workspace.logger() {
+            doc.buf_mut().text.append(log);
         }
 
         match self.workspace.logger_active() {

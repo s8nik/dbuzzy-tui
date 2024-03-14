@@ -52,7 +52,7 @@ impl<'a> Renderer<'a> {
 
     #[inline]
     pub fn text(&self) -> Option<Text> {
-        let buffer = self.0.workspace.current();
+        let buffer = self.0.workspace.current_doc();
 
         let text = &buffer.text;
         let vscroll = buffer.vscroll();

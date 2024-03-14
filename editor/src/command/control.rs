@@ -6,7 +6,7 @@ pub(super) fn open_close_logger(workspace: &mut Workspace) {
         // at this point we do not care about the last active buffer
         let logger_id = workspace.logger_id();
         let id = workspace
-            .buffers
+            .documents
             .keys()
             .find(|id| **id != logger_id)
             .unwrap();
