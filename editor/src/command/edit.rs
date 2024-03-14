@@ -11,7 +11,7 @@ pub(super) fn new_line(buffer: &mut Buffer) {
     buffer.text.insert_char(pos, '\n');
 
     super::shift_cursor(buffer, super::shift::Shift::Down(1));
-    cursor!(buffer, offset 0);
+    cursor!(buffer, offset = 0);
 }
 
 pub(super) fn delete_char(buffer: &mut Buffer) {

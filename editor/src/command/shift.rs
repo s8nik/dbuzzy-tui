@@ -44,5 +44,5 @@ pub(super) fn shift_cursor(buffer: &mut Buffer, direction: Shift) {
         Shift::LineEnd => (buffer.len_bytes(index).saturating_sub(1), index),
     };
 
-    cursor!(buffer, index new_index, offset new_offset);
+    cursor!(buffer, index = new_index, offset = new_offset);
 }

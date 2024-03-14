@@ -36,14 +36,19 @@ pub struct FileMeta {
     pub readonly: bool,
 }
 
+#[derive(Debug, Default)]
+pub struct Position {
+    pub index: usize,
+    pub offset: usize,
+}
+
 #[derive(Debug)]
 pub struct Buffer {
     id: BufferId,
     meta: FileMeta,
 
     pub(super) text: Rope,
-    pub(super) offset: usize,
-    pub(super) index: usize,
+    pub(super) position: Position,
     vscroll: usize,
 
     mode: CursorMode,
@@ -53,31 +58,33 @@ pub struct Buffer {
 #[macro_export]
 macro_rules! cursor {
     ($buffer:expr) => {{
-        ($buffer.index, $buffer.offset)
+        ($buffer.position.index, $buffer.position.offset)
     }};
-    ($buffer:expr, index $value:expr) => {{
-        $buffer.index = $value;
+    ($buffer:expr, index) => {{
+        $buffer.position.index
+    }};
+    ($buffer:expr, offset) => {{
+        $buffer.position.offset
     }};
     ($buffer:expr, index $op:tt $value:expr) => {{
         match stringify!($op) {
-            "+=" => $buffer.index += $value,
-            "-=" => $buffer.index -= $value,
+            "=" => $buffer.position.index = $value,
+            "+=" => $buffer.position.index += $value,
+            "-=" => $buffer.position.index -= $value,
             _ => unreachable!(),
         };
-    }};
-    ($buffer:expr, offset $value:expr) => {{
-        $buffer.offset = $value;
     }};
     ($buffer:expr, offset $op:tt $value:expr) => {{
         match stringify!($op) {
-            "+=" => $buffer.offset += $value,
-            "-=" => $buffer.offset -= $value,
+            "=" => $buffer.position.offset = $value,
+            "+=" => $buffer.position.offset += $value,
+            "-=" => $buffer.position.offset -= $value,
             _ => unreachable!(),
         };
     }};
-    ($buffer:expr, index $index:expr, offset $offset:expr) => {{
-        $buffer.index = $index;
-        $buffer.offset = $offset;
+    ($buffer:expr, index $i_op:tt $index:expr, offset $o_op:tt $offset:expr) => {{
+        cursor!($buffer, index $i_op $index);
+        cursor!($buffer, offset $o_op $offset);
     }};
 }
 
@@ -116,8 +123,7 @@ impl Buffer {
                 readonly: true,
             },
             text: Rope::default(),
-            offset: 0,
-            index: 0,
+            position: Position::default(),
             vscroll: 0,
             mode: CursorMode::Normal,
             available_modes: vec![CursorMode::Normal, CursorMode::Visual],
@@ -139,8 +145,8 @@ impl Buffer {
     }
 
     pub fn position(&self) -> usize {
-        let byte_index = self.text.line_to_byte(self.index);
-        self.offset + byte_index
+        let (index, offset) = cursor!(&self);
+        offset + self.text.line_to_byte(index)
     }
 
     pub const fn vscroll(&self) -> usize {
@@ -148,12 +154,13 @@ impl Buffer {
     }
 
     pub fn update_vscroll(&mut self, max: usize) {
+        let index = cursor!(&self, index);
         let upper_bound = self.vscroll + max - 1;
 
-        if self.index < self.vscroll {
-            self.vscroll = self.index;
-        } else if self.index > upper_bound {
-            self.vscroll = self.index - max + 1;
+        if index < self.vscroll {
+            self.vscroll = index;
+        } else if index > upper_bound {
+            self.vscroll = index - max + 1;
         }
     }
 
@@ -176,8 +183,7 @@ impl Default for Buffer {
             id: BufferId::default(),
             meta: FileMeta::default(),
             text: Rope::default(),
-            offset: 0,
-            index: 0,
+            position: Position::default(),
             vscroll: 0,
             mode: CursorMode::Normal,
             available_modes: vec![CursorMode::Insert, CursorMode::Normal, CursorMode::Visual],
@@ -216,7 +222,7 @@ mod tests {
         cursor!(buffer, offset += 10);
         assert_eq!((5, 10), cursor!(buffer));
 
-        cursor!(buffer, index 15, offset 20);
+        cursor!(buffer, index = 15, offset = 20);
         assert_eq!((15, 20), cursor!(buffer));
     }
 }
