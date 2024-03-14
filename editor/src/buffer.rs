@@ -211,15 +211,12 @@ mod tests {
         let mut buffer = Buffer::default();
 
         cursor!(buffer, index += 5);
-
         assert_eq!((5, 0), cursor!(buffer));
 
         cursor!(buffer, offset += 10);
-
         assert_eq!((5, 10), cursor!(buffer));
 
         cursor!(buffer, index 15, offset 20);
-
         assert_eq!((15, 20), cursor!(buffer));
     }
 }

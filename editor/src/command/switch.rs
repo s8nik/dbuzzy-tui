@@ -24,9 +24,10 @@ pub(super) fn switch_mode(buffer: &mut Buffer, switch: Switch) {
 }
 
 fn switch_line_end(buffer: &mut Buffer) {
-    cursor!(buffer, offset buffer.len_bytes(buffer.index));
+    let (index, _) = cursor!(buffer);
+    cursor!(buffer, offset buffer.len_bytes(index));
 
-    if buffer.index < buffer.len_lines() - 1 {
+    if index < buffer.len_lines() - 1 {
         cursor!(buffer, offset -= 1);
     }
 }
