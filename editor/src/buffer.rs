@@ -19,10 +19,9 @@ impl From<(usize, usize)> for Position {
 pub struct Buffer {
     pub(super) text: Rope,
     pub(super) position: Position,
-    vscroll: usize,
+    pub(super) mode: CursorMode,
 
-    mode: CursorMode,
-    available_modes: Vec<CursorMode>,
+    vscroll: usize,
 }
 
 #[macro_export]
@@ -59,26 +58,6 @@ macro_rules! cursor {
 }
 
 impl Buffer {
-    pub fn logger() -> Self {
-        Self {
-            text: Rope::default(),
-            position: Position::default(),
-            vscroll: 0,
-            mode: CursorMode::Normal,
-            available_modes: vec![CursorMode::Normal, CursorMode::Visual],
-        }
-    }
-
-    pub const fn cursor_mode(&self) -> CursorMode {
-        self.mode
-    }
-
-    pub fn update_cursor_mode(&mut self, mode: CursorMode) {
-        if self.available_modes.contains(&mode) {
-            self.mode = mode;
-        }
-    }
-
     pub fn position(&self) -> usize {
         let (index, offset) = cursor!(&self);
         offset + self.text.line_to_byte(index)
@@ -119,7 +98,6 @@ impl Default for Buffer {
             position: Position::default(),
             vscroll: 0,
             mode: CursorMode::Normal,
-            available_modes: vec![CursorMode::Insert, CursorMode::Normal, CursorMode::Visual],
         }
     }
 }
