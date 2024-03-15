@@ -4,10 +4,10 @@
     clippy::missing_const_for_fn,
     clippy::use_self
 )]
-mod workspace;
 
 mod buffer;
 mod command;
+mod document;
 pub mod editor;
 mod history;
 mod input;
