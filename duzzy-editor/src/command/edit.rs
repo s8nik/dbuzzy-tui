@@ -29,13 +29,11 @@ pub(super) fn delete_char_inplace(workspace: &mut Workspace) {
 }
 
 pub(super) fn delete_char(workspace: &mut Workspace) {
-    workspace.with_curr_mut(|doc| {
-        let buf = doc.buf_mut();
-        let pos = buf.text_pos();
+    let buf = workspace.curr_mut().buf_mut();
+    let pos = buf.text_pos();
 
-        if pos > 0 {
-            set_cursor!(buf, super::shift_left(buf));
-            buf.text.remove(pos - 1..pos);
-        }
-    });
+    if pos > 0 {
+        set_cursor!(buf, super::shift_left(buf));
+        buf.text.remove(pos - 1..pos);
+    }
 }
