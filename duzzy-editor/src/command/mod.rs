@@ -57,27 +57,21 @@ pub struct CommandRegistry {
 
 impl CommandRegistry {
     pub fn register() -> Self {
-        macro_rules! cmd {
-            ($type:expr, $fun:ident) => {{
-                Command::new($type, $fun)
-            }};
-        }
-
         let commands = vec![
-            cmd!(CmdType::InsertMode, insert_mode_inplace),
-            cmd!(CmdType::MoveLeft, move_left),
-            cmd!(CmdType::MoveDown, move_down),
-            cmd!(CmdType::MoveUp, move_up),
-            cmd!(CmdType::MoveRight, move_right),
-            cmd!(CmdType::InsertModeLineEnd, insert_mode_line_end),
-            cmd!(CmdType::InsertModeLineStart, insert_mode_line_start),
-            cmd!(CmdType::InsertModeLineNext, insert_mode_line_next),
-            cmd!(CmdType::InsertModeLinePrev, insert_mode_line_prev),
-            cmd!(CmdType::DeleteChar, delete_char_inplace),
-            cmd!(CmdType::GoToTopLine, go_to_top_line),
-            cmd!(CmdType::GoToBottomLine, go_to_bottom_line),
-            cmd!(CmdType::GoToLineEnd, go_to_line_end),
-            cmd!(CmdType::GoToLineStart, go_to_line_start),
+            Command::new(CmdType::InsertMode, insert_mode_inplace),
+            Command::new(CmdType::MoveLeft, move_left),
+            Command::new(CmdType::MoveDown, move_down),
+            Command::new(CmdType::MoveUp, move_up),
+            Command::new(CmdType::MoveRight, move_right),
+            Command::new(CmdType::InsertModeLineEnd, insert_mode_line_end),
+            Command::new(CmdType::InsertModeLineStart, insert_mode_line_start),
+            Command::new(CmdType::InsertModeLineNext, insert_mode_line_next),
+            Command::new(CmdType::InsertModeLinePrev, insert_mode_line_prev),
+            Command::new(CmdType::DeleteChar, delete_char_inplace),
+            Command::new(CmdType::GoToTopLine, go_to_top_line),
+            Command::new(CmdType::GoToBottomLine, go_to_bottom_line),
+            Command::new(CmdType::GoToLineEnd, go_to_line_end),
+            Command::new(CmdType::GoToLineStart, go_to_line_start),
         ];
 
         let mut map = HashMap::new();
