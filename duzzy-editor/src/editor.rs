@@ -84,10 +84,10 @@ impl DuzzyEditor {
         };
 
         if matches!(outcome, EventOutcome::Render) {
-            let height = self.viewport.height;
-            self.workspace.with_curr_mut(|doc| {
-                doc.buf_mut().update_vscroll(height);
-            });
+            self.workspace
+                .curr_mut()
+                .buf_mut()
+                .update_vscroll(self.viewport.height);
         }
 
         outcome
@@ -121,21 +121,5 @@ impl Workspace {
         self.documents
             .get_mut(&self.current)
             .expect("current mut doc")
-    }
-
-    pub fn with_curr<T, F>(&self, func: F) -> T
-    where
-        F: Fn(&Document) -> T,
-    {
-        let curr = self.curr();
-        func(curr)
-    }
-
-    pub fn with_curr_mut<T, F>(&mut self, func: F) -> T
-    where
-        F: Fn(&mut Document) -> T,
-    {
-        let curr = self.curr_mut();
-        func(curr)
     }
 }
