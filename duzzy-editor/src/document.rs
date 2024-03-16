@@ -42,9 +42,8 @@ pub struct FileMeta {
 pub struct Document {
     id: DocumentId,
     meta: FileMeta,
-
-    pub(super) buffer: Buffer,
-    pub(super) history: History,
+    buffer: Buffer,
+    history: History,
 }
 
 impl Document {
@@ -76,5 +75,13 @@ impl Document {
 
     pub const fn id(&self) -> DocumentId {
         self.id
+    }
+
+    pub const fn buf(&self) -> &Buffer {
+        &self.buffer
+    }
+
+    pub fn buf_mut(&mut self) -> &mut Buffer {
+        &mut self.buffer
     }
 }

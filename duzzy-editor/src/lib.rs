@@ -4,6 +4,7 @@
     clippy::missing_const_for_fn,
     clippy::use_self
 )]
+mod macros;
 
 mod buffer;
 mod command;
@@ -12,5 +13,4 @@ pub mod editor;
 mod history;
 mod input;
 mod keymap;
-pub mod logger;
 pub mod renderer;

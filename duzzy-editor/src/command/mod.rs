@@ -1,4 +1,3 @@
-mod control;
 mod edit;
 pub mod insert;
 mod shift;
@@ -6,15 +5,15 @@ mod switch;
 
 use std::{collections::HashMap, sync::Arc};
 
-use control::*;
 use edit::*;
 use shift::*;
 use switch::*;
 
 use crate::{
+    buffer::Buffer,
+    editor::Workspace,
     input::Input,
     keymap::{Keymap, Keymaps},
-    workspace::Workspace,
 };
 
 pub type Callback = fn(&mut Workspace);
@@ -35,8 +34,6 @@ pub enum CmdType {
     GoToBottomLine,
     GoToLineStart,
     GoToLineEnd,
-    // @todo: eventually it will be a logger widget
-    OpenCloseLog,
 }
 
 pub struct Command {
@@ -61,32 +58,26 @@ pub struct CommandRegistry {
 impl CommandRegistry {
     pub fn register() -> Self {
         macro_rules! cmd {
-            (workspace, $type:expr, $fun:ident) => {{
+            ($type:expr, $fun:ident) => {{
                 Command::new($type, $fun)
-            }};
-            ($type:expr, $fun:ident $(, $($arg:expr),*)?) => {{
-                Command::new($type, |workspace: &mut Workspace| {
-                    $fun(workspace.current_mut(), $($($arg),*)?)
-                })
             }};
         }
 
         let commands = vec![
-            cmd!(CmdType::InsertMode, switch_mode, Switch::Inplace),
-            cmd!(CmdType::MoveLeft, shift_cursor, Shift::Left),
-            cmd!(CmdType::MoveDown, shift_cursor, Shift::Down(1)),
-            cmd!(CmdType::MoveUp, shift_cursor, Shift::Up(1)),
-            cmd!(CmdType::MoveRight, shift_cursor, Shift::Right),
-            cmd!(CmdType::InsertModeLineEnd, switch_mode, Switch::LineEnd),
-            cmd!(CmdType::InsertModeLineStart, switch_mode, Switch::LineStart),
-            cmd!(CmdType::InsertModeLineNext, switch_mode, Switch::LineNext),
-            cmd!(CmdType::InsertModeLinePrev, switch_mode, Switch::LinePrev),
-            cmd!(CmdType::DeleteChar, delete_char),
-            cmd!(CmdType::GoToTopLine, shift_cursor, Shift::Top),
-            cmd!(CmdType::GoToBottomLine, shift_cursor, Shift::Bottom),
-            cmd!(CmdType::GoToLineEnd, shift_cursor, Shift::LineEnd),
-            cmd!(CmdType::GoToLineStart, shift_cursor, Shift::LineStart),
-            cmd!(workspace, CmdType::OpenCloseLog, open_close_logger),
+            cmd!(CmdType::InsertMode, insert_mode_inplace),
+            cmd!(CmdType::MoveLeft, move_left),
+            cmd!(CmdType::MoveDown, move_down),
+            cmd!(CmdType::MoveUp, move_up),
+            cmd!(CmdType::MoveRight, move_right),
+            cmd!(CmdType::InsertModeLineEnd, insert_mode_line_end),
+            cmd!(CmdType::InsertModeLineStart, insert_mode_line_start),
+            cmd!(CmdType::InsertModeLineNext, insert_mode_line_next),
+            cmd!(CmdType::InsertModeLinePrev, insert_mode_line_prev),
+            cmd!(CmdType::DeleteChar, delete_char_inplace),
+            cmd!(CmdType::GoToTopLine, go_to_top_line),
+            cmd!(CmdType::GoToBottomLine, go_to_bottom_line),
+            cmd!(CmdType::GoToLineEnd, go_to_line_end),
+            cmd!(CmdType::GoToLineStart, go_to_line_start),
         ];
 
         let mut map = HashMap::new();
@@ -122,12 +113,10 @@ impl CommandFinder {
     pub fn find(
         &mut self,
         keymaps: &'static Keymaps,
-        workspace: &Workspace,
+        buffer: &Buffer,
         input: Input,
     ) -> Option<Arc<Command>> {
-        let buffer = workspace.current_doc();
-
-        let Some(bindings) = keymaps.get(&buffer.cursor_mode()) else {
+        let Some(bindings) = keymaps.get(&buffer.mode) else {
             return None;
         };
 

@@ -6,10 +6,10 @@ use ratatui::{
     widgets::{Paragraph, Widget},
 };
 
-use crate::{buffer::CursorMode, editor::Editor};
+use crate::{buffer::CursorMode, editor::DuzzyEditor};
 
 #[derive(Default)]
-pub struct Viewport {
+pub(super) struct Viewport {
     pub width: usize,
     pub height: usize,
 }
@@ -43,24 +43,24 @@ impl Cursor {
     }
 }
 
-pub struct Renderer<'a>(&'a Editor);
+pub struct Renderer<'a>(&'a DuzzyEditor);
 
 impl<'a> Renderer<'a> {
-    pub const fn new(editor: &'a Editor) -> Self {
+    pub const fn new(editor: &'a DuzzyEditor) -> Self {
         Self(editor)
     }
 
     #[inline]
     pub fn text(&self) -> Option<Text> {
-        let buffer = self.0.workspace.current_doc();
+        let buf = self.0.workspace.curr().buf();
 
-        let text = &buffer.text;
-        let vscroll = buffer.vscroll();
+        let text = &buf.text;
+        let vscroll = buf.vscroll();
 
         let start_byte = text.line_to_byte(vscroll);
 
-        let end_index = vscroll + self.0.viewport.height - 1;
-        let end_byte = text.line_to_byte(end_index.min(buffer.len_lines()));
+        let end_index = vscroll + self.0.viewport().1 - 1;
+        let end_byte = text.line_to_byte(end_index.min(buf.len_lines()));
 
         Some(Text::raw(text.slice(start_byte..end_byte)))
     }

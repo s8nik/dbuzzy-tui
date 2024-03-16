@@ -7,59 +7,32 @@ pub struct Position {
 }
 
 impl From<(usize, usize)> for Position {
-    fn from(value: (usize, usize)) -> Self {
+    fn from(pos: (usize, usize)) -> Self {
         Self {
-            index: value.0,
-            offset: value.1,
+            index: pos.0,
+            offset: pos.1,
         }
+    }
+}
+
+impl Into<(usize, usize)> for &Position {
+    fn into(self) -> (usize, usize) {
+        (self.index, self.offset)
     }
 }
 
 #[derive(Debug)]
 pub struct Buffer {
     pub(super) text: Rope,
-    pub(super) position: Position,
+    pub(super) pos: Position,
     pub(super) mode: CursorMode,
 
     vscroll: usize,
 }
 
-#[macro_export]
-macro_rules! cursor {
-    ($buffer:expr) => {{
-        ($buffer.position.index, $buffer.position.offset)
-    }};
-    ($buffer:expr, index) => {{
-        $buffer.position.index
-    }};
-    ($buffer:expr, offset) => {{
-        $buffer.position.offset
-    }};
-    ($buffer:expr, index $op:tt $value:expr) => {{
-        match stringify!($op) {
-            "=" => $buffer.position.index = $value,
-            "+=" => $buffer.position.index += $value,
-            "-=" => $buffer.position.index -= $value,
-            _ => unreachable!(),
-        };
-    }};
-    ($buffer:expr, offset $op:tt $value:expr) => {{
-        match stringify!($op) {
-            "=" => $buffer.position.offset = $value,
-            "+=" => $buffer.position.offset += $value,
-            "-=" => $buffer.position.offset -= $value,
-            _ => unreachable!(),
-        };
-    }};
-    ($buffer:expr, index $i_op:tt $index:expr, offset $o_op:tt $offset:expr) => {{
-        cursor!($buffer, index $i_op $index);
-        cursor!($buffer, offset $o_op $offset);
-    }};
-}
-
 impl Buffer {
-    pub fn position(&self) -> usize {
-        let (index, offset) = cursor!(&self);
+    pub fn text_pos(&self) -> usize {
+        let (index, offset) = Into::into(&self.pos);
         offset + self.text.line_to_byte(index)
     }
 
@@ -68,7 +41,7 @@ impl Buffer {
     }
 
     pub fn update_vscroll(&mut self, max: usize) {
-        let index = cursor!(&self, index);
+        let index = self.pos.index;
         let upper_bound = self.vscroll + max - 1;
 
         if index < self.vscroll {
@@ -95,7 +68,7 @@ impl Default for Buffer {
     fn default() -> Self {
         Self {
             text: Rope::default(),
-            position: Position::default(),
+            pos: Position::default(),
             vscroll: 0,
             mode: CursorMode::Normal,
         }
@@ -121,19 +94,21 @@ impl std::fmt::Display for CursorMode {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::set_cursor;
+
+    use super::Buffer;
 
     #[test]
     fn test_cursor_macro() {
         let mut buffer = Buffer::default();
 
-        cursor!(buffer, index += 5);
-        assert_eq!((5, 0), cursor!(buffer));
+        set_cursor!(buffer, index += 5);
+        assert_eq!((5, 0), Into::into(&buffer.pos));
 
-        cursor!(buffer, offset += 10);
-        assert_eq!((5, 10), cursor!(buffer));
+        set_cursor!(buffer, offset += 10);
+        assert_eq!((5, 10), Into::into(&buffer.pos));
 
-        cursor!(buffer, index = 15, offset = 20);
-        assert_eq!((15, 20), cursor!(buffer));
+        set_cursor!(buffer, (15, 20).into());
+        assert_eq!((15, 20), Into::into(&buffer.pos));
     }
 }
