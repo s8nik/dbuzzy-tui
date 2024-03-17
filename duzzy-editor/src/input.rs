@@ -26,7 +26,7 @@ impl From<KeyModifiers> for Modifiers {
 
 impl From<&[String]> for Modifiers {
     fn from(values: &[String]) -> Self {
-        let mut modifiers = Modifiers::default();
+        let mut modifiers = Self::default();
 
         for name in values {
             modifiers.set_by(name, true);

@@ -21,7 +21,7 @@ impl Bindings {
 
 impl From<Vec<(&str, CmdType)>> for Bindings {
     fn from(mappings: Vec<(&str, CmdType)>) -> Self {
-        let mut bindings = Bindings::default();
+        let mut bindings = Self::default();
         for (sequence, command_type) in mappings {
             Keymaps::parse(&mut bindings, sequence, command_type);
         }
@@ -52,7 +52,7 @@ impl Keymaps {
 
         map.insert(CursorMode::Normal, Self::normal_mode());
 
-        Box::leak(Box::new(Keymaps(map)))
+        Box::leak(Box::new(Self(map)))
     }
 
     fn normal_mode() -> Bindings {
@@ -71,7 +71,6 @@ impl Keymaps {
             ("ge", CmdType::GoToBottomLine),
             ("gl", CmdType::GoToLineEnd),
             ("gh", CmdType::GoToLineStart),
-            ("g0", CmdType::OpenCloseLog),
         ];
 
         mappings.into()

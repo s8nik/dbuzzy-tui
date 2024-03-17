@@ -1,5 +1,5 @@
 [package]
-name = "editor"
+name = "duzzy-editor"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

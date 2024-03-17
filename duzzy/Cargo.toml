@@ -13,4 +13,4 @@ crossterm.workspace = true
 
 futures-util = "0.3.30"
 
-editor = { path = "../editor" }
+duzzy-editor = { path = "../duzzy-editor" }

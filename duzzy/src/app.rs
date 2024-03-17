@@ -1,12 +1,12 @@
-use std::io::Write;
+use std::{io::Write, time::Duration};
 
 use crossterm::{event::EventStream, execute, ExecutableCommand};
-use editor::{editor::Editor, renderer::EventOutcome};
+use duzzy_editor::{editor::DuzzyEditor, renderer::EventOutcome};
 use futures_util::StreamExt;
 use ratatui::{backend::Backend, Terminal};
 
 pub struct App<B: Backend + Write> {
-    editor: Editor,
+    editor: DuzzyEditor,
     terminal: Terminal<B>,
 }
 
@@ -15,7 +15,7 @@ impl<B: Backend + Write> App<B> {
         let mut terminal = Terminal::new(backend).expect("terminal");
         let size = terminal.size()?;
 
-        let mut editor = Editor::init(size.width as usize, size.height as usize);
+        let mut editor = DuzzyEditor::new(size.width as usize, size.height as usize);
 
         let mut opened = 0;
         let mut failed = 0;
@@ -65,9 +65,6 @@ impl<B: Backend + Write> App<B> {
     pub async fn run(&mut self) -> anyhow::Result<()> {
         Self::setup_panic();
 
-        let (log_tx, mut log_rx) = tokio::sync::mpsc::unbounded_channel();
-        editor::logger::enable(log_tx);
-
         let mut reader = EventStream::new();
 
         // first render
@@ -77,16 +74,12 @@ impl<B: Backend + Write> App<B> {
         })?;
 
         loop {
-            let outcome = tokio::select! {
-                Some(event) = reader.next() => match event {
-                    Ok(event) => self.editor.on_event(event),
-                    Err(e) => {
-                        log::error!("event error: {e}");
-                        continue;
-                    },
-                },
-                Some(log) = log_rx.recv() => self.editor.on_log(log),
+            let Some(Ok(event)) = reader.next().await else {
+                tokio::time::sleep(Duration::from_millis(100)).await;
+                continue;
             };
+
+            let outcome = self.editor.on_event(event);
 
             match outcome {
                 EventOutcome::Exit => break,

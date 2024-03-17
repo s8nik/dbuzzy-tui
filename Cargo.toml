@@ -1,6 +1,6 @@
 [workspace]
 members = [
-  "editor",
+  "duzzy-editor",
   "duzzy",
 ]
 resolver = "2"
@@ -14,7 +14,7 @@ authors = ["Nikita S"]
 log = "0.4.21"
 anyhow = "1.0.70"
 
-tokio = { version = "1.36.0", features = ["rt-multi-thread", "macros", "sync"] }
+tokio = { version = "1.36.0", features = ["rt-multi-thread", "macros", "sync", "time"] }
 
 ratatui = "0.26.1"
 crossterm = { version = "0.26.1", features = ["event-stream"] }

@@ -1,12 +1,11 @@
 use crate::{
-    buffer::{Buffer, CursorMode},
+    buffer::CursorMode,
+    editor::Workspace,
     input::{Event, Input, Modifiers},
     renderer::EventOutcome,
 };
 
-use super::shift::Shift;
-
-pub fn on_key(buffer: &mut Buffer, input: Input) -> EventOutcome {
+pub fn on_key(workspace: &mut Workspace, input: Input) -> EventOutcome {
     if let Input {
         event: Event::Char('q'),
         modifiers: Modifiers { ctr: true, .. },
@@ -22,40 +21,40 @@ pub fn on_key(buffer: &mut Buffer, input: Input) -> EventOutcome {
             event: Event::Char(ch),
             ..
         } => {
-            super::edit::insert_char(buffer, ch);
+            super::edit::insert_char(workspace, ch);
         }
         Input {
             event: Event::Esc, ..
-        } => buffer.update_cursor_mode(CursorMode::Normal),
+        } => workspace.curr_mut().buf_mut().mode = CursorMode::Normal,
         Input {
             event: Event::Left, ..
-        } => super::shift::shift_cursor(buffer, Shift::Left),
+        } => super::shift::move_left(workspace),
         Input {
             event: Event::Right,
             ..
-        } => super::shift::shift_cursor(buffer, Shift::Right),
+        } => super::shift::move_right(workspace),
         Input {
             event: Event::Up, ..
-        } => super::shift::shift_cursor(buffer, Shift::Up(1)),
+        } => super::shift::move_up(workspace),
         Input {
             event: Event::Down, ..
-        } => super::shift::shift_cursor(buffer, Shift::Down(1)),
+        } => super::shift::move_down(workspace),
         Input {
             event: Event::Backspace,
             ..
-        } => super::edit::backspace(buffer),
+        } => super::edit::delete_char(workspace),
         Input {
             event: Event::Enter,
             ..
-        } => super::edit::new_line(buffer),
+        } => super::edit::new_line(workspace),
         Input {
             event: Event::PageUp,
             ..
-        } => super::shift::shift_cursor(buffer, Shift::Top),
+        } => super::shift::go_to_top_line(workspace),
         Input {
             event: Event::PageDown,
             ..
-        } => super::shift::shift_cursor(buffer, Shift::Bottom),
+        } => super::shift::go_to_bottom_line(workspace),
         _ => outcome = EventOutcome::Ignore,
     }
 
