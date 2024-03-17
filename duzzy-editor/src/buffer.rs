@@ -1,6 +1,6 @@
 use ropey::Rope;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Position {
     pub index: usize,
     pub offset: usize,
