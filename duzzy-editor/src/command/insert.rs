@@ -5,7 +5,7 @@ use crate::{
     renderer::EventOutcome,
 };
 
-pub fn on_key(editor: &mut Workspace, input: Input) -> EventOutcome {
+pub fn on_key(workspace: &mut Workspace, input: Input) -> EventOutcome {
     if let Input {
         event: Event::Char('q'),
         modifiers: Modifiers { ctr: true, .. },
@@ -21,40 +21,40 @@ pub fn on_key(editor: &mut Workspace, input: Input) -> EventOutcome {
             event: Event::Char(ch),
             ..
         } => {
-            super::edit::insert_char(editor, ch);
+            super::edit::insert_char(workspace, ch);
         }
         Input {
             event: Event::Esc, ..
-        } => editor.curr_mut().buf_mut().mode = CursorMode::Normal,
+        } => workspace.curr_mut().buf_mut().mode = CursorMode::Normal,
         Input {
             event: Event::Left, ..
-        } => super::shift::move_left(editor),
+        } => super::shift::move_left(workspace),
         Input {
             event: Event::Right,
             ..
-        } => super::shift::move_right(editor),
+        } => super::shift::move_right(workspace),
         Input {
             event: Event::Up, ..
-        } => super::shift::move_up(editor),
+        } => super::shift::move_up(workspace),
         Input {
             event: Event::Down, ..
-        } => super::shift::move_down(editor),
+        } => super::shift::move_down(workspace),
         Input {
             event: Event::Backspace,
             ..
-        } => super::edit::delete_char(editor),
+        } => super::edit::delete_char(workspace),
         Input {
             event: Event::Enter,
             ..
-        } => super::edit::new_line(editor),
+        } => super::edit::new_line(workspace),
         Input {
             event: Event::PageUp,
             ..
-        } => super::shift::go_to_top_line(editor),
+        } => super::shift::go_to_top_line(workspace),
         Input {
             event: Event::PageDown,
             ..
-        } => super::shift::go_to_bottom_line(editor),
+        } => super::shift::go_to_bottom_line(workspace),
         _ => outcome = EventOutcome::Ignore,
     }
 
