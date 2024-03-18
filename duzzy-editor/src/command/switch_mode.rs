@@ -1,5 +1,6 @@
 use crate::{
     buffer::{Buffer, CursorMode},
+    doc_mut,
     editor::Workspace,
     set_cursor,
 };
@@ -12,28 +13,35 @@ enum Switch {
     LinePrev,
 }
 
-pub(super) fn insert_mode_inplace(editor: &mut Workspace) {
-    switch_mode(editor, Switch::Inplace);
+pub(super) fn normal_mode_inplace(ws: &mut Workspace) {
+    let (buf, history) = doc_mut!(ws);
+
+    buf.mode = CursorMode::Normal;
+    history.commit();
 }
 
-pub(super) fn insert_mode_line_end(editor: &mut Workspace) {
-    switch_mode(editor, Switch::LineEnd);
+pub(super) fn insert_mode_inplace(ws: &mut Workspace) {
+    switch_mode(ws, Switch::Inplace);
 }
 
-pub(super) fn insert_mode_line_start(editor: &mut Workspace) {
-    switch_mode(editor, Switch::LineStart);
+pub(super) fn insert_mode_line_end(ws: &mut Workspace) {
+    switch_mode(ws, Switch::LineEnd);
 }
 
-pub(super) fn insert_mode_line_next(editor: &mut Workspace) {
-    switch_mode(editor, Switch::LineNext);
+pub(super) fn insert_mode_line_start(ws: &mut Workspace) {
+    switch_mode(ws, Switch::LineStart);
 }
 
-pub(super) fn insert_mode_line_prev(editor: &mut Workspace) {
-    switch_mode(editor, Switch::LinePrev);
+pub(super) fn insert_mode_line_next(ws: &mut Workspace) {
+    switch_mode(ws, Switch::LineNext);
 }
 
-fn switch_mode(editor: &mut Workspace, switch: Switch) {
-    let buf = editor.curr_mut().buf_mut();
+pub(super) fn insert_mode_line_prev(ws: &mut Workspace) {
+    switch_mode(ws, Switch::LinePrev);
+}
+
+fn switch_mode(ws: &mut Workspace, switch: Switch) {
+    let (buf, history) = doc_mut!(ws);
 
     match switch {
         Switch::LineStart => set_cursor!(buf, offset = 0),
@@ -44,6 +52,7 @@ fn switch_mode(editor: &mut Workspace, switch: Switch) {
     };
 
     buf.mode = CursorMode::Insert;
+    history.commit();
 }
 
 fn switch_line_end(buf: &mut Buffer) {
