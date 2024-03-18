@@ -15,9 +15,9 @@ impl From<(usize, usize)> for Position {
     }
 }
 
-impl Into<(usize, usize)> for &Position {
-    fn into(self) -> (usize, usize) {
-        (self.index, self.offset)
+impl From<&Position> for (usize, usize) {
+    fn from(pos: &Position) -> Self {
+        (pos.index, pos.offset)
     }
 }
 
