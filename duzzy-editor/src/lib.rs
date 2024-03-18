@@ -14,3 +14,5 @@ mod history;
 mod input;
 mod keymap;
 pub mod renderer;
+
+pub type SmartString = smartstring::SmartString<smartstring::LazyCompact>;
