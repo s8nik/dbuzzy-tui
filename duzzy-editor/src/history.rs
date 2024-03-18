@@ -1,74 +1,36 @@
 use std::collections::VecDeque;
 
-use crate::buffer::Position;
-
-pub enum Action {
-    InsertChar(char),
-    DeleteChar(char),
-}
+use crate::{buffer::Position, SmartString};
 
 #[derive(Debug)]
-enum Change {
-    Insert(String),
-    Delete(String),
+pub enum Change {
+    Insert(SmartString),
+    Delete(SmartString),
 }
 
 impl Change {
     fn inverse(&self) -> Self {
         match self {
-            Change::Insert(c) => Change::Delete(c.to_owned()),
-            Change::Delete(c) => Change::Insert(c.to_owned()),
-        }
-    }
-}
-
-impl From<Action> for Change {
-    fn from(action: Action) -> Self {
-        match action {
-            Action::InsertChar(ch) => Self::Insert(String::from(ch)),
-            Action::DeleteChar(ch) => Self::Delete(String::from(ch)),
+            Self::Insert(c) => Self::Delete(c.to_owned()),
+            Self::Delete(c) => Self::Insert(c.to_owned()),
         }
     }
 }
 
 #[derive(Debug)]
-struct Commit {
-    before: Position,
-    after: Position,
-    change: Change,
-    inverse: Change,
+pub struct Commit {
+    pub before: Position,
+    pub after: Position,
+    pub change: Change,
 }
 
 impl Commit {
-    fn new(change: Change, before: Position, after: Position) -> Self {
-        let inverse = change.inverse();
-
+    pub const fn new(change: Change, before: Position, after: Position) -> Self {
         Self {
             change,
-            inverse,
             before,
             after,
         }
-    }
-
-    fn change(&mut self, action: Action, before: Position, after: Position) -> Option<Self> {
-        let mut new_kind = None;
-
-        match (&mut self.change, &mut self.inverse, &action) {
-            (Change::Insert(c), Change::Delete(i), Action::InsertChar(ch))
-            | (Change::Delete(c), Change::Insert(i), Action::DeleteChar(ch)) => {
-                c.push(*ch);
-                i.push(*ch);
-            }
-            _ => new_kind = Some(action.into()),
-        };
-
-        if let Some(kind) = new_kind.take() {
-            return Some(Self::new(kind, before, after));
-        }
-
-        self.after = after;
-        None
     }
 
     fn apply(change: &Change, text: &mut ropey::Rope, pos: Position) {
@@ -76,22 +38,24 @@ impl Commit {
 
         match change {
             Change::Insert(c) => text.insert(text_pos, c),
-            Change::Delete(c) => text.remove(text_pos - c.chars().count()..text_pos),
+            Change::Delete(c) => {
+                dbg!(c, c.chars().count(), text_pos, text.len_chars());
+                text.remove(text_pos..text_pos + c.chars().count());
+            }
         }
     }
 
-    pub fn undo(&self, text: &mut ropey::Rope) -> Position {
-        Self::apply(&self.inverse, text, self.after);
+    fn undo(&self, text: &mut ropey::Rope) -> Position {
+        Self::apply(&self.change.inverse(), text, self.before);
         self.before
     }
 
-    pub fn redo(&self, text: &mut ropey::Rope) -> Position {
-        Self::apply(&self.change, text, self.before);
+    fn redo(&self, text: &mut ropey::Rope) -> Position {
+        Self::apply(&self.change, text, self.after);
         self.after
     }
 }
 
-#[derive(Default)]
 pub struct History {
     head: usize,
     max_items: usize,
@@ -99,31 +63,29 @@ pub struct History {
     transaction: Option<Commit>,
 }
 
-impl History {
-    pub fn new(max_items: usize) -> anyhow::Result<Self> {
-        anyhow::ensure!(max_items != 0, "invalid max length");
-
-        Ok(Self {
+impl Default for History {
+    fn default() -> Self {
+        Self {
             head: 0,
-            max_items,
+            max_items: Self::DEFAULT_CAPACITY,
             transaction: None,
-            commits: VecDeque::with_capacity(max_items),
-        })
-    }
-
-    pub fn commit(&mut self, action: Action, before: Position, after: Position) {
-        let mut maybe_new = match self.transaction.as_mut() {
-            Some(commit) => commit.change(action, before, after),
-            None => Some(Commit::new(action.into(), before, after)),
-        };
-
-        if let Some(commit) = maybe_new.take() {
-            self.apply();
-            self.transaction = Some(commit);
+            commits: VecDeque::with_capacity(Self::DEFAULT_CAPACITY),
         }
     }
+}
 
-    pub fn apply(&mut self) {
+impl History {
+    const DEFAULT_CAPACITY: usize = 20;
+
+    pub fn tx(&mut self) -> Option<&mut Commit> {
+        self.transaction.as_mut()
+    }
+
+    pub fn set_tx(&mut self, commit: Commit) {
+        self.transaction = Some(commit);
+    }
+
+    pub fn commit(&mut self) {
         let Some(commit) = self.transaction.take() else {
             return;
         };
@@ -165,71 +127,62 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_history() {
-        //@note: let's say original text is "hello world!"
+    fn test_history_del_inplace() {
+        //@note: let's say original text is "test test"
 
-        let mut history = History::new(10).unwrap();
+        let mut history = History::default();
         let before = (0, 5).into();
-        let mut after = (0, 6).into();
+        let after = (0, 5).into();
 
-        history.commit(Action::InsertChar(' '), before, after);
-        after.offset += 1;
-        history.commit(Action::InsertChar(' '), before, after);
-        history.apply();
-        // hello   world!
+        let commit = Commit::new(Change::Delete("t".into()), before, after);
+        history.set_tx(commit);
+        history.commit();
+        // test est
 
-        let before = (0, 6).into();
-        let after = (0, 7).into();
-        history.commit(Action::InsertChar('o'), before, after);
-        history.apply();
-        // hello o  world!
+        let commit = Commit::new(Change::Delete("e".into()), before, after);
+        history.set_tx(commit);
+        history.commit();
+        // test st
 
-        let before = (0, 7).into();
-        let after = (0, 8).into();
-        history.commit(Action::InsertChar('k'), before, after);
-        history.apply();
-        // hello ok  world!
-
-        let before = (0, 10).into();
-        let mut after = (0, 9).into();
-        history.commit(Action::DeleteChar(' '), before, after);
-        after.offset -= 1;
-        history.commit(Action::DeleteChar(' '), before, after);
-        history.apply();
-        // hello okworld!
-
-        let mut text = ropey::Rope::from_str("hello okworld!");
-
-        let pos = history.undo(&mut text).unwrap();
-        assert_eq!((0, 10), Into::into(&pos));
-        assert_eq!(text.to_string().as_str(), "hello ok  world!");
-
-        let pos = history.undo(&mut text).unwrap();
-        assert_eq!((0, 7), Into::into(&pos));
-        assert_eq!(text.to_string().as_str(), "hello o  world!");
-
-        let pos = history.undo(&mut text).unwrap();
-        assert_eq!((0, 6), Into::into(&pos));
-        assert_eq!(text.to_string().as_str(), "hello   world!");
+        let mut text = ropey::Rope::from_str("test st");
 
         let pos = history.undo(&mut text).unwrap();
         assert_eq!((0, 5), Into::into(&pos));
-        assert_eq!(text.to_string().as_str(), "hello world!");
+        assert_eq!(text.to_string().as_str(), "test est");
+
+        let pos = history.undo(&mut text).unwrap();
+        assert_eq!((0, 5), Into::into(&pos));
+        assert_eq!(text.to_string().as_str(), "test test");
 
         let pos = history.redo(&mut text).unwrap();
-        assert_eq!((0, 7), Into::into(&pos));
-        assert_eq!(text.to_string().as_str(), "hello   world!");
+        assert_eq!((0, 5), Into::into(&pos));
+        assert_eq!(text.to_string().as_str(), "test est");
 
         let pos = history.redo(&mut text).unwrap();
-        assert_eq!((0, 7), Into::into(&pos));
-        assert_eq!(text.to_string().as_str(), "hello o  world!");
+        assert_eq!((0, 5), Into::into(&pos));
+        assert_eq!(text.to_string().as_str(), "test st");
+    }
+
+    #[test]
+    fn test_history_insert() {
+        //@note: let's say original text is "test test"
+
+        let mut history = History::default();
+        let before = (0, 0).into();
+        let after = (0, 9).into();
+
+        let commit = Commit::new(Change::Insert("test test".into()), before, after);
+        history.set_tx(commit);
+        history.commit();
+
+        let mut text = ropey::Rope::from_str("test test");
+
+        let pos = history.undo(&mut text).unwrap();
+        assert_eq!((0, 0), Into::into(&pos));
+        assert_eq!(text.to_string().as_str(), "");
 
         let pos = history.redo(&mut text).unwrap();
-        assert_eq!((0, 8), Into::into(&pos));
-        assert_eq!(text.to_string().as_str(), "hello ok  world!");
-
-        let pos = history.redo(&mut text).unwrap();
-        assert_eq!((0, 8), Into::into(&pos));
-        assert_eq!(text.to_string().as_str(), "hello okworld!");
+        assert_eq!((0, 9), Into::into(&pos));
+        assert_eq!(text.to_string().as_str(), "test est");
     }
 }
