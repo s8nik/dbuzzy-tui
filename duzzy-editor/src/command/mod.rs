@@ -1,13 +1,15 @@
-mod edit;
-pub mod insert;
-mod shift;
-mod switch;
+mod adjustment;
+mod history;
+pub mod insert_mode;
+mod movement;
+mod switch_mode;
 
 use std::{collections::HashMap, sync::Arc};
 
-use edit::*;
-use shift::*;
-use switch::*;
+use adjustment::*;
+use history::{redo, undo};
+use movement::*;
+use switch_mode::*;
 
 use crate::{
     buffer::Buffer,
@@ -34,6 +36,8 @@ pub enum CmdType {
     GoToBottomLine,
     GoToLineStart,
     GoToLineEnd,
+    Undo,
+    Redo,
 }
 
 pub struct Command {
@@ -72,6 +76,8 @@ impl CommandRegistry {
             Command::new(CmdType::GoToBottomLine, go_to_bottom_line),
             Command::new(CmdType::GoToLineEnd, go_to_line_end),
             Command::new(CmdType::GoToLineStart, go_to_line_start),
+            Command::new(CmdType::Undo, undo),
+            Command::new(CmdType::Redo, redo),
         ];
 
         let mut map = HashMap::new();
