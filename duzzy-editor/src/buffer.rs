@@ -31,9 +31,15 @@ pub struct Buffer {
 }
 
 impl Buffer {
-    pub fn text_pos(&self) -> usize {
+    pub fn byte_pos(&self) -> usize {
         let (index, offset) = Into::into(&self.pos);
         offset + self.text.line_to_byte(index)
+    }
+
+    pub fn cursor_pos(&self, pos: usize) -> Position {
+        let index = self.text.byte_to_line(pos);
+        let offset = pos - index;
+        (index, offset).into()
     }
 
     pub const fn vscroll(&self) -> usize {

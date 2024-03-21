@@ -17,42 +17,44 @@ pub struct Change {
 }
 
 impl Change {
-    pub fn new_empty(kind: ChangeKind, pos: usize) -> Self {
-        let content = SmartString::new_const();
-        Self::new(kind, content, pos, pos)
+    pub const fn new(kind: ChangeKind, pos: usize) -> Self {
+        Self {
+            kind,
+            content: SmartString::new_const(),
+            start: pos,
+            end: pos,
+        }
     }
 
-    pub fn new_insert(content: SmartString, start: usize, end: usize) -> Self {
-        Self::new(ChangeKind::Insert, content, start, end)
-    }
-
-    pub fn new_delete(content: SmartString, start: usize, end: usize) -> Self {
-        Self::new(ChangeKind::Delete, content, start, end)
-    }
-
-    pub fn on_char(&mut self, ch: char) {
+    pub fn on_char(&mut self, ch: char, inplace: bool) -> &mut Self {
         self.content.push(ch);
-        self.update_state(1);
+
+        if !inplace {
+            self.update_state(1);
+        }
+
+        self
     }
 
-    pub fn on_slice(&mut self, slice: &str) {
+    pub fn on_slice(&mut self, slice: &str) -> &mut Self {
         self.content.push_str(slice);
-        self.update_state(slice.chars().count())
+        self.update_state(slice.chars().count());
+
+        self
+    }
+
+    pub const fn commit(&self) -> ChangesResult {
+        ChangesResult::Commit
+    }
+
+    pub const fn keep(&self) -> ChangesResult {
+        ChangesResult::Keep
     }
 
     fn update_state(&mut self, shift: usize) {
         match self.kind {
             ChangeKind::Insert => self.end += shift,
             ChangeKind::Delete => self.end -= shift,
-        }
-    }
-
-    fn new(kind: ChangeKind, content: SmartString, start: usize, end: usize) -> Self {
-        Self {
-            kind,
-            content,
-            start,
-            end,
         }
     }
 
@@ -73,11 +75,18 @@ impl Change {
     }
 
     fn apply(&self, text: &mut ropey::Rope) {
+        let pos = self.start.min(self.end);
+        let reverted: Option<SmartString> =
+            (self.start > self.end).then_some(self.content.chars().rev().collect());
+
+        let content = reverted
+            .as_ref()
+            .map(|c| c.as_str())
+            .unwrap_or(self.content.as_str());
+
         match self.kind {
-            ChangeKind::Insert => text.insert(self.start, &self.content),
-            ChangeKind::Delete => {
-                text.remove(self.start..self.start + self.content.chars().count())
-            }
+            ChangeKind::Insert => text.insert(pos, content),
+            ChangeKind::Delete => text.remove(pos..pos + content.chars().count()),
         }
     }
 }
@@ -113,22 +122,28 @@ impl History {
         }
     }
 
-    pub fn with_new_change<F>(&mut self, new_change: Change, func: F)
+    pub fn push<F>(&mut self, kind: ChangeKind, pos: usize, func: F)
     where
         F: Fn(&mut Change) -> ChangesResult,
     {
         let mut current = match self.current.take() {
             Some(change) => change,
-            None => new_change,
+            None => Change::new(kind, pos),
         };
 
         match func(&mut current) {
-            ChangesResult::Commit => self.commit(current),
+            ChangesResult::Commit => self.commit_impl(current),
             ChangesResult::Keep => self.current = Some(current),
         }
     }
 
-    fn commit(&mut self, change: Change) {
+    pub fn commit(&mut self) {
+        if let Some(change) = self.current.take() {
+            self.commit_impl(change);
+        }
+    }
+
+    fn commit_impl(&mut self, change: Change) {
         if self.changes.len() == self.max_items {
             self.changes.pop_front();
             self.head = self.head.saturating_sub(1);
@@ -173,12 +188,14 @@ mod tests {
         let mut history = History::default();
 
         // test est
-        let delete = Change::new_delete("t".into(), 5, 5);
-        history.with_new_change(delete, |_| ChangesResult::Commit);
+        history.push(ChangeKind::Delete, 5, |change| {
+            change.on_char('t', true).commit()
+        });
 
         // test st
-        let delete = Change::new_delete("e".into(), 5, 5);
-        history.with_new_change(delete, |_| ChangesResult::Commit);
+        history.push(ChangeKind::Delete, 5, |change| {
+            change.on_char('e', true).commit()
+        });
 
         let mut text = ropey::Rope::from("test st");
 
@@ -203,10 +220,32 @@ mod tests {
     fn test_history_on_char() {
         let mut history = History::default();
 
-        let insert = Change::new_empty(ChangeKind::Insert, 0);
-        history.with_new_change(insert, |change| {
-            change.on_slice("test test");
-            ChangesResult::Commit
+        history.push(ChangeKind::Delete, 9, |change| {
+            change
+                .on_char('t', false)
+                .on_char('s', false)
+                .on_char('e', false)
+                .on_char('t', false)
+                .commit()
+        });
+
+        let mut text = ropey::Rope::from_str("test ");
+
+        let pos = history.undo(&mut text).unwrap();
+        assert_eq!(9, pos);
+        assert_eq!(text.to_string().as_str(), "test test");
+
+        let pos = history.redo(&mut text).unwrap();
+        assert_eq!(5, pos);
+        assert_eq!(text.to_string().as_str(), "test ");
+    }
+
+    #[test]
+    fn test_history_on_slice() {
+        let mut history = History::default();
+
+        history.push(ChangeKind::Insert, 0, |change| {
+            change.on_slice("test test").commit()
         });
 
         let mut text = ropey::Rope::from_str("test test");
