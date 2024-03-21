@@ -1,235 +1,261 @@
 use std::collections::VecDeque;
 
-use crate::buffer::Position;
+use crate::SmartString;
 
-pub enum Action {
-    InsertChar(char),
-    DeleteChar(char),
+#[derive(Debug)]
+pub enum ChangeKind {
+    Insert,
+    Delete,
 }
 
 #[derive(Debug)]
-enum Change {
-    Insert(String),
-    Delete(String),
+pub struct Change {
+    kind: ChangeKind,
+    content: SmartString,
+    start: usize,
+    end: usize,
 }
 
 impl Change {
-    fn inverse(&self) -> Self {
-        match self {
-            Change::Insert(c) => Change::Delete(c.to_owned()),
-            Change::Delete(c) => Change::Insert(c.to_owned()),
-        }
-    }
-}
-
-impl From<Action> for Change {
-    fn from(action: Action) -> Self {
-        match action {
-            Action::InsertChar(ch) => Self::Insert(String::from(ch)),
-            Action::DeleteChar(ch) => Self::Delete(String::from(ch)),
-        }
-    }
-}
-
-#[derive(Debug)]
-struct Commit {
-    before: Position,
-    after: Position,
-    change: Change,
-    inverse: Change,
-}
-
-impl Commit {
-    fn new(change: Change, before: Position, after: Position) -> Self {
-        let inverse = change.inverse();
-
+    pub const fn new(kind: ChangeKind, pos: usize) -> Self {
         Self {
-            change,
-            inverse,
-            before,
-            after,
+            kind,
+            content: SmartString::new_const(),
+            start: pos,
+            end: pos,
         }
     }
 
-    fn change(&mut self, action: Action, before: Position, after: Position) -> Option<Self> {
-        let mut new_kind = None;
+    pub fn on_char(&mut self, ch: char, inplace: bool) -> &mut Self {
+        self.content.push(ch);
 
-        match (&mut self.change, &mut self.inverse, &action) {
-            (Change::Insert(c), Change::Delete(i), Action::InsertChar(ch))
-            | (Change::Delete(c), Change::Insert(i), Action::DeleteChar(ch)) => {
-                c.push(*ch);
-                i.push(*ch);
-            }
-            _ => new_kind = Some(action.into()),
+        if !inplace {
+            self.update_state(1);
+        }
+
+        self
+    }
+
+    pub fn on_slice(&mut self, slice: &str) -> &mut Self {
+        self.content.push_str(slice);
+        self.update_state(slice.chars().count());
+
+        self
+    }
+
+    pub const fn commit(&self) -> ChangesResult {
+        ChangesResult::Commit
+    }
+
+    pub const fn keep(&self) -> ChangesResult {
+        ChangesResult::Keep
+    }
+
+    fn update_state(&mut self, shift: usize) {
+        match self.kind {
+            ChangeKind::Insert => self.end += shift,
+            ChangeKind::Delete => self.end -= shift,
+        }
+    }
+
+    fn inverse(&self) -> Self {
+        let kind = match self.kind {
+            ChangeKind::Insert => ChangeKind::Delete,
+            ChangeKind::Delete => ChangeKind::Insert,
         };
 
-        if let Some(kind) = new_kind.take() {
-            return Some(Self::new(kind, before, after));
-        }
+        let content = self.content.to_owned();
 
-        self.after = after;
-        None
-    }
-
-    fn apply(change: &Change, text: &mut ropey::Rope, pos: Position) {
-        let text_pos = pos.offset + text.line_to_byte(pos.index);
-
-        match change {
-            Change::Insert(c) => text.insert(text_pos, c),
-            Change::Delete(c) => text.remove(text_pos - c.chars().count()..text_pos),
+        Self {
+            kind,
+            content,
+            start: self.start,
+            end: self.end,
         }
     }
 
-    pub fn undo(&self, text: &mut ropey::Rope) -> Position {
-        Self::apply(&self.inverse, text, self.after);
-        self.before
-    }
+    fn apply(&self, text: &mut ropey::Rope) {
+        let pos = self.start.min(self.end);
+        let reverted: Option<SmartString> =
+            (self.start > self.end).then_some(self.content.chars().rev().collect());
 
-    pub fn redo(&self, text: &mut ropey::Rope) -> Position {
-        Self::apply(&self.change, text, self.before);
-        self.after
+        let content = reverted
+            .as_ref()
+            .map(|c| c.as_str())
+            .unwrap_or(self.content.as_str());
+
+        match self.kind {
+            ChangeKind::Insert => text.insert(pos, content),
+            ChangeKind::Delete => text.remove(pos..pos + content.chars().count()),
+        }
     }
 }
 
-#[derive(Default)]
+#[derive(Clone, Copy)]
+pub enum ChangesResult {
+    Commit,
+    Keep,
+}
+
 pub struct History {
     head: usize,
     max_items: usize,
-    commits: VecDeque<Commit>,
-    transaction: Option<Commit>,
+    changes: VecDeque<Change>,
+    current: Option<Change>,
+}
+
+impl Default for History {
+    fn default() -> Self {
+        Self::new(Self::DEFAULT_CAPACITY)
+    }
 }
 
 impl History {
-    pub fn new(max_items: usize) -> anyhow::Result<Self> {
-        anyhow::ensure!(max_items != 0, "invalid max length");
+    const DEFAULT_CAPACITY: usize = 20;
 
-        Ok(Self {
+    pub fn new(max_items: usize) -> Self {
+        Self {
             head: 0,
             max_items,
-            transaction: None,
-            commits: VecDeque::with_capacity(max_items),
-        })
-    }
-
-    pub fn commit(&mut self, action: Action, before: Position, after: Position) {
-        let mut maybe_new = match self.transaction.as_mut() {
-            Some(commit) => commit.change(action, before, after),
-            None => Some(Commit::new(action.into(), before, after)),
-        };
-
-        if let Some(commit) = maybe_new.take() {
-            self.apply();
-            self.transaction = Some(commit);
+            current: None,
+            changes: VecDeque::with_capacity(max_items),
         }
     }
 
-    pub fn apply(&mut self) {
-        let Some(commit) = self.transaction.take() else {
-            return;
+    pub fn push<F>(&mut self, kind: ChangeKind, pos: usize, func: F)
+    where
+        F: Fn(&mut Change) -> ChangesResult,
+    {
+        let mut current = match self.current.take() {
+            Some(change) => change,
+            None => Change::new(kind, pos),
         };
 
-        if self.commits.len() == self.max_items {
-            self.commits.pop_front();
+        match func(&mut current) {
+            ChangesResult::Commit => self.commit_impl(current),
+            ChangesResult::Keep => self.current = Some(current),
+        }
+    }
+
+    pub fn commit(&mut self) {
+        if let Some(change) = self.current.take() {
+            self.commit_impl(change);
+        }
+    }
+
+    fn commit_impl(&mut self, change: Change) {
+        if self.changes.len() == self.max_items {
+            self.changes.pop_front();
             self.head = self.head.saturating_sub(1);
         }
 
-        if self.head < self.commits.len() {
-            self.commits.truncate(self.head);
+        if self.head < self.changes.len() {
+            self.changes.truncate(self.head);
         }
 
-        self.commits.push_back(commit);
+        self.changes.push_back(change);
         self.head += 1;
     }
 
-    pub fn undo(&mut self, text: &mut ropey::Rope) -> Option<Position> {
+    pub fn undo(&mut self, text: &mut ropey::Rope) -> Option<usize> {
         self.head = self.head.checked_sub(1)?;
-        let commit = &self.commits[self.head];
+        let change = &mut self.changes[self.head].inverse();
 
-        Some(commit.undo(text))
+        change.apply(text);
+        Some(change.start)
     }
 
-    pub fn redo(&mut self, text: &mut ropey::Rope) -> Option<Position> {
-        if self.head == self.commits.len() {
+    pub fn redo(&mut self, text: &mut ropey::Rope) -> Option<usize> {
+        if self.head == self.changes.len() {
             return None;
         }
 
-        let commit = &self.commits[self.head];
+        let change = &mut self.changes[self.head];
         self.head += 1;
 
-        Some(commit.redo(text))
+        change.apply(text);
+        Some(change.end)
     }
 }
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
     #[test]
-    fn test_history() {
-        //@note: let's say original text is "hello world!"
+    fn test_history_delete_inplace() {
+        let mut history = History::default();
 
-        let mut history = History::new(10).unwrap();
-        let before = (0, 5).into();
-        let mut after = (0, 6).into();
+        // test est
+        history.push(ChangeKind::Delete, 5, |change| {
+            change.on_char('t', true).commit()
+        });
 
-        history.commit(Action::InsertChar(' '), before, after);
-        after.offset += 1;
-        history.commit(Action::InsertChar(' '), before, after);
-        history.apply();
-        // hello   world!
+        // test st
+        history.push(ChangeKind::Delete, 5, |change| {
+            change.on_char('e', true).commit()
+        });
 
-        let before = (0, 6).into();
-        let after = (0, 7).into();
-        history.commit(Action::InsertChar('o'), before, after);
-        history.apply();
-        // hello o  world!
-
-        let before = (0, 7).into();
-        let after = (0, 8).into();
-        history.commit(Action::InsertChar('k'), before, after);
-        history.apply();
-        // hello ok  world!
-
-        let before = (0, 10).into();
-        let mut after = (0, 9).into();
-        history.commit(Action::DeleteChar(' '), before, after);
-        after.offset -= 1;
-        history.commit(Action::DeleteChar(' '), before, after);
-        history.apply();
-        // hello okworld!
-
-        let mut text = ropey::Rope::from_str("hello okworld!");
+        let mut text = ropey::Rope::from("test st");
 
         let pos = history.undo(&mut text).unwrap();
-        assert_eq!((0, 10), Into::into(&pos));
-        assert_eq!(text.to_string().as_str(), "hello ok  world!");
+        assert_eq!(5, pos);
+        assert_eq!(text.to_string().as_str(), "test est");
 
         let pos = history.undo(&mut text).unwrap();
-        assert_eq!((0, 7), Into::into(&pos));
-        assert_eq!(text.to_string().as_str(), "hello o  world!");
+        assert_eq!(5, pos);
+        assert_eq!(text.to_string().as_str(), "test test");
+
+        let pos = history.redo(&mut text).unwrap();
+        assert_eq!(5, pos);
+        assert_eq!(text.to_string().as_str(), "test est");
+
+        let pos = history.redo(&mut text).unwrap();
+        assert_eq!(5, pos);
+        assert_eq!(text.to_string().as_str(), "test st");
+    }
+
+    #[test]
+    fn test_history_on_char() {
+        let mut history = History::default();
+
+        history.push(ChangeKind::Delete, 9, |change| {
+            change
+                .on_char('t', false)
+                .on_char('s', false)
+                .on_char('e', false)
+                .on_char('t', false)
+                .commit()
+        });
+
+        let mut text = ropey::Rope::from_str("test ");
 
         let pos = history.undo(&mut text).unwrap();
-        assert_eq!((0, 6), Into::into(&pos));
-        assert_eq!(text.to_string().as_str(), "hello   world!");
+        assert_eq!(9, pos);
+        assert_eq!(text.to_string().as_str(), "test test");
+
+        let pos = history.redo(&mut text).unwrap();
+        assert_eq!(5, pos);
+        assert_eq!(text.to_string().as_str(), "test ");
+    }
+
+    #[test]
+    fn test_history_on_slice() {
+        let mut history = History::default();
+
+        history.push(ChangeKind::Insert, 0, |change| {
+            change.on_slice("test test").commit()
+        });
+
+        let mut text = ropey::Rope::from_str("test test");
 
         let pos = history.undo(&mut text).unwrap();
-        assert_eq!((0, 5), Into::into(&pos));
-        assert_eq!(text.to_string().as_str(), "hello world!");
+        assert_eq!(0, pos);
+        assert_eq!(text.to_string().as_str(), "");
 
         let pos = history.redo(&mut text).unwrap();
-        assert_eq!((0, 7), Into::into(&pos));
-        assert_eq!(text.to_string().as_str(), "hello   world!");
-
-        let pos = history.redo(&mut text).unwrap();
-        assert_eq!((0, 7), Into::into(&pos));
-        assert_eq!(text.to_string().as_str(), "hello o  world!");
-
-        let pos = history.redo(&mut text).unwrap();
-        assert_eq!((0, 8), Into::into(&pos));
-        assert_eq!(text.to_string().as_str(), "hello ok  world!");
-
-        let pos = history.redo(&mut text).unwrap();
-        assert_eq!((0, 8), Into::into(&pos));
-        assert_eq!(text.to_string().as_str(), "hello okworld!");
+        assert_eq!(9, pos);
+        assert_eq!(text.to_string().as_str(), "test test");
     }
 }

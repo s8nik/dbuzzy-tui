@@ -15,9 +15,9 @@ impl From<(usize, usize)> for Position {
     }
 }
 
-impl Into<(usize, usize)> for &Position {
-    fn into(self) -> (usize, usize) {
-        (self.index, self.offset)
+impl From<&Position> for (usize, usize) {
+    fn from(pos: &Position) -> Self {
+        (pos.index, pos.offset)
     }
 }
 
@@ -31,9 +31,15 @@ pub struct Buffer {
 }
 
 impl Buffer {
-    pub fn text_pos(&self) -> usize {
+    pub fn byte_pos(&self) -> usize {
         let (index, offset) = Into::into(&self.pos);
         offset + self.text.line_to_byte(index)
+    }
+
+    pub fn cursor_pos(&self, pos: usize) -> Position {
+        let index = self.text.byte_to_line(pos);
+        let offset = pos - index;
+        (index, offset).into()
     }
 
     pub const fn vscroll(&self) -> usize {

@@ -15,40 +15,40 @@ enum Shift {
     LineEnd,
 }
 
-pub(super) fn move_left(editor: &mut Workspace) {
-    shift_cursor(editor, Shift::Left)
+pub(super) fn move_left(ws: &mut Workspace) {
+    shift_cursor(ws, Shift::Left);
 }
 
-pub(super) fn move_down(editor: &mut Workspace) {
-    shift_cursor(editor, Shift::Down(1))
+pub(super) fn move_down(ws: &mut Workspace) {
+    shift_cursor(ws, Shift::Down(1));
 }
 
-pub(super) fn move_up(editor: &mut Workspace) {
-    shift_cursor(editor, Shift::Up(1))
+pub(super) fn move_up(ws: &mut Workspace) {
+    shift_cursor(ws, Shift::Up(1));
 }
 
-pub(super) fn move_right(editor: &mut Workspace) {
-    shift_cursor(editor, Shift::Right)
+pub(super) fn move_right(ws: &mut Workspace) {
+    shift_cursor(ws, Shift::Right);
 }
 
-pub(super) fn go_to_top_line(editor: &mut Workspace) {
-    shift_cursor(editor, Shift::Top)
+pub(super) fn go_to_top_line(ws: &mut Workspace) {
+    shift_cursor(ws, Shift::Top);
 }
 
-pub(super) fn go_to_bottom_line(editor: &mut Workspace) {
-    shift_cursor(editor, Shift::Bottom)
+pub(super) fn go_to_bottom_line(ws: &mut Workspace) {
+    shift_cursor(ws, Shift::Bottom);
 }
 
-pub(super) fn go_to_line_end(editor: &mut Workspace) {
-    shift_cursor(editor, Shift::LineEnd)
+pub(super) fn go_to_line_end(ws: &mut Workspace) {
+    shift_cursor(ws, Shift::LineEnd);
 }
 
-pub(super) fn go_to_line_start(editor: &mut Workspace) {
-    shift_cursor(editor, Shift::LineStart)
+pub(super) fn go_to_line_start(ws: &mut Workspace) {
+    shift_cursor(ws, Shift::LineStart);
 }
 
-fn shift_cursor(editor: &mut Workspace, shift: Shift) {
-    let buf = editor.curr_mut().buf_mut();
+fn shift_cursor(ws: &mut Workspace, shift: Shift) {
+    let buf = ws.curr_mut().buf_mut();
     let index = buf.pos.index;
 
     let pos = match shift {

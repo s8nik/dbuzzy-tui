@@ -42,8 +42,9 @@ pub struct FileMeta {
 pub struct Document {
     id: DocumentId,
     meta: FileMeta,
-    buffer: Buffer,
-    history: History,
+
+    pub(super) buffer: Buffer,
+    pub(super) history: History,
 }
 
 impl Document {

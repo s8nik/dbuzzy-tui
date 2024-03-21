@@ -73,6 +73,8 @@ impl<B: Backend + Write> App<B> {
             ui.render_widget(widget, ui.size());
         })?;
 
+        self.render_cursor()?;
+
         loop {
             let Some(Ok(event)) = reader.next().await else {
                 tokio::time::sleep(Duration::from_millis(100)).await;
@@ -92,11 +94,18 @@ impl<B: Backend + Write> App<B> {
                 _ => (),
             };
 
-            let cursor = self.editor.cursor();
-            self.terminal.set_cursor(cursor.x, cursor.y)?;
-            execute!(self.terminal.backend_mut(), cursor.style())?;
-            self.terminal.show_cursor()?;
+            self.render_cursor()?;
         }
+
+        Ok(())
+    }
+
+    fn render_cursor(&mut self) -> anyhow::Result<()> {
+        let cursor = self.editor.cursor();
+
+        self.terminal.set_cursor(cursor.x, cursor.y)?;
+        execute!(self.terminal.backend_mut(), cursor.style())?;
+        self.terminal.show_cursor()?;
 
         Ok(())
     }

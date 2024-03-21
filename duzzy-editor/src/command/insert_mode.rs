@@ -1,11 +1,10 @@
 use crate::{
-    buffer::CursorMode,
     editor::Workspace,
     input::{Event, Input, Modifiers},
     renderer::EventOutcome,
 };
 
-pub fn on_key(workspace: &mut Workspace, input: Input) -> EventOutcome {
+pub fn on_key(ws: &mut Workspace, input: Input) -> EventOutcome {
     if let Input {
         event: Event::Char('q'),
         modifiers: Modifiers { ctr: true, .. },
@@ -20,41 +19,39 @@ pub fn on_key(workspace: &mut Workspace, input: Input) -> EventOutcome {
         Input {
             event: Event::Char(ch),
             ..
-        } => {
-            super::edit::insert_char(workspace, ch);
-        }
+        } => super::adjustment::insert_char(ws, ch),
         Input {
             event: Event::Esc, ..
-        } => workspace.curr_mut().buf_mut().mode = CursorMode::Normal,
+        } => super::switch_mode::normal_mode_inplace(ws),
         Input {
             event: Event::Left, ..
-        } => super::shift::move_left(workspace),
+        } => super::movement::move_left(ws),
         Input {
             event: Event::Right,
             ..
-        } => super::shift::move_right(workspace),
+        } => super::movement::move_right(ws),
         Input {
             event: Event::Up, ..
-        } => super::shift::move_up(workspace),
+        } => super::movement::move_up(ws),
         Input {
             event: Event::Down, ..
-        } => super::shift::move_down(workspace),
+        } => super::movement::move_down(ws),
         Input {
             event: Event::Backspace,
             ..
-        } => super::edit::delete_char(workspace),
+        } => super::adjustment::delete_char(ws),
         Input {
             event: Event::Enter,
             ..
-        } => super::edit::new_line(workspace),
+        } => super::adjustment::new_line(ws),
         Input {
             event: Event::PageUp,
             ..
-        } => super::shift::go_to_top_line(workspace),
+        } => super::movement::go_to_top_line(ws),
         Input {
             event: Event::PageDown,
             ..
-        } => super::shift::go_to_bottom_line(workspace),
+        } => super::movement::go_to_bottom_line(ws),
         _ => outcome = EventOutcome::Ignore,
     }
 

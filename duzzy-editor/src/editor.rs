@@ -1,7 +1,7 @@
 use std::{collections::HashMap, path::Path};
 
 use crate::{
-    command::{insert, CommandFinder},
+    command::{insert_mode, CommandFinder},
     document::{Document, DocumentId},
     keymap::Keymaps,
     renderer::{Cursor, EventOutcome, Renderer, Viewport},
@@ -26,15 +26,16 @@ impl DuzzyEditor {
 
     pub fn open_file(&mut self, filepath: impl AsRef<Path>) -> anyhow::Result<()> {
         let doc = Document::from_path(filepath)?;
-        Ok(self.workspace.add_doc(doc))
+        self.workspace.add_doc(doc);
+        Ok(())
     }
 
     pub fn open_scratch(&mut self) {
-        self.workspace.add_doc(Document::default())
+        self.workspace.add_doc(Document::default());
     }
 
     pub const fn widget(&self) -> Renderer<'_> {
-        Renderer::new(&self)
+        Renderer::new(self)
     }
 
     pub const fn viewport(&self) -> (usize, usize) {
@@ -79,7 +80,7 @@ impl DuzzyEditor {
                 self.command.reset();
                 EventOutcome::Render
             }
-            None if buf.is_insert() => insert::on_key(&mut self.workspace, input),
+            None if buf.is_insert() => insert_mode::on_key(&mut self.workspace, input),
             _ => EventOutcome::Ignore,
         };
 
@@ -97,6 +98,12 @@ impl DuzzyEditor {
 pub struct Workspace {
     documents: HashMap<DocumentId, Document>,
     current: DocumentId,
+}
+
+impl Default for Workspace {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Workspace {
