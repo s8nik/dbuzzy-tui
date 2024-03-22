@@ -51,12 +51,24 @@ impl Change {
     }
 }
 
+#[derive(Debug)]
 pub struct Transaction {
     action: Action,
     change: Change,
 }
 
 impl Transaction {
+    const fn new(action: Action, pos: usize) -> Self {
+        let change = Change::new(action, pos);
+
+        Self { action, change }
+    }
+
+    const fn update_action(mut self, action: Action) -> Self {
+        self.action = action;
+        self
+    }
+
     pub fn on_char(mut self, ch: char, inplace: bool) -> Self {
         if !inplace {
             self.update_state(1);
@@ -95,8 +107,8 @@ impl Transaction {
         TransactionResult::Commit(self.finish())
     }
 
-    pub fn keep(self) -> TransactionResult {
-        TransactionResult::Keep(self.finish())
+    pub const fn keep(self) -> TransactionResult {
+        TransactionResult::Keep(self)
     }
 
     fn finish(self) -> Option<Change> {
@@ -116,14 +128,14 @@ impl Transaction {
 
 pub enum TransactionResult {
     Commit(Option<Change>),
-    Keep(Option<Change>),
+    Keep(Transaction),
 }
 
 pub struct History {
     head: usize,
     max_items: usize,
     changes: VecDeque<Change>,
-    current: Option<Change>,
+    transaction: Option<Transaction>,
 }
 
 impl Default for History {
@@ -139,7 +151,7 @@ impl History {
         Self {
             head: 0,
             max_items,
-            current: None,
+            transaction: None,
             changes: VecDeque::with_capacity(max_items),
         }
     }
@@ -148,26 +160,26 @@ impl History {
     where
         F: Fn(Transaction) -> TransactionResult,
     {
-        let change = match self.current.take() {
-            Some(change) => change,
-            None => Change::new(action, pos),
+        let tx = match self.transaction.take() {
+            Some(transaction) => transaction.update_action(action),
+            None => Transaction::new(action, pos),
         };
-
-        let tx = Transaction { action, change };
 
         match func(tx) {
             TransactionResult::Commit(change) => self.maybe_commit(change),
-            TransactionResult::Keep(change) => self.current = change,
+            TransactionResult::Keep(tx) => self.transaction = Some(tx),
         }
     }
 
     pub fn commit(&mut self) {
-        let change = self.current.take();
-        self.maybe_commit(change);
+        if let Some(tx) = self.transaction.take() {
+            self.maybe_commit(tx.finish());
+        }
     }
 
     fn maybe_commit(&mut self, change: Option<Change>) {
         let Some(change) = change else {
+            self.head = self.head.saturating_sub(1);
             return;
         };
 
@@ -280,12 +292,42 @@ mod tests {
     }
 
     #[test]
-    fn test_history_empty_commit() {
+    fn test_history_on_slice_empty_commit() {
         let mut history = History::default();
 
         history.push(Action::Insert, 0, |tx| tx.on_slice("test").keep());
 
-        history.push(Action::Delete, 4, |tx| tx.on_slice("test").keep());
+        history.push(Action::Delete, 4, |tx| tx.on_slice("test").commit());
+
+        let mut text = ropey::Rope::new();
+        let expected = text.to_string();
+
+        let pos = history.undo(&mut text);
+        assert_eq!(None, pos);
+        assert_eq!(&expected, "");
+
+        let pos = history.redo(&mut text);
+        assert_eq!(None, pos);
+        assert_eq!(&expected, "");
+    }
+
+    #[test]
+    fn test_history_on_char_empty_commit() {
+        let mut history = History::default();
+
+        history.push(Action::Insert, 0, |tx| {
+            tx.on_char('t', false)
+                .on_char('e', false)
+                .on_char('s', false)
+                .on_char('t', false)
+                .keep()
+        });
+
+        history.push(Action::Delete, 4, |tx| tx.on_char('t', false).keep());
+        history.push(Action::Delete, 3, |tx| tx.on_char('s', false).keep());
+        history.push(Action::Delete, 2, |tx| tx.on_char('e', false).keep());
+        history.push(Action::Delete, 1, |tx| tx.on_char('t', false).keep());
+        history.commit();
 
         let mut text = ropey::Rope::new();
         let expected = text.to_string();
