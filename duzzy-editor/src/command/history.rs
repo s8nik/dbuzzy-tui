@@ -1,7 +1,7 @@
 use crate::{
     doc_mut,
     editor::Workspace,
-    history::{ChangeKind, History},
+    history::{Action, History},
     set_cursor,
 };
 
@@ -22,19 +22,13 @@ pub(super) fn redo(ws: &mut Workspace) {
 }
 
 pub(super) fn insert_char(ch: char, pos: usize, history: &mut History) {
-    history.push(ChangeKind::Insert, pos, |change| {
-        change.on_char(ch, false).keep()
-    });
+    history.push(Action::Insert, pos, |tx| tx.on_char(ch, false).keep());
 }
 
 pub(super) fn delete_char(ch: char, pos: usize, history: &mut History) {
-    history.push(ChangeKind::Delete, pos, |change| {
-        change.on_char(ch, false).keep()
-    });
+    history.push(Action::Delete, pos, |tx| tx.on_char(ch, false).keep());
 }
 
 pub(super) fn delete_char_inplace(ch: char, pos: usize, history: &mut History) {
-    history.push(ChangeKind::Delete, pos, |change| {
-        change.on_char(ch, true).commit()
-    });
+    history.push(Action::Delete, pos, |tx| tx.on_char(ch, true).commit());
 }

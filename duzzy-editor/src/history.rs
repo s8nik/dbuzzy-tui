@@ -2,72 +2,38 @@ use std::collections::VecDeque;
 
 use crate::SmartString;
 
-#[derive(Debug)]
-pub enum ChangeKind {
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Action {
     Insert,
     Delete,
 }
 
 #[derive(Debug)]
-pub struct Change {
-    kind: ChangeKind,
+pub(super) struct Change {
+    action: Action,
     content: SmartString,
     start: usize,
     end: usize,
 }
 
 impl Change {
-    pub const fn new(kind: ChangeKind, pos: usize) -> Self {
+    const fn new(action: Action, pos: usize) -> Self {
         Self {
-            kind,
+            action,
             content: SmartString::new_const(),
             start: pos,
             end: pos,
         }
     }
 
-    pub fn on_char(&mut self, ch: char, inplace: bool) -> &mut Self {
-        self.content.push(ch);
-
-        if !inplace {
-            self.update_state(1);
-        }
-
-        self
-    }
-
-    pub fn on_slice(&mut self, slice: &str) -> &mut Self {
-        self.content.push_str(slice);
-        self.update_state(slice.chars().count());
-
-        self
-    }
-
-    pub const fn commit(&self) -> ChangesResult {
-        ChangesResult::Commit
-    }
-
-    pub const fn keep(&self) -> ChangesResult {
-        ChangesResult::Keep
-    }
-
-    fn update_state(&mut self, shift: usize) {
-        match self.kind {
-            ChangeKind::Insert => self.end += shift,
-            ChangeKind::Delete => self.end -= shift,
-        }
-    }
-
     fn inverse(&self) -> Self {
-        let kind = match self.kind {
-            ChangeKind::Insert => ChangeKind::Delete,
-            ChangeKind::Delete => ChangeKind::Insert,
+        let (action, content) = match self.action {
+            Action::Insert => (Action::Delete, self.content.to_owned()),
+            Action::Delete => (Action::Insert, self.content.chars().rev().collect()),
         };
 
-        let content = self.content.to_owned();
-
         Self {
-            kind,
+            action,
             content,
             start: self.start,
             end: self.end,
@@ -76,25 +42,81 @@ impl Change {
 
     fn apply(&self, text: &mut ropey::Rope) {
         let pos = self.start.min(self.end);
-        let reverted: Option<SmartString> =
-            (self.start > self.end).then_some(self.content.chars().rev().collect());
+        let content = &self.content;
 
-        let content = reverted
-            .as_ref()
-            .map(|c| c.as_str())
-            .unwrap_or(self.content.as_str());
-
-        match self.kind {
-            ChangeKind::Insert => text.insert(pos, content),
-            ChangeKind::Delete => text.remove(pos..pos + content.chars().count()),
+        match self.action {
+            Action::Insert => text.insert(pos, content),
+            Action::Delete => text.remove(pos..pos + content.chars().count()),
         }
     }
 }
 
-#[derive(Clone, Copy)]
-pub enum ChangesResult {
-    Commit,
-    Keep,
+pub struct Transaction {
+    action: Action,
+    change: Change,
+}
+
+impl Transaction {
+    pub fn on_char(mut self, ch: char, inplace: bool) -> Self {
+        if !inplace {
+            self.update_state(1);
+        }
+
+        let is_same = self.change.action == self.action;
+        let content = &mut self.change.content;
+
+        if is_same {
+            content.push(ch);
+        } else {
+            let idx = content.chars().count() - 1;
+            content.remove(idx);
+        }
+
+        self
+    }
+
+    pub fn on_slice(mut self, slice: &str) -> Self {
+        let slice_len = slice.chars().count();
+        self.update_state(slice_len);
+
+        let is_same = self.change.action == self.action;
+        let content = &mut self.change.content;
+
+        if is_same {
+            content.push_str(slice);
+        } else if let Some(idx) = content.rfind(slice) {
+            content.replace_range(idx..idx + slice_len, "");
+        }
+
+        self
+    }
+
+    pub fn commit(self) -> TransactionResult {
+        TransactionResult::Commit(self.finish())
+    }
+
+    pub fn keep(self) -> TransactionResult {
+        TransactionResult::Keep(self.finish())
+    }
+
+    fn finish(self) -> Option<Change> {
+        let mut change = self.change;
+        change.action = self.action;
+
+        (!change.content.is_empty()).then_some(change)
+    }
+
+    fn update_state(&mut self, shift: usize) {
+        match self.action {
+            Action::Insert => self.change.end += shift,
+            Action::Delete => self.change.end -= shift,
+        }
+    }
+}
+
+pub enum TransactionResult {
+    Commit(Option<Change>),
+    Keep(Option<Change>),
 }
 
 pub struct History {
@@ -122,28 +144,33 @@ impl History {
         }
     }
 
-    pub fn push<F>(&mut self, kind: ChangeKind, pos: usize, func: F)
+    pub fn push<F>(&mut self, action: Action, pos: usize, func: F)
     where
-        F: Fn(&mut Change) -> ChangesResult,
+        F: Fn(Transaction) -> TransactionResult,
     {
-        let mut current = match self.current.take() {
+        let change = match self.current.take() {
             Some(change) => change,
-            None => Change::new(kind, pos),
+            None => Change::new(action, pos),
         };
 
-        match func(&mut current) {
-            ChangesResult::Commit => self.commit_impl(current),
-            ChangesResult::Keep => self.current = Some(current),
+        let tx = Transaction { action, change };
+
+        match func(tx) {
+            TransactionResult::Commit(change) => self.maybe_commit(change),
+            TransactionResult::Keep(change) => self.current = change,
         }
     }
 
     pub fn commit(&mut self) {
-        if let Some(change) = self.current.take() {
-            self.commit_impl(change);
-        }
+        let change = self.current.take();
+        self.maybe_commit(change);
     }
 
-    fn commit_impl(&mut self, change: Change) {
+    fn maybe_commit(&mut self, change: Option<Change>) {
+        let Some(change) = change else {
+            return;
+        };
+
         if self.changes.len() == self.max_items {
             self.changes.pop_front();
             self.head = self.head.saturating_sub(1);
@@ -188,14 +215,10 @@ mod tests {
         let mut history = History::default();
 
         // test est
-        history.push(ChangeKind::Delete, 5, |change| {
-            change.on_char('t', true).commit()
-        });
+        history.push(Action::Delete, 5, |tx| tx.on_char('t', true).commit());
 
         // test st
-        history.push(ChangeKind::Delete, 5, |change| {
-            change.on_char('e', true).commit()
-        });
+        history.push(Action::Delete, 5, |tx| tx.on_char('e', true).commit());
 
         let mut text = ropey::Rope::from("test st");
 
@@ -220,9 +243,8 @@ mod tests {
     fn test_history_on_char() {
         let mut history = History::default();
 
-        history.push(ChangeKind::Delete, 9, |change| {
-            change
-                .on_char('t', false)
+        history.push(Action::Delete, 9, |tx| {
+            tx.on_char('t', false)
                 .on_char('s', false)
                 .on_char('e', false)
                 .on_char('t', false)
@@ -244,9 +266,7 @@ mod tests {
     fn test_history_on_slice() {
         let mut history = History::default();
 
-        history.push(ChangeKind::Insert, 0, |change| {
-            change.on_slice("test test").commit()
-        });
+        history.push(Action::Insert, 0, |tx| tx.on_slice("test test").commit());
 
         let mut text = ropey::Rope::from_str("test test");
 
@@ -257,5 +277,25 @@ mod tests {
         let pos = history.redo(&mut text).unwrap();
         assert_eq!(9, pos);
         assert_eq!(text.to_string().as_str(), "test test");
+    }
+
+    #[test]
+    fn test_history_empty_commit() {
+        let mut history = History::default();
+
+        history.push(Action::Insert, 0, |tx| tx.on_slice("test").keep());
+
+        history.push(Action::Delete, 4, |tx| tx.on_slice("test").keep());
+
+        let mut text = ropey::Rope::new();
+        let expected = text.to_string();
+
+        let pos = history.undo(&mut text);
+        assert_eq!(None, pos);
+        assert_eq!(&expected, "");
+
+        let pos = history.redo(&mut text);
+        assert_eq!(None, pos);
+        assert_eq!(&expected, "");
     }
 }
