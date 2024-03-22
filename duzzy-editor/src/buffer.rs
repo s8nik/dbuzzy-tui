@@ -38,7 +38,8 @@ impl Buffer {
 
     pub fn cursor_pos(&self, pos: usize) -> Position {
         let index = self.text.byte_to_line(pos);
-        let offset = pos - index;
+        let start = self.text.line_to_byte(index);
+        let offset = pos - start;
         (index, offset).into()
     }
 
@@ -102,19 +103,28 @@ impl std::fmt::Display for CursorMode {
 mod tests {
     use crate::set_cursor;
 
-    use super::Buffer;
+    use super::*;
 
     #[test]
     fn test_cursor_macro() {
-        let mut buffer = Buffer::default();
+        let mut buf = Buffer::default();
 
-        set_cursor!(buffer, index += 5);
-        assert_eq!((5, 0), Into::into(&buffer.pos));
+        set_cursor!(buf, index += 5);
+        assert_eq!((5, 0), Into::into(&buf.pos));
 
-        set_cursor!(buffer, offset += 10);
-        assert_eq!((5, 10), Into::into(&buffer.pos));
+        set_cursor!(buf, offset += 10);
+        assert_eq!((5, 10), Into::into(&buf.pos));
 
-        set_cursor!(buffer, (15, 20).into());
-        assert_eq!((15, 20), Into::into(&buffer.pos));
+        set_cursor!(buf, (15, 20).into());
+        assert_eq!((15, 20), Into::into(&buf.pos));
+    }
+
+    #[test]
+    fn test_cursor_pos() {
+        let mut buf = Buffer::default();
+        buf.text = Rope::from_str("text\n\ntext");
+
+        set_cursor!(buf, buf.cursor_pos(10));
+        assert_eq!((2, 4), Into::into(&buf.pos));
     }
 }
