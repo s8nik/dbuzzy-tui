@@ -107,3 +107,65 @@ pub(super) fn shift_right(buf: &mut Buffer) -> Position {
     }
     .into()
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::document::Document;
+
+    use super::*;
+
+    #[test]
+    fn test_movement() {
+        let mut ws = Workspace::default();
+        ws.add_doc(Document::default());
+
+        {
+            let buf = ws.curr_mut().buf_mut();
+            buf.text = ropey::Rope::from_str("test\n\ntest");
+        }
+
+        shift_cursor(&mut ws, Shift::Up(10));
+        let buf = ws.curr().buf();
+        assert_eq!((0, 0), Into::into(&buf.pos));
+
+        shift_cursor(&mut ws, Shift::Bottom);
+        let buf = ws.curr().buf();
+        assert_eq!((2, 0), Into::into(&buf.pos));
+
+        shift_cursor(&mut ws, Shift::Top);
+        let buf = ws.curr().buf();
+        assert_eq!((0, 0), Into::into(&buf.pos));
+
+        shift_cursor(&mut ws, Shift::Right);
+        let buf = ws.curr().buf();
+        assert_eq!((0, 1), Into::into(&buf.pos));
+
+        shift_cursor(&mut ws, Shift::Down(1));
+        let buf = ws.curr().buf();
+        assert_eq!((1, 0), Into::into(&buf.pos));
+
+        shift_cursor(&mut ws, Shift::LineEnd);
+        let buf = ws.curr().buf();
+        assert_eq!((1, 0), Into::into(&buf.pos));
+
+        shift_cursor(&mut ws, Shift::Left);
+        let buf = ws.curr().buf();
+        assert_eq!((0, 4), Into::into(&buf.pos));
+
+        shift_cursor(&mut ws, Shift::Right);
+        let buf = ws.curr().buf();
+        assert_eq!((1, 0), Into::into(&buf.pos));
+
+        shift_cursor(&mut ws, Shift::Right);
+        let buf = ws.curr().buf();
+        assert_eq!((2, 0), Into::into(&buf.pos));
+
+        shift_cursor(&mut ws, Shift::LineEnd);
+        let buf = ws.curr().buf();
+        assert_eq!((2, 3), Into::into(&buf.pos));
+
+        shift_cursor(&mut ws, Shift::Right);
+        let buf = ws.curr().buf();
+        assert_eq!((2, 4), Into::into(&buf.pos));
+    }
+}
