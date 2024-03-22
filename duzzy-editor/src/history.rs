@@ -112,8 +112,7 @@ impl Transaction {
     }
 
     fn finish(self) -> Option<Change> {
-        let mut change = self.change;
-        change.action = self.action;
+        let change = self.change;
 
         (!change.content.is_empty()).then_some(change)
     }
@@ -339,5 +338,37 @@ mod tests {
         let pos = history.redo(&mut text);
         assert_eq!(None, pos);
         assert_eq!(&expected, "");
+    }
+
+    #[test]
+    fn test_history_transaction() {
+        let mut history = History::default();
+
+        history.push(Action::Insert, 0, |tx| {
+            tx.on_slice("test")
+                .on_char('\n', false)
+                .on_char('\n', false)
+                .on_slice("test!!!")
+                .keep()
+        });
+
+        history.push(Action::Delete, 0, |tx| {
+            tx.on_char('!', false)
+                .on_char('!', false)
+                .on_char('!', false)
+                .keep()
+        });
+
+        history.commit();
+
+        let mut text = ropey::Rope::from_str("test\n\ntest");
+
+        let pos = history.undo(&mut text);
+        assert_eq!(Some(0), pos);
+        assert_eq!(&text.to_string(), "");
+
+        let pos = history.redo(&mut text);
+        assert_eq!(Some(10), pos);
+        assert_eq!(&text.to_string(), "test\n\ntest");
     }
 }
