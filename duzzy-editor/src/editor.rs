@@ -114,7 +114,7 @@ impl Workspace {
         }
     }
 
-    fn add_doc(&mut self, doc: Document) {
+    pub(super) fn add_doc(&mut self, doc: Document) {
         let id = doc.id();
         self.documents.insert(id, doc);
         self.current = id;

@@ -50,3 +50,50 @@ pub(super) fn delete_char(ws: &mut Workspace) {
         super::history::delete_char(ch, pos, history);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::document::Document;
+
+    use super::*;
+
+    #[test]
+    fn test_adjustment() {
+        let mut ws = Workspace::default();
+        ws.add_doc(Document::default());
+
+        insert_char(&mut ws, 't');
+        insert_char(&mut ws, 'e');
+        insert_char(&mut ws, 's');
+        insert_char(&mut ws, 't');
+
+        let buf = ws.curr().buf();
+        assert_eq!((0, 4), Into::into(&buf.pos));
+        assert_eq!(buf.text.to_string().as_str(), "test");
+
+        delete_char(&mut ws);
+        delete_char(&mut ws);
+
+        let buf = ws.curr().buf();
+        assert_eq!((0, 2), Into::into(&buf.pos));
+        assert_eq!(buf.text.to_string().as_str(), "te");
+
+        ws.curr_mut().buf_mut().pos = (0, 0).into();
+        new_line(&mut ws);
+        new_line(&mut ws);
+        new_line(&mut ws);
+        new_line(&mut ws);
+
+        let buf = ws.curr().buf();
+        assert_eq!((4, 0), Into::into(&buf.pos));
+        assert_eq!(buf.text.to_string().as_str(), "\n\n\n\nte");
+
+        delete_char_inplace(&mut ws);
+        delete_char_inplace(&mut ws);
+        delete_char_inplace(&mut ws);
+
+        let buf = ws.curr().buf();
+        assert_eq!((4, 0), Into::into(&buf.pos));
+        assert_eq!(buf.text.to_string().as_str(), "\n\n\n\n");
+    }
+}
