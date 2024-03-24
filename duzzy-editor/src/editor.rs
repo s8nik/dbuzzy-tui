@@ -46,7 +46,7 @@ impl DuzzyEditor {
         let buf = self.workspace.curr().buf();
         let mode = buf.mode();
 
-        let (mut y, mut x) = &buf.pos();
+        let (mut y, mut x) = buf.pos();
 
         x = x.min(self.viewport.width - 1);
         y = y
