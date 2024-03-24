@@ -74,10 +74,9 @@ pub(super) fn delete_char(ws: &mut Workspace) {
 
             delete_tx.merge(tx);
             set_cursor!(buf, super::shift_left(buf));
-            return TransactionResult::Keep;
         }
 
-        TransactionResult::Abort
+        TransactionResult::Keep
     });
 }
 

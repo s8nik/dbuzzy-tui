@@ -88,7 +88,7 @@ pub(super) fn shift_left(buf: &mut Buffer) -> Position {
 
     match (offset > 0, index > 0) {
         (true, _) => (index, offset - 1),
-        (false, true) => (index - 1, buf.len_bytes(index - 1) - 1),
+        (false, true) => (index - 1, buf.len_bytes(index - 1).saturating_sub(1)),
         _ => (index, offset),
     }
     .into()
