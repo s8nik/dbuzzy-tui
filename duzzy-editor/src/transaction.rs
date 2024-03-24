@@ -4,7 +4,7 @@ use crate::SmartString;
 enum Action {
     Insert(Change),
     Delete(Change),
-    Move,
+    Move(usize),
 }
 
 impl Action {
@@ -24,15 +24,9 @@ impl Action {
 }
 
 #[derive(Debug, Clone)]
-pub struct Change {
-    pub content: SmartString,
-    pub pos: usize,
-}
-
-impl Change {
-    pub fn is_empty(&self) -> bool {
-        self.content.is_empty()
-    }
+struct Change {
+    content: SmartString,
+    pos: usize,
 }
 
 impl Action {
@@ -46,7 +40,7 @@ impl Action {
                     pos: change.pos,
                 })
             }
-            Self::Move => Self::Move,
+            Self::Move(pos) => Self::Move(*pos),
         }
     }
 }
@@ -72,24 +66,36 @@ impl Transaction {
             match change {
                 Action::Insert(c) => self.insert_str(c.pos, &c.content),
                 Action::Delete(c) => self.delete_str(c.pos, &c.content),
-                Action::Move => self.shift(),
+                Action::Move(pos) => self.shift(pos),
             }
         }
     }
 
-    pub fn apply(&self, text: &mut ropey::Rope) {
+    pub fn apply(&self, text: &mut ropey::Rope) -> Option<usize> {
+        let mut last_pos = None;
+
         for change in self.changes.iter() {
             match change {
-                Action::Insert(c) => text.insert(c.pos, &c.content),
-                Action::Delete(c) => text.remove(c.pos..c.pos + c.content.chars().count()),
-                _ => (),
+                Action::Insert(c) => {
+                    text.insert(c.pos, &c.content);
+                    last_pos = Some(c.pos + c.content.chars().count());
+                }
+                Action::Delete(c) => {
+                    text.remove(c.pos..c.pos + c.content.chars().count());
+                    last_pos = Some(c.pos);
+                }
+                Action::Move(pos) => last_pos = Some(*pos),
             }
         }
+
+        last_pos
     }
 
-    pub fn shift(&mut self) {
-        if !matches!(self.changes.last(), Some(Action::Move)) {
-            self.changes.push(Action::Move);
+    pub fn shift(&mut self, pos: usize) {
+        if let Some(Action::Move(p)) = self.changes.last_mut() {
+            *p = pos;
+        } else {
+            self.changes.push(Action::Move(pos));
         }
     }
 
@@ -154,16 +160,6 @@ impl Transaction {
             }
         }
     }
-
-    pub fn changes(&self) -> Vec<&Change> {
-        self.changes
-            .iter()
-            .filter_map(|action| match action {
-                Action::Insert(c) | Action::Delete(c) => Some(c),
-                Action::Move => None,
-            })
-            .collect()
-    }
 }
 
 pub enum TransactionResult {
@@ -196,10 +192,10 @@ mod tests {
 
             tx.delete_char(3, 't');
             tx.delete_char(2, 's');
-            tx.shift();
-            tx.shift();
+            tx.shift(1);
+            tx.shift(0);
             tx.insert_char(0, ' ');
-            tx.shift();
+            tx.shift(0);
             tx.insert_char(0, 't');
             tx.insert_char(1, 'e');
             tx.apply(&mut text);

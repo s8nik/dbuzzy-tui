@@ -3,28 +3,10 @@ use std::collections::VecDeque;
 use crate::transaction::Transaction;
 
 #[derive(Debug)]
-struct Commit {
-    pub tx: Transaction,
-    pub before: usize,
-    pub after: usize,
-}
-
-impl Commit {
-    fn from_transaction(tx: Transaction) -> Option<Self> {
-        let changes = tx.changes();
-
-        let before = changes.first().map(|c| c.pos)?;
-        let after = changes.last().map(|c| c.pos + c.content.chars().count())?;
-
-        Some(Self { tx, before, after })
-    }
-}
-
-#[derive(Debug)]
 pub struct History {
     head: usize,
     max_items: usize,
-    commits: VecDeque<Commit>,
+    commits: VecDeque<Transaction>,
 }
 
 impl Default for History {
@@ -45,10 +27,6 @@ impl History {
     }
 
     pub fn commit(&mut self, tx: Transaction) {
-        let Some(commit) = Commit::from_transaction(tx) else {
-            return;
-        };
-
         if self.commits.len() == self.max_items {
             self.commits.pop_front();
             self.head = self.head.saturating_sub(1);
@@ -58,7 +36,7 @@ impl History {
             self.commits.truncate(self.head);
         }
 
-        self.commits.push_back(commit);
+        self.commits.push_back(tx);
         self.head += 1;
     }
 
@@ -66,8 +44,7 @@ impl History {
         self.head = self.head.checked_sub(1)?;
         let commit = &mut self.commits[self.head];
 
-        commit.tx.inverse().apply(text);
-        Some(commit.before)
+        commit.inverse().apply(text)
     }
 
     pub fn redo(&mut self, text: &mut ropey::Rope) -> Option<usize> {
@@ -78,8 +55,7 @@ impl History {
         let commit = &mut self.commits[self.head];
         self.head += 1;
 
-        commit.tx.apply(text);
-        Some(commit.after)
+        commit.apply(text)
     }
 }
 
