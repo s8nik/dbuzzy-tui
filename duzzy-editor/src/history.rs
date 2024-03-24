@@ -61,8 +61,35 @@ impl History {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
+
+    #[test]
+    fn test_history_undo_redo() {
+        let mut history = History::default();
+        let mut text = ropey::Rope::new();
+
+        let mut tx = Transaction::new();
+        tx.insert_str(0, "test");
+        tx.apply(&mut text);
+        history.commit(tx);
+        assert_eq!(&text.to_string(), "test");
+
+        let mut tx = Transaction::new();
+        tx.insert_str(4, "test");
+        tx.delete_str(8, "testtest");
+
+        tx.apply(&mut text);
+        history.commit(tx);
+        assert_eq!(&text.to_string(), "");
+
+        let pos = history.undo(&mut text);
+        assert_eq!(Some(4), pos);
+        assert_eq!(&text.to_string(), "test");
+
+        let pos = history.redo(&mut text);
+        assert_eq!(Some(0), pos);
+        assert_eq!(&text.to_string(), "");
+    }
 
     #[test]
     fn test_history_empty_commit() {
@@ -91,30 +118,24 @@ mod tests {
     }
 
     #[test]
-    fn test_history_undo() {
+    fn test_history_shifts() {
         let mut history = History::default();
-        let mut text = ropey::Rope::new();
+        let mut text = ropey::Rope::from("test");
 
         let mut tx = Transaction::new();
+        tx.shift(2);
+        tx.insert_char(0, '\n');
+        tx.shift(0);
         tx.insert_str(0, "test");
         tx.apply(&mut text);
         history.commit(tx);
-        assert_eq!(&text.to_string(), "test");
-
-        let mut tx = Transaction::new();
-        tx.insert_str(4, "test");
-        tx.delete_str(8, "testtest");
-
-        tx.apply(&mut text);
-        history.commit(tx);
-        assert_eq!(&text.to_string(), "");
 
         let pos = history.undo(&mut text);
-        assert_eq!(Some(4), pos);
+        assert_eq!(Some(2), pos);
         assert_eq!(&text.to_string(), "test");
 
         let pos = history.redo(&mut text);
-        assert_eq!(Some(0), pos);
-        assert_eq!(&text.to_string(), "");
+        assert_eq!(Some(4), pos);
+        assert_eq!(&text.to_string(), "test\ntest");
     }
 }

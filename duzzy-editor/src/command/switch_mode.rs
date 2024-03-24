@@ -66,25 +66,65 @@ fn switch_line_end(buf: &mut Buffer) {
 }
 
 fn switch_line_next(doc: &mut Document) {
+    let buf = doc.buf();
+    let start_pos = buf.text.line_to_byte(buf.pos.index + 1);
+
+    switch_with_new_line(doc, start_pos);
+
     let buf = doc.buf_mut();
-
-    let index = buf.pos.index;
-    let new_line = '\n';
-
-    let line_start_byte = buf.text.line_to_byte(index + 1);
-    buf.text.insert_char(line_start_byte, new_line);
-
     set_cursor!(buf, super::shift_down(1, buf));
 }
 
 fn switch_line_prev(doc: &mut Document) {
-    let buf = doc.buf_mut();
+    let buf = doc.buf();
+    let start_pos = buf.text.line_to_byte(buf.pos.index);
 
-    let index = buf.pos.index;
-    let new_line = '\n';
+    switch_with_new_line(doc, start_pos);
+    set_cursor!(doc.buf_mut(), offset = 0);
+}
 
-    let line_start_byte = buf.text.line_to_byte(index);
-    buf.text.insert_char(line_start_byte, new_line);
+fn switch_with_new_line(doc: &mut Document, start_pos: usize) {
+    doc.with_transaction(|tx, buf| {
+        tx.shift(buf.byte_pos());
+        tx.insert_char(start_pos, '\n');
+        tx.shift(start_pos);
+        tx.apply(&mut buf.text);
 
-    set_cursor!(buf, offset = 0);
+        TransactionResult::Keep
+    });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_switch_next() {
+        let mut doc = Document::default();
+
+        switch_line_next(&mut doc);
+
+        doc.commit();
+
+        switch_line_next(&mut doc);
+
+        let buf = doc.buf();
+        assert_eq!((2, 0), Into::into(&buf.pos));
+        assert_eq!(&buf.text.to_string(), "\n\n");
+    }
+
+    #[test]
+    fn test_switch_prev() {
+        let mut doc = Document::default();
+
+        switch_line_prev(&mut doc);
+
+        doc.commit();
+
+        switch_line_prev(&mut doc);
+
+        let buf = doc.buf();
+        assert_eq!((0, 0), Into::into(&buf.pos));
+        assert_eq!(&buf.text.to_string(), "\n\n");
+    }
 }
