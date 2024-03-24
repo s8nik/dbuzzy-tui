@@ -23,10 +23,10 @@ impl Action {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Change {
-    content: SmartString,
-    pub(super) pos: usize,
+    pub content: SmartString,
+    pub pos: usize,
 }
 
 impl Change {
@@ -38,13 +38,9 @@ impl Change {
 impl Action {
     fn inverse(&self) -> Self {
         match self {
-            Self::Insert(change) => Self::Delete(Change {
-                content: change.content.to_owned(),
-                pos: change.pos,
-            }),
+            Self::Insert(change) => Self::Delete(change.clone()),
             Self::Delete(change) => {
                 let content = change.content.chars().rev().collect();
-
                 Self::Insert(Change {
                     content,
                     pos: change.pos,
@@ -122,7 +118,8 @@ impl Transaction {
 
     pub fn delete_str(&mut self, pos: usize, slice: &str) {
         let pos = pos.saturating_sub(slice.chars().count());
-        self.delete_impl(pos, |content| content.push_str(slice));
+        let slice: SmartString = slice.chars().rev().collect();
+        self.delete_impl(pos, |content| content.push_str(&slice));
     }
 
     fn delete_impl<F>(&mut self, pos: usize, func: F)

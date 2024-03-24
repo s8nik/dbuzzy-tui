@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 
 use crate::transaction::Transaction;
 
+#[derive(Debug)]
 struct Commit {
     pub tx: Transaction,
     pub before: usize,
@@ -10,15 +11,16 @@ struct Commit {
 
 impl Commit {
     fn from_transaction(tx: Transaction) -> Option<Self> {
-        let changes: Vec<usize> = tx.changes().into_iter().map(|c| c.pos).collect();
+        let changes = tx.changes();
 
-        let before = *changes.first()?;
-        let after = *changes.last()?;
+        let before = changes.first().map(|c| c.pos)?;
+        let after = changes.last().map(|c| c.pos + c.content.chars().count())?;
 
         Some(Self { tx, before, after })
     }
 }
 
+#[derive(Debug)]
 pub struct History {
     head: usize,
     max_items: usize,
@@ -99,7 +101,7 @@ mod tests {
         tx.delete_char(0, 't');
         tx.apply(&mut text);
 
-        history.commit(tx.into());
+        history.commit(tx);
 
         let expected = text.to_string();
 
@@ -110,5 +112,33 @@ mod tests {
         let pos = history.redo(&mut text);
         assert_eq!(Some(0), pos);
         assert_eq!(&expected, "");
+    }
+
+    #[test]
+    fn test_history_undo() {
+        let mut history = History::default();
+        let mut text = ropey::Rope::new();
+
+        let mut tx = Transaction::new();
+        tx.insert_str(0, "test");
+        tx.apply(&mut text);
+        history.commit(tx);
+        assert_eq!(&text.to_string(), "test");
+
+        let mut tx = Transaction::new();
+        tx.insert_str(4, "test");
+        tx.delete_str(8, "testtest");
+
+        tx.apply(&mut text);
+        history.commit(tx);
+        assert_eq!(&text.to_string(), "");
+
+        let pos = history.undo(&mut text);
+        assert_eq!(Some(4), pos);
+        assert_eq!(&text.to_string(), "test");
+
+        let pos = history.redo(&mut text);
+        assert_eq!(Some(0), pos);
+        assert_eq!(&text.to_string(), "");
     }
 }
