@@ -70,7 +70,7 @@ impl Document {
         let file = File::open(path)?;
         let text = Rope::from_reader(BufReader::new(file))?;
 
-        document.buffer.text = text;
+        document.buffer.set_text(text);
         document.meta = FileMeta {
             path: Some(path.into()),
             readonly: metadata.permissions().readonly(),
@@ -114,10 +114,10 @@ impl Document {
     }
 
     pub fn undo(&mut self) -> Option<usize> {
-        self.history.undo(&mut self.buffer.text)
+        self.history.undo(self.buffer.text_mut())
     }
 
     pub fn redo(&mut self) -> Option<usize> {
-        self.history.redo(&mut self.buffer.text)
+        self.history.redo(self.buffer.text_mut())
     }
 }

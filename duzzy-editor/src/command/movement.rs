@@ -1,8 +1,4 @@
-use crate::{
-    buffer::{Buffer, Position},
-    editor::Workspace,
-    set_cursor,
-};
+use crate::{buffer::Buffer, editor::Workspace};
 
 enum Shift {
     Up(usize),
@@ -49,63 +45,61 @@ pub(super) fn go_to_line_start(ws: &mut Workspace) {
 
 fn shift_cursor(ws: &mut Workspace, shift: Shift) {
     let buf = ws.curr_mut().buf_mut();
-    let index = buf.pos.index;
+    let idx = buf.index();
 
     let pos = match shift {
         Shift::Up(n) => shift_up(n, buf),
         Shift::Down(n) => shift_down(n, buf),
         Shift::Left => shift_left(buf),
         Shift::Right => shift_right(buf),
-        Shift::Top => (0, 0).into(),
-        Shift::Bottom => (buf.len_lines() - 1, 0).into(),
-        Shift::LineStart => (index, 0).into(),
-        Shift::LineEnd => (index, buf.len_bytes(index).saturating_sub(1)).into(),
+        Shift::Top => (0, 0),
+        Shift::Bottom => (buf.len_lines() - 1, 0),
+        Shift::LineStart => (idx, 0),
+        Shift::LineEnd => (idx, buf.len_bytes(idx).saturating_sub(1)),
     };
 
-    set_cursor!(buf, pos);
+    buf.set_pos(pos);
 }
 
-pub(super) fn shift_up(n: usize, buf: &mut Buffer) -> Position {
-    let (index, offset) = Into::into(&buf.pos);
+pub(super) fn shift_up(n: usize, buf: &mut Buffer) -> (usize, usize) {
+    let (idx, ofs) = buf.pos();
 
-    let index = index.saturating_sub(n);
-    let offset = offset.min(buf.len_bytes(index).saturating_sub(1));
+    let idx = idx.saturating_sub(n);
+    let ofs = ofs.min(buf.len_bytes(idx).saturating_sub(1));
 
-    (index, offset).into()
+    (idx, ofs)
 }
 
-pub(super) fn shift_down(n: usize, buf: &mut Buffer) -> Position {
-    let (index, offset) = Into::into(&buf.pos);
+pub(super) fn shift_down(n: usize, buf: &mut Buffer) -> (usize, usize) {
+    let (idx, ofs) = buf.pos();
 
-    let index = (index + n).min(buf.len_lines() - 1);
-    let offset = offset.min(buf.len_bytes(index).saturating_sub(1));
+    let idx = (idx + n).min(buf.len_lines() - 1);
+    let ofs = ofs.min(buf.len_bytes(idx).saturating_sub(1));
 
-    (index, offset).into()
+    (idx, ofs)
 }
 
-pub(super) fn shift_left(buf: &mut Buffer) -> Position {
-    let (index, offset) = Into::into(&buf.pos);
+pub(super) fn shift_left(buf: &mut Buffer) -> (usize, usize) {
+    let (idx, ofs) = buf.pos();
 
-    match (offset > 0, index > 0) {
-        (true, _) => (index, offset - 1),
-        (false, true) => (index - 1, buf.len_bytes(index - 1).saturating_sub(1)),
-        _ => (index, offset),
+    match (ofs > 0, idx > 0) {
+        (true, _) => (idx, ofs - 1),
+        (false, true) => (idx - 1, buf.len_bytes(idx - 1).saturating_sub(1)),
+        _ => (idx, ofs),
     }
-    .into()
 }
 
-pub(super) fn shift_right(buf: &mut Buffer) -> Position {
-    let (index, offset) = Into::into(&buf.pos);
+pub(super) fn shift_right(buf: &mut Buffer) -> (usize, usize) {
+    let (idx, ofs) = buf.pos();
 
     match (
-        offset < buf.len_bytes(index).saturating_sub(1),
-        index < buf.len_lines().saturating_sub(1),
+        ofs < buf.len_bytes(idx).saturating_sub(1),
+        idx < buf.len_lines().saturating_sub(1),
     ) {
-        (true, _) => (index, offset + 1),
-        (false, true) => ((index + 1).min(buf.len_lines() - 1), 0),
-        (false, false) => (index, (offset + 1).min(buf.len_bytes(index))),
+        (true, _) => (idx, ofs + 1),
+        (false, true) => ((idx + 1).min(buf.len_lines() - 1), 0),
+        (false, false) => (idx, (ofs + 1).min(buf.len_bytes(idx))),
     }
-    .into()
 }
 
 #[cfg(test)]
@@ -121,51 +115,40 @@ mod tests {
 
         {
             let buf = ws.curr_mut().buf_mut();
-            buf.text = ropey::Rope::from_str("test\n\ntest");
+            buf.text_mut().insert(0, "test\n\ntest");
         }
 
         shift_cursor(&mut ws, Shift::Up(10));
-        let buf = ws.curr().buf();
-        assert_eq!((0, 0), Into::into(&buf.pos));
+        assert_eq!((0, 0), ws.curr().buf().pos());
 
         shift_cursor(&mut ws, Shift::Bottom);
-        let buf = ws.curr().buf();
-        assert_eq!((2, 0), Into::into(&buf.pos));
+        assert_eq!((2, 0), ws.curr().buf().pos());
 
         shift_cursor(&mut ws, Shift::Top);
-        let buf = ws.curr().buf();
-        assert_eq!((0, 0), Into::into(&buf.pos));
+        assert_eq!((0, 0), ws.curr().buf().pos());
 
         shift_cursor(&mut ws, Shift::Right);
-        let buf = ws.curr().buf();
-        assert_eq!((0, 1), Into::into(&buf.pos));
+        assert_eq!((0, 1), ws.curr().buf().pos());
 
         shift_cursor(&mut ws, Shift::Down(1));
-        let buf = ws.curr().buf();
-        assert_eq!((1, 0), Into::into(&buf.pos));
+        assert_eq!((1, 0), ws.curr().buf().pos());
 
         shift_cursor(&mut ws, Shift::LineEnd);
-        let buf = ws.curr().buf();
-        assert_eq!((1, 0), Into::into(&buf.pos));
+        assert_eq!((1, 0), ws.curr().buf().pos());
 
         shift_cursor(&mut ws, Shift::Left);
-        let buf = ws.curr().buf();
-        assert_eq!((0, 4), Into::into(&buf.pos));
+        assert_eq!((0, 4), ws.curr().buf().pos());
 
         shift_cursor(&mut ws, Shift::Right);
-        let buf = ws.curr().buf();
-        assert_eq!((1, 0), Into::into(&buf.pos));
+        assert_eq!((1, 0), ws.curr().buf().pos());
 
         shift_cursor(&mut ws, Shift::Right);
-        let buf = ws.curr().buf();
-        assert_eq!((2, 0), Into::into(&buf.pos));
+        assert_eq!((2, 0), ws.curr().buf().pos());
 
         shift_cursor(&mut ws, Shift::LineEnd);
-        let buf = ws.curr().buf();
-        assert_eq!((2, 3), Into::into(&buf.pos));
+        assert_eq!((2, 3), ws.curr().buf().pos());
 
         shift_cursor(&mut ws, Shift::Right);
-        let buf = ws.curr().buf();
-        assert_eq!((2, 4), Into::into(&buf.pos));
+        assert_eq!((2, 4), ws.curr().buf().pos());
     }
 }

@@ -2,7 +2,6 @@ use crate::{
     buffer::{Buffer, CursorMode},
     document::Document,
     editor::Workspace,
-    set_cursor,
     transaction::TransactionResult,
 };
 
@@ -17,7 +16,7 @@ enum Switch {
 pub(super) fn normal_mode_inplace(ws: &mut Workspace) {
     let doc = ws.curr_mut();
     doc.with_transaction(|_, buf| {
-        buf.mode = CursorMode::Normal;
+        buf.set_mode(CursorMode::Normal);
         TransactionResult::Commit
     });
 }
@@ -46,49 +45,53 @@ fn switch_mode(ws: &mut Workspace, switch: Switch) {
     let doc = ws.curr_mut();
 
     match switch {
-        Switch::LineStart => set_cursor!(doc.buf_mut(), offset = 0),
+        Switch::LineStart => doc.buf_mut().set_offset(0),
         Switch::LineEnd => switch_line_end(doc.buf_mut()),
         Switch::LineNext => switch_line_next(doc),
         Switch::LinePrev => switch_line_prev(doc),
         _ => (),
     };
 
-    doc.buf_mut().mode = CursorMode::Insert;
+    doc.buf_mut().set_mode(CursorMode::Insert);
 }
 
 fn switch_line_end(buf: &mut Buffer) {
-    let index = buf.pos.index;
-    set_cursor!(buf, offset = buf.len_bytes(index));
+    let idx = buf.index();
+    buf.set_offset(buf.len_bytes(idx));
 
-    if index < buf.len_lines() - 1 {
-        set_cursor!(buf, offset -= 1);
+    if idx < buf.len_lines() - 1 {
+        let ofs = buf.offset() - 1;
+        buf.set_offset(ofs);
     }
 }
 
 fn switch_line_next(doc: &mut Document) {
     let buf = doc.buf();
-    let start_pos = buf.text.line_to_byte(buf.pos.index + 1);
+    let idx = buf.index() + 1;
+    let line_pos = buf.line_byte(idx);
 
-    switch_with_new_line(doc, start_pos);
+    switch_with_new_line(doc, line_pos);
 
     let buf = doc.buf_mut();
-    set_cursor!(buf, super::shift_down(1, buf));
+    let new_pos = super::shift_down(1, buf);
+    buf.set_pos(new_pos);
 }
 
 fn switch_line_prev(doc: &mut Document) {
     let buf = doc.buf();
-    let start_pos = buf.text.line_to_byte(buf.pos.index);
+    let idx = buf.index() + 1;
+    let line_pos = buf.line_byte(idx);
 
-    switch_with_new_line(doc, start_pos);
-    set_cursor!(doc.buf_mut(), offset = 0);
+    doc.buf_mut().set_offset(0);
+    switch_with_new_line(doc, line_pos);
 }
 
-fn switch_with_new_line(doc: &mut Document, start_pos: usize) {
+fn switch_with_new_line(doc: &mut Document, line_pos: usize) {
     doc.with_transaction(|tx, buf| {
-        tx.shift(buf.byte_pos());
-        tx.insert_char(start_pos, '\n');
-        tx.shift(start_pos);
-        tx.apply(&mut buf.text);
+        tx.shift(buf.as_byte_pos());
+        tx.insert_char(line_pos, '\n');
+        tx.shift(line_pos);
+        tx.apply(buf.text_mut());
 
         TransactionResult::Keep
     });
@@ -109,8 +112,8 @@ mod tests {
         switch_line_next(&mut doc);
 
         let buf = doc.buf();
-        assert_eq!((2, 0), Into::into(&buf.pos));
-        assert_eq!(&buf.text.to_string(), "\n\n");
+        assert_eq!((2, 0), buf.pos());
+        assert_eq!(&buf.text().to_string(), "\n\n");
     }
 
     #[test]
@@ -124,7 +127,7 @@ mod tests {
         switch_line_prev(&mut doc);
 
         let buf = doc.buf();
-        assert_eq!((0, 0), Into::into(&buf.pos));
-        assert_eq!(&buf.text.to_string(), "\n\n");
+        assert_eq!((0, 0), buf.pos());
+        assert_eq!(&buf.text().to_string(), "\n\n");
     }
 }

@@ -4,8 +4,6 @@
     clippy::missing_const_for_fn,
     clippy::use_self
 )]
-mod macros;
-
 mod buffer;
 mod command;
 mod document;

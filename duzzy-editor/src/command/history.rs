@@ -1,11 +1,11 @@
-use crate::{editor::Workspace, set_cursor};
+use crate::editor::Workspace;
 
 pub(super) fn undo(ws: &mut Workspace) {
     let doc = ws.curr_mut();
 
     if let Some(pos) = doc.undo() {
         let buf = doc.buf_mut();
-        set_cursor!(buf, buf.cursor_pos(pos));
+        buf.set_pos(buf.as_curs_pos(pos));
     }
 }
 
@@ -14,6 +14,6 @@ pub(super) fn redo(ws: &mut Workspace) {
 
     if let Some(pos) = doc.redo() {
         let buf = doc.buf_mut();
-        set_cursor!(buf, buf.cursor_pos(pos));
+        buf.set_pos(buf.as_curs_pos(pos));
     }
 }

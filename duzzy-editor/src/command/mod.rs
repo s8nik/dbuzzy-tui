@@ -116,7 +116,7 @@ impl CommandFinder {
         buffer: &Buffer,
         input: Input,
     ) -> Option<Arc<Command>> {
-        let Some(bindings) = keymaps.get(&buffer.mode) else {
+        let Some(bindings) = keymaps.get(&buffer.mode()) else {
             return None;
         };
 
