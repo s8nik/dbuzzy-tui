@@ -1,4 +1,4 @@
-use crate::{history::Commit, SmartString};
+use crate::SmartString;
 
 #[derive(Debug)]
 enum Action {
@@ -7,10 +7,32 @@ enum Action {
     Move,
 }
 
+impl Action {
+    fn as_insert_mut(&mut self) -> Option<&mut Change> {
+        match self {
+            Self::Insert(change) => Some(change),
+            _ => None,
+        }
+    }
+
+    fn as_delete_mut(&mut self) -> Option<&mut Change> {
+        match self {
+            Self::Delete(change) => Some(change),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug)]
-struct Change {
+pub struct Change {
     content: SmartString,
-    pos: usize,
+    pub(super) pos: usize,
+}
+
+impl Change {
+    pub fn is_empty(&self) -> bool {
+        self.content.is_empty()
+    }
 }
 
 impl Action {
@@ -33,10 +55,6 @@ impl Action {
     }
 }
 
-macro_rules! merge {
-    () => {};
-}
-
 #[derive(Debug, Default)]
 pub struct Transaction {
     changes: Vec<Action>,
@@ -48,20 +66,16 @@ impl Transaction {
     }
 
     pub fn inverse(&self) -> Self {
-        let changes = self.changes.iter().map(Action::inverse).collect();
+        let changes = self.changes.iter().rev().map(Action::inverse).collect();
 
         Self { changes }
     }
 
-    pub fn merge(&mut self, tx: Transaction) {
+    pub fn merge(&mut self, tx: Self) {
         for change in tx.changes {
             match change {
-                Action::Insert(c) => {
-                    self.insert_impl(c.pos, |content| content.push_str(&c.content))
-                }
-                Action::Delete(c) => {
-                    self.delete_impl(c.pos, |content| content.push_str(&c.content))
-                }
+                Action::Insert(c) => self.insert_str(c.pos, &c.content),
+                Action::Delete(c) => self.delete_str(c.pos, &c.content),
                 Action::Move => self.shift(),
             }
         }
@@ -87,55 +101,71 @@ impl Transaction {
         self.insert_impl(pos, |content| content.push(ch));
     }
 
+    pub fn insert_str(&mut self, pos: usize, slice: &str) {
+        self.insert_impl(pos, |content| content.push_str(slice));
+    }
+
     fn insert_impl<F>(&mut self, pos: usize, func: F)
     where
         F: Fn(&mut SmartString),
     {
-        if let Some(Action::Insert(change)) = self.changes.last_mut() {
-            return func(&mut change.content);
+        let maybe_change = self.changes.last_mut().and_then(|c| c.as_insert_mut());
+
+        if let Some(change) = Self::merge_or_new(maybe_change, pos, func) {
+            self.changes.push(Action::Insert(change));
         }
-
-        let mut content = SmartString::new_const();
-        func(&mut content);
-
-        self.changes.push(Action::Insert(Change { content, pos }));
     }
 
     pub fn delete_char(&mut self, pos: usize, ch: char) {
         self.delete_impl(pos, |content| content.push(ch));
     }
 
+    pub fn delete_str(&mut self, pos: usize, slice: &str) {
+        let pos = pos.saturating_sub(slice.chars().count());
+        self.delete_impl(pos, |content| content.push_str(slice));
+    }
+
     fn delete_impl<F>(&mut self, pos: usize, func: F)
     where
         F: Fn(&mut SmartString),
     {
-        if let Some(Action::Delete(change)) = self.changes.last_mut() {
+        let mut maybe_change = self.changes.last_mut().and_then(|c| c.as_delete_mut());
+
+        if let Some(change) = maybe_change.as_deref_mut() {
             change.pos = pos;
-            return func(&mut change.content);
+        };
+
+        if let Some(change) = Self::merge_or_new(maybe_change, pos, func) {
+            self.changes.push(Action::Delete(change));
         }
-
-        let mut content = SmartString::new_const();
-        func(&mut content);
-
-        self.changes.push(Action::Delete(Change { content, pos }));
     }
-}
 
-impl From<Transaction> for Commit {
-    fn from(tx: Transaction) -> Self {
-        let positions: Vec<usize> = tx
-            .changes
+    fn merge_or_new<F>(maybe_change: Option<&mut Change>, pos: usize, func: F) -> Option<Change>
+    where
+        F: Fn(&mut SmartString),
+    {
+        match maybe_change {
+            Some(change) => {
+                func(&mut change.content);
+                None
+            }
+            None => {
+                let mut content = SmartString::new_const();
+                func(&mut content);
+
+                Some(Change { content, pos })
+            }
+        }
+    }
+
+    pub fn changes(&self) -> Vec<&Change> {
+        self.changes
             .iter()
             .filter_map(|action| match action {
-                Action::Insert(change) | Action::Delete(change) => Some(change.pos),
+                Action::Insert(c) | Action::Delete(c) => Some(c),
                 Action::Move => None,
             })
-            .collect();
-
-        let before = *positions.first().unwrap();
-        let after = *positions.last().unwrap();
-
-        Self { tx, before, after }
+            .collect()
     }
 }
 
@@ -155,11 +185,11 @@ mod tests {
 
         {
             let mut tx = Transaction::new();
-            tx.insert_char(0, 't')
-                .insert_char(1, 'e')
-                .insert_char(2, 's')
-                .insert_char(3, 't')
-                .apply(&mut text);
+            tx.insert_char(0, 't');
+            tx.insert_char(1, 'e');
+            tx.insert_char(2, 's');
+            tx.insert_char(3, 't');
+            tx.apply(&mut text);
 
             assert_eq!(&text.to_string(), "test");
         }
@@ -167,15 +197,15 @@ mod tests {
         {
             let mut tx = Transaction::new();
 
-            tx.delete_char(3, 't')
-                .delete_char(2, 's')
-                .shift()
-                .shift()
-                .insert_char(0, ' ')
-                .shift()
-                .insert_char(0, 't')
-                .insert_char(1, 'e')
-                .apply(&mut text);
+            tx.delete_char(3, 't');
+            tx.delete_char(2, 's');
+            tx.shift();
+            tx.shift();
+            tx.insert_char(0, ' ');
+            tx.shift();
+            tx.insert_char(0, 't');
+            tx.insert_char(1, 'e');
+            tx.apply(&mut text);
 
             assert_eq!(&text.to_string(), "te te");
         }

@@ -1,54 +1,84 @@
-use crate::{doc_mut, editor::Workspace, set_cursor};
+use crate::{
+    editor::Workspace,
+    set_cursor,
+    transaction::{Transaction, TransactionResult},
+};
 
 pub(super) fn insert_char(ws: &mut Workspace, ch: char) {
-    let (buf, history) = doc_mut!(ws);
+    let doc = ws.curr_mut();
 
-    let pos = buf.byte_pos();
-    buf.text.insert_char(pos, ch);
+    doc.with_transaction(|insert_tx, buf| {
+        let pos = buf.byte_pos();
+        let mut tx = Transaction::new();
 
-    super::history::insert_char(ch, pos, history);
+        tx.insert_char(pos, ch);
+        tx.apply(&mut buf.text);
 
-    set_cursor!(buf, offset += 1);
+        insert_tx.merge(tx);
+        set_cursor!(buf, offset += 1);
+        TransactionResult::Keep
+    });
 }
 
 pub(super) fn new_line(ws: &mut Workspace) {
-    let (buf, history) = doc_mut!(ws);
-    let new_line = '\n';
+    let doc = ws.curr_mut();
 
-    let pos = buf.byte_pos();
-    buf.text.insert_char(pos, new_line);
+    doc.with_transaction(|insert_tx, buf| {
+        let pos = buf.byte_pos();
+        let mut tx = Transaction::new();
 
-    super::history::insert_char(new_line, pos, history);
+        tx.insert_char(pos, '\n');
+        tx.apply(&mut buf.text);
 
-    set_cursor!(buf, super::shift_down(1, buf));
-    set_cursor!(buf, offset = 0);
+        insert_tx.merge(tx);
+        set_cursor!(buf, super::shift_down(1, buf));
+        set_cursor!(buf, offset = 0);
+
+        TransactionResult::Keep
+    });
 }
 
 pub(super) fn delete_char_inplace(ws: &mut Workspace) {
-    let (buf, history) = doc_mut!(ws);
+    let doc = ws.curr_mut();
 
-    let pos = buf.byte_pos();
+    doc.with_transaction(|tx, buf| {
+        let pos = buf.byte_pos();
 
-    if pos < buf.text.len_chars() {
-        let ch = buf.text.char(pos);
-        buf.text.remove(pos..pos + 1);
+        if pos < buf.text.len_chars() {
+            let ch = buf.text.char(pos);
 
-        super::history::delete_char_inplace(ch, pos, history);
-    }
+            tx.delete_char(pos, ch);
+            tx.apply(&mut buf.text);
+
+            return TransactionResult::Commit;
+        }
+
+        TransactionResult::Abort
+    });
 }
 
 pub(super) fn delete_char(ws: &mut Workspace) {
-    let (buf, history) = doc_mut!(ws);
+    let doc = ws.curr_mut();
 
-    let pos = buf.byte_pos();
+    doc.with_transaction(|delete_tx, buf| {
+        let pos = buf.byte_pos();
 
-    if pos > 0 {
-        set_cursor!(buf, super::shift_left(buf));
-        let ch = buf.text.char(pos - 1);
-        buf.text.remove(pos - 1..pos);
+        if pos > 0 {
+            let char_pos = pos - 1;
 
-        super::history::delete_char(ch, pos, history);
-    }
+            let mut tx = Transaction::new();
+            let ch = buf.text.char(char_pos);
+
+            tx.delete_char(char_pos, ch);
+            tx.apply(&mut buf.text);
+
+            delete_tx.merge(tx);
+            set_cursor!(buf, super::shift_left(buf));
+            return TransactionResult::Keep;
+        }
+
+        TransactionResult::Abort
+    });
 }
 
 #[cfg(test)]
@@ -69,7 +99,7 @@ mod tests {
 
         let buf = ws.curr().buf();
         assert_eq!((0, 4), Into::into(&buf.pos));
-        assert_eq!(buf.text.to_string().as_str(), "test");
+        assert_eq!(&buf.text.to_string(), "test");
 
         delete_char(&mut ws);
         delete_char(&mut ws);
@@ -87,6 +117,8 @@ mod tests {
         let buf = ws.curr().buf();
         assert_eq!((4, 0), Into::into(&buf.pos));
         assert_eq!(buf.text.to_string().as_str(), "\n\n\n\nte");
+
+        ws.curr_mut().commit();
 
         delete_char_inplace(&mut ws);
         delete_char_inplace(&mut ws);

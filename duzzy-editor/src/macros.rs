@@ -20,22 +20,3 @@ macro_rules! set_cursor {
         $buffer.pos = $pos;
     }};
 }
-
-#[macro_export]
-macro_rules! doc {
-    ($workspace:expr) => {{
-        let doc = $workspace.curr();
-        (&doc.buf, &doc.history)
-    }};
-}
-
-#[macro_export]
-macro_rules! doc_mut {
-    ($workspace:expr) => {{
-        let doc = $workspace.curr_mut();
-        let buf = &mut doc.buffer;
-        let history = &mut doc.history;
-
-        (buf, history)
-    }};
-}

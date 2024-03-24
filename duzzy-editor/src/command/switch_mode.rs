@@ -1,8 +1,9 @@
 use crate::{
     buffer::{Buffer, CursorMode},
-    doc_mut,
+    document::Document,
     editor::Workspace,
     set_cursor,
+    transaction::TransactionResult,
 };
 
 enum Switch {
@@ -14,10 +15,11 @@ enum Switch {
 }
 
 pub(super) fn normal_mode_inplace(ws: &mut Workspace) {
-    let (buf, history) = doc_mut!(ws);
-
-    buf.mode = CursorMode::Normal;
-    history.commit();
+    let doc = ws.curr_mut();
+    doc.with_transaction(|_, buf| {
+        buf.mode = CursorMode::Normal;
+        TransactionResult::Commit
+    });
 }
 
 pub(super) fn insert_mode_inplace(ws: &mut Workspace) {
@@ -41,18 +43,17 @@ pub(super) fn insert_mode_line_prev(ws: &mut Workspace) {
 }
 
 fn switch_mode(ws: &mut Workspace, switch: Switch) {
-    let (buf, history) = doc_mut!(ws);
+    let doc = ws.curr_mut();
 
     match switch {
-        Switch::LineStart => set_cursor!(buf, offset = 0),
-        Switch::LineEnd => switch_line_end(buf),
-        Switch::LineNext => switch_line_next(buf),
-        Switch::LinePrev => switch_line_prev(buf),
+        Switch::LineStart => set_cursor!(doc.buf_mut(), offset = 0),
+        Switch::LineEnd => switch_line_end(doc.buf_mut()),
+        Switch::LineNext => switch_line_next(doc),
+        Switch::LinePrev => switch_line_prev(doc),
         _ => (),
     };
 
-    buf.mode = CursorMode::Insert;
-    history.commit();
+    doc.buf_mut().mode = CursorMode::Insert;
 }
 
 fn switch_line_end(buf: &mut Buffer) {
@@ -64,18 +65,26 @@ fn switch_line_end(buf: &mut Buffer) {
     }
 }
 
-fn switch_line_next(buf: &mut Buffer) {
+fn switch_line_next(doc: &mut Document) {
+    let buf = doc.buf_mut();
+
     let index = buf.pos.index;
+    let new_line = '\n';
 
     let line_start_byte = buf.text.line_to_byte(index + 1);
-    buf.text.insert_char(line_start_byte, '\n');
+    buf.text.insert_char(line_start_byte, new_line);
+
     set_cursor!(buf, super::shift_down(1, buf));
 }
 
-fn switch_line_prev(buf: &mut Buffer) {
+fn switch_line_prev(doc: &mut Document) {
+    let buf = doc.buf_mut();
+
     let index = buf.pos.index;
+    let new_line = '\n';
 
     let line_start_byte = buf.text.line_to_byte(index);
-    buf.text.insert_char(line_start_byte, '\n');
+    buf.text.insert_char(line_start_byte, new_line);
+
     set_cursor!(buf, offset = 0);
 }
