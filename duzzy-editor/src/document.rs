@@ -8,7 +8,11 @@ use std::{
 
 use ropey::Rope;
 
-use crate::{buffer::Buffer, history::History};
+use crate::{
+    buffer::Buffer,
+    history::History,
+    transaction::{Transaction, TransactionResult},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct DocumentId(NonZeroUsize);
@@ -43,8 +47,9 @@ pub struct Document {
     id: DocumentId,
     meta: FileMeta,
 
-    pub(super) buffer: Buffer,
-    pub(super) history: History,
+    buffer: Buffer,
+    history: History,
+    transaction: Option<Transaction>,
 }
 
 impl Document {
@@ -65,7 +70,7 @@ impl Document {
         let file = File::open(path)?;
         let text = Rope::from_reader(BufReader::new(file))?;
 
-        document.buffer.text = text;
+        document.buffer.set_text(text);
         document.meta = FileMeta {
             path: Some(path.into()),
             readonly: metadata.permissions().readonly(),
@@ -84,5 +89,35 @@ impl Document {
 
     pub fn buf_mut(&mut self) -> &mut Buffer {
         &mut self.buffer
+    }
+
+    pub fn with_transaction<F>(&mut self, func: F)
+    where
+        F: Fn(&mut Transaction, &mut Buffer) -> TransactionResult,
+    {
+        let mut tx = match self.transaction.take() {
+            Some(transaction) => transaction,
+            None => Transaction::new(),
+        };
+
+        match func(&mut tx, &mut self.buffer) {
+            TransactionResult::Commit => self.history.commit(tx),
+            TransactionResult::Keep => self.transaction = Some(tx),
+            TransactionResult::Abort => (),
+        }
+    }
+
+    pub fn commit(&mut self) {
+        if let Some(tx) = self.transaction.take() {
+            self.history.commit(tx);
+        }
+    }
+
+    pub fn undo(&mut self) -> Option<usize> {
+        self.history.undo(self.buffer.text_mut())
+    }
+
+    pub fn redo(&mut self) -> Option<usize> {
+        self.history.redo(self.buffer.text_mut())
     }
 }
