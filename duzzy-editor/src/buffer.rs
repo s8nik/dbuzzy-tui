@@ -1,5 +1,7 @@
 use ropey::Rope;
 
+pub type Pos = (usize, usize);
+
 #[derive(Debug, Default)]
 pub struct Buffer {
     text: Rope,
@@ -46,11 +48,11 @@ impl Buffer {
         self.offset = offset;
     }
 
-    pub const fn pos(&self) -> (usize, usize) {
+    pub const fn pos(&self) -> Pos {
         (self.index, self.offset)
     }
 
-    pub fn set_pos(&mut self, pos: (usize, usize)) {
+    pub fn set_pos(&mut self, pos: Pos) {
         self.index = pos.0;
         self.offset = pos.1;
     }
@@ -59,7 +61,7 @@ impl Buffer {
         self.offset + self.text.line_to_byte(self.index)
     }
 
-    pub fn as_curs_pos(&self, pos: usize) -> (usize, usize) {
+    pub fn as_curs_pos(&self, pos: usize) -> Pos {
         let index = self.text.byte_to_line(pos);
         let start = self.text.line_to_byte(index);
         let offset = pos - start;
