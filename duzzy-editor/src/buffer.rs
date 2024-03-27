@@ -8,15 +8,15 @@ pub struct Buffer {
     index: usize,
     offset: usize,
     vscroll: usize,
-    mode: CursorMode,
+    mode: Mode,
 }
 
 impl Buffer {
-    pub const fn mode(&self) -> CursorMode {
+    pub const fn mode(&self) -> Mode {
         self.mode
     }
 
-    pub fn set_mode(&mut self, mode: CursorMode) {
+    pub fn set_mode(&mut self, mode: Mode) {
         self.mode = mode;
     }
 
@@ -99,7 +99,7 @@ impl Buffer {
     }
 
     pub fn is_insert(&self) -> bool {
-        self.mode == CursorMode::Insert
+        self.mode == Mode::Insert
     }
 
     pub fn char(&self, pos: usize) -> char {
@@ -108,7 +108,7 @@ impl Buffer {
 }
 
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
-pub enum CursorMode {
+pub enum Mode {
     Insert,
     #[default]
     Normal,

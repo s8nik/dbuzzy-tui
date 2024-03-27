@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    buffer::CursorMode,
+    buffer::Mode,
     command::CmdType,
     input::{Event, Input, Modifiers},
 };
@@ -38,19 +38,19 @@ pub enum Keymap {
 }
 
 #[derive(Debug, Default)]
-pub struct Keymaps(HashMap<CursorMode, Bindings>);
+pub struct Keymaps(HashMap<Mode, Bindings>);
 
 impl Keymaps {
-    pub fn get(&self, mode: &CursorMode) -> Option<&Bindings> {
+    pub fn get(&self, mode: &Mode) -> Option<&Bindings> {
         self.0.get(mode)
     }
 }
 
 impl Keymaps {
     pub fn init() -> &'static Self {
-        let mut map = HashMap::<CursorMode, Bindings>::new();
+        let mut map = HashMap::<Mode, Bindings>::new();
 
-        map.insert(CursorMode::Normal, Self::normal_mode());
+        map.insert(Mode::Normal, Self::normal_mode());
 
         Box::leak(Box::new(Self(map)))
     }
@@ -148,7 +148,7 @@ mod tests {
     fn test_keymap() {
         let keymap = super::Keymaps::init();
 
-        let normal = keymap.get(&super::CursorMode::Normal).unwrap();
+        let normal = keymap.get(&super::Mode::Normal).unwrap();
 
         let node = normal
             .get(super::Input {

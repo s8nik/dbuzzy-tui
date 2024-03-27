@@ -1,5 +1,5 @@
 use crate::{
-    buffer::{Buffer, CursorMode},
+    buffer::{Buffer, Mode},
     document::Document,
     editor::Workspace,
     transaction::TransactionResult,
@@ -16,7 +16,7 @@ enum Switch {
 pub(super) fn normal_mode_inplace(ws: &mut Workspace) {
     let doc = ws.curr_mut();
     doc.with_transaction(|_, buf| {
-        buf.set_mode(CursorMode::Normal);
+        buf.set_mode(Mode::Normal);
         TransactionResult::Commit
     });
 }
@@ -52,7 +52,7 @@ fn switch_mode(ws: &mut Workspace, switch: Switch) {
         _ => (),
     };
 
-    doc.buf_mut().set_mode(CursorMode::Insert);
+    doc.buf_mut().set_mode(Mode::Insert);
 }
 
 fn switch_line_end(buf: &mut Buffer) {
