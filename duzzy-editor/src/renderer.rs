@@ -38,7 +38,7 @@ impl Cursor {
     pub const fn style(&self) -> SetCursorStyle {
         match self.mode {
             Mode::Insert => SetCursorStyle::BlinkingBar,
-            Mode::Normal | Mode::Visual => SetCursorStyle::BlinkingBlock,
+            Mode::Normal | Mode::Visual(_) => SetCursorStyle::BlinkingBlock,
         }
     }
 }

@@ -1,5 +1,7 @@
 use ropey::Rope;
 
+use crate::highlight::Selection;
+
 pub type Pos = (usize, usize);
 
 #[derive(Debug, Default)]
@@ -107,12 +109,12 @@ impl Buffer {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq)]
 pub enum Mode {
     Insert,
     #[default]
     Normal,
-    Visual,
+    Visual(Selection),
 }
 
 impl AsRef<str> for Mode {
@@ -120,7 +122,7 @@ impl AsRef<str> for Mode {
         match self {
             Mode::Insert => "insert",
             Mode::Normal => "normal",
-            Mode::Visual => "visual",
+            Mode::Visual(_) => "visual",
         }
     }
 }
