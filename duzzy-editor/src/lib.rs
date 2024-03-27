@@ -8,6 +8,7 @@ mod buffer;
 mod command;
 mod document;
 pub mod editor;
+mod highlight;
 mod history;
 mod input;
 mod keymap;
