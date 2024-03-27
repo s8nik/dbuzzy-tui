@@ -114,3 +114,13 @@ pub enum Mode {
     Normal,
     Visual,
 }
+
+impl AsRef<str> for Mode {
+    fn as_ref(&self) -> &str {
+        match self {
+            Mode::Insert => "insert",
+            Mode::Normal => "normal",
+            Mode::Visual => "visual",
+        }
+    }
+}
