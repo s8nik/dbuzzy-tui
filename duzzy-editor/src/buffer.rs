@@ -117,12 +117,19 @@ pub enum Mode {
     Visual(Selection),
 }
 
-impl AsRef<str> for Mode {
-    fn as_ref(&self) -> &str {
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub enum CursorKind {
+    Insert,
+    Normal,
+    Visual,
+}
+
+impl Mode {
+    pub fn kind(&self) -> CursorKind {
         match self {
-            Mode::Insert => "insert",
-            Mode::Normal => "normal",
-            Mode::Visual(_) => "visual",
+            Mode::Insert => CursorKind::Insert,
+            Mode::Normal => CursorKind::Normal,
+            Mode::Visual(_) => CursorKind::Visual,
         }
     }
 }

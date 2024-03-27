@@ -38,6 +38,8 @@ pub enum CmdType {
     GoToLineEnd,
     Undo,
     Redo,
+    NormalMode,
+    VisualMode,
 }
 
 pub struct Command {
@@ -116,7 +118,7 @@ impl CommandFinder {
         buffer: &Buffer,
         input: Input,
     ) -> Option<Arc<Command>> {
-        let bindings = keymaps.get(&buffer.mode().as_ref())?;
+        let bindings = keymaps.get(&buffer.mode().kind())?;
 
         self.current = match self.current {
             Some(node) => match node {

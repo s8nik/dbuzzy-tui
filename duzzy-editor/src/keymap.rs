@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    buffer::Mode,
+    buffer::CursorKind,
     command::CmdType,
     input::{Event, Input, Modifiers},
 };
@@ -38,19 +38,20 @@ pub enum Keymap {
 }
 
 #[derive(Debug, Default)]
-pub struct Keymaps(HashMap<&'static str, Bindings>);
+pub struct Keymaps(HashMap<CursorKind, Bindings>);
 
 impl Keymaps {
-    pub fn get(&self, mode: &str) -> Option<&Bindings> {
-        self.0.get(mode)
+    pub fn get(&self, kind: &CursorKind) -> Option<&Bindings> {
+        self.0.get(kind)
     }
 }
 
 impl Keymaps {
     pub fn init() -> &'static Self {
-        let mut map = HashMap::<&'static str, Bindings>::new();
+        let mut map = HashMap::<CursorKind, Bindings>::new();
 
-        map.insert(Mode::Normal.as_ref(), Self::normal_mode());
+        map.insert(CursorKind::Insert, Self::normal_mode());
+        map.insert(CursorKind::Visual, Self::visual_mode());
 
         Box::leak(Box::new(Self(map)))
     }
@@ -73,6 +74,22 @@ impl Keymaps {
             ("gh", CmdType::GoToLineStart),
             ("u", CmdType::Undo),
             ("U", CmdType::Redo),
+        ];
+
+        mappings.into()
+    }
+
+    fn visual_mode() -> Bindings {
+        let mappings = vec![
+            ("<Esc>", CmdType::NormalMode),
+            ("h", CmdType::MoveLeft),
+            ("j", CmdType::MoveDown),
+            ("k", CmdType::MoveUp),
+            ("l", CmdType::MoveRight),
+            ("gg", CmdType::GoToTopLine),
+            ("ge", CmdType::GoToBottomLine),
+            ("gl", CmdType::GoToLineEnd),
+            ("gh", CmdType::GoToLineStart),
         ];
 
         mappings.into()
@@ -142,13 +159,13 @@ impl Keymaps {
 
 #[cfg(test)]
 mod tests {
-    use crate::command::CmdType;
+    use crate::{buffer::CursorKind, command::CmdType};
 
     #[test]
     fn test_keymap() {
         let keymap = super::Keymaps::init();
 
-        let normal = keymap.get(&super::Mode::Normal.as_ref()).unwrap();
+        let normal = keymap.get(CursorKind::Normal).unwrap();
 
         let node = normal
             .get(super::Input {
