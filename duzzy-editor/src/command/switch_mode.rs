@@ -2,7 +2,7 @@ use crate::{
     buffer::{Buffer, ModeData},
     document::Document,
     editor::Workspace,
-    highlight::Selection,
+    selection::Selection,
     transaction::TransactionResult,
 };
 

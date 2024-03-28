@@ -1,6 +1,6 @@
 use ropey::Rope;
 
-use crate::highlight::Selection;
+use crate::selection::Selection;
 
 pub type Pos = (usize, usize);
 

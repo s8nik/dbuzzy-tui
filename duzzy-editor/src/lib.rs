@@ -8,11 +8,11 @@ mod buffer;
 mod command;
 mod document;
 pub mod editor;
-mod highlight;
 mod history;
 mod input;
 mod keymap;
 pub mod renderer;
+mod selection;
 mod transaction;
 
 pub type SmartString = smartstring::SmartString<smartstring::LazyCompact>;
