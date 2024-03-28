@@ -10,15 +10,15 @@ pub struct Buffer {
     index: usize,
     offset: usize,
     vscroll: usize,
-    mode: Mode,
+    mode: ModeData,
 }
 
 impl Buffer {
-    pub const fn mode(&self) -> Mode {
+    pub const fn mode(&self) -> ModeData {
         self.mode
     }
 
-    pub fn set_mode(&mut self, mode: Mode) {
+    pub fn set_mode(&mut self, mode: ModeData) {
         self.mode = mode;
     }
 
@@ -101,7 +101,7 @@ impl Buffer {
     }
 
     pub fn is_insert(&self) -> bool {
-        self.mode == Mode::Insert
+        self.mode.kind() == ModeKind::Insert
     }
 
     pub fn char(&self, pos: usize) -> char {
@@ -109,27 +109,33 @@ impl Buffer {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, Eq, PartialEq)]
-pub enum Mode {
-    Insert,
-    #[default]
-    Normal,
-    Visual(Selection),
-}
+mod mode {
+    use super::*;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub enum CursorKind {
-    Insert,
-    Normal,
-    Visual,
-}
+    #[derive(Debug, Default, Clone, Copy, Eq, PartialEq)]
+    pub enum ModeData {
+        #[default]
+        Normal,
+        Insert,
+        Visual(Selection),
+    }
 
-impl Mode {
-    pub fn kind(&self) -> CursorKind {
-        match self {
-            Mode::Insert => CursorKind::Insert,
-            Mode::Normal => CursorKind::Normal,
-            Mode::Visual(_) => CursorKind::Visual,
+    #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+    pub enum ModeKind {
+        Normal,
+        Insert,
+        Visual,
+    }
+
+    impl ModeData {
+        pub fn kind(&self) -> ModeKind {
+            match self {
+                ModeData::Insert => ModeKind::Insert,
+                ModeData::Normal => ModeKind::Normal,
+                ModeData::Visual(_) => ModeKind::Visual,
+            }
         }
     }
 }
+
+pub use mode::*;

@@ -6,7 +6,7 @@ use ratatui::{
     widgets::{Paragraph, Widget},
 };
 
-use crate::{buffer::Mode, editor::DuzzyEditor};
+use crate::{buffer::ModeData, editor::DuzzyEditor};
 
 #[derive(Default)]
 pub(super) struct Viewport {
@@ -24,7 +24,7 @@ impl Viewport {
 pub struct Cursor {
     pub x: u16,
     pub y: u16,
-    pub mode: Mode,
+    pub mode: ModeData,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -37,8 +37,8 @@ pub enum EventOutcome {
 impl Cursor {
     pub const fn style(&self) -> SetCursorStyle {
         match self.mode {
-            Mode::Insert => SetCursorStyle::BlinkingBar,
-            Mode::Normal | Mode::Visual(_) => SetCursorStyle::BlinkingBlock,
+            ModeData::Insert => SetCursorStyle::BlinkingBar,
+            ModeData::Normal | ModeData::Visual(_) => SetCursorStyle::BlinkingBlock,
         }
     }
 }

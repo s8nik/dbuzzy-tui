@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    buffer::CursorKind,
+    buffer::ModeKind,
     command::CmdType,
     input::{Event, Input, Modifiers},
 };
@@ -38,20 +38,20 @@ pub enum Keymap {
 }
 
 #[derive(Debug, Default)]
-pub struct Keymaps(HashMap<CursorKind, Bindings>);
+pub struct Keymaps(HashMap<ModeKind, Bindings>);
 
 impl Keymaps {
-    pub fn get(&self, kind: &CursorKind) -> Option<&Bindings> {
+    pub fn get(&self, kind: &ModeKind) -> Option<&Bindings> {
         self.0.get(kind)
     }
 }
 
 impl Keymaps {
     pub fn init() -> &'static Self {
-        let mut map = HashMap::<CursorKind, Bindings>::new();
+        let mut map = HashMap::<ModeKind, Bindings>::new();
 
-        map.insert(CursorKind::Insert, Self::normal_mode());
-        map.insert(CursorKind::Visual, Self::visual_mode());
+        map.insert(ModeKind::Insert, Self::normal_mode());
+        map.insert(ModeKind::Visual, Self::visual_mode());
 
         Box::leak(Box::new(Self(map)))
     }
@@ -159,13 +159,13 @@ impl Keymaps {
 
 #[cfg(test)]
 mod tests {
-    use crate::{buffer::CursorKind, command::CmdType};
+    use crate::{buffer::ModeKind, command::CmdType};
 
     #[test]
     fn test_keymap() {
         let keymap = super::Keymaps::init();
 
-        let normal = keymap.get(CursorKind::Normal).unwrap();
+        let normal = keymap.get(&ModeKind::Normal).unwrap();
 
         let node = normal
             .get(super::Input {

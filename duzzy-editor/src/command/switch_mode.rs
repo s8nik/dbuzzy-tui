@@ -1,5 +1,5 @@
 use crate::{
-    buffer::{Buffer, Mode},
+    buffer::{Buffer, ModeData},
     document::Document,
     editor::Workspace,
     highlight::Selection,
@@ -17,7 +17,7 @@ enum Switch {
 pub(super) fn normal_mode(ws: &mut Workspace) {
     let doc = ws.curr_mut();
     doc.with_transaction(|_, buf| {
-        buf.set_mode(Mode::Normal);
+        buf.set_mode(ModeData::Normal);
         TransactionResult::Commit
     });
 }
@@ -26,7 +26,7 @@ pub(super) fn visual_mode(ws: &mut Workspace) {
     let buf = ws.curr_mut().buf_mut();
 
     let selection = Selection::new(buf.as_byte_pos());
-    buf.set_mode(Mode::Visual(selection));
+    buf.set_mode(ModeData::Visual(selection));
 }
 
 pub(super) fn insert_mode_inplace(ws: &mut Workspace) {
@@ -60,7 +60,7 @@ fn switch_mode(ws: &mut Workspace, switch: Switch) {
         _ => (),
     };
 
-    doc.buf_mut().set_mode(Mode::Insert);
+    doc.buf_mut().set_mode(ModeData::Insert);
 }
 
 fn switch_line_end(buf: &mut Buffer) {
