@@ -90,7 +90,9 @@ impl Buffer {
     }
 
     pub fn update_selection(&mut self, pos: usize) {
-        self.selection.update(pos)
+        if self.mode == Mode::Visual {
+            self.selection.update(pos);
+        }
     }
 
     pub fn new_selection(&mut self, pos: usize) {

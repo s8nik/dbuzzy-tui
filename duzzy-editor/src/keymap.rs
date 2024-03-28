@@ -74,6 +74,7 @@ impl Keymaps {
             ("gh", CmdType::GoToLineStart),
             ("u", CmdType::Undo),
             ("U", CmdType::Redo),
+            ("v", CmdType::VisualMode),
         ];
 
         mappings.into()
