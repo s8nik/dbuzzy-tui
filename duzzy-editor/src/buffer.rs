@@ -10,15 +10,16 @@ pub struct Buffer {
     index: usize,
     offset: usize,
     vscroll: usize,
-    mode: ModeData,
+    mode: Mode,
+    selection: Selection,
 }
 
 impl Buffer {
-    pub const fn mode(&self) -> ModeData {
+    pub const fn mode(&self) -> Mode {
         self.mode
     }
 
-    pub fn set_mode(&mut self, mode: ModeData) {
+    pub fn set_mode(&mut self, mode: Mode) {
         self.mode = mode;
     }
 
@@ -84,6 +85,18 @@ impl Buffer {
         }
     }
 
+    pub fn selection(&self) -> Option<Selection> {
+        (self.mode == Mode::Visual).then_some(self.selection)
+    }
+
+    pub fn update_selection(&mut self, pos: usize) {
+        self.selection.update(pos)
+    }
+
+    pub fn new_selection(&mut self, pos: usize) {
+        self.selection = Selection::new(pos);
+    }
+
     pub fn line_byte(&self, index: usize) -> usize {
         self.text.line_to_byte(index)
     }
@@ -101,7 +114,7 @@ impl Buffer {
     }
 
     pub fn is_insert(&self) -> bool {
-        self.mode.kind() == ModeKind::Insert
+        self.mode == Mode::Insert
     }
 
     pub fn char(&self, pos: usize) -> char {
@@ -109,33 +122,10 @@ impl Buffer {
     }
 }
 
-mod mode {
-    use super::*;
-
-    #[derive(Debug, Default, Clone, Copy, Eq, PartialEq)]
-    pub enum ModeData {
-        #[default]
-        Normal,
-        Insert,
-        Visual(Selection),
-    }
-
-    #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-    pub enum ModeKind {
-        Normal,
-        Insert,
-        Visual,
-    }
-
-    impl ModeData {
-        pub fn kind(&self) -> ModeKind {
-            match self {
-                ModeData::Insert => ModeKind::Insert,
-                ModeData::Normal => ModeKind::Normal,
-                ModeData::Visual(_) => ModeKind::Visual,
-            }
-        }
-    }
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
+pub enum Mode {
+    #[default]
+    Normal,
+    Insert,
+    Visual,
 }
-
-pub use mode::*;

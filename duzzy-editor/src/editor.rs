@@ -57,7 +57,7 @@ impl DuzzyEditor {
         Cursor {
             x: x as _,
             y: y as _,
-            kind: mode.kind(),
+            mode,
         }
     }
 
