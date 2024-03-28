@@ -81,6 +81,7 @@ impl CommandRegistry {
             Command::new(CmdType::Undo, undo),
             Command::new(CmdType::Redo, redo),
             Command::new(CmdType::VisualMode, visual_mode),
+            Command::new(CmdType::NormalMode, normal_mode),
         ];
 
         let mut map = HashMap::new();
