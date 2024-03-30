@@ -1,7 +1,5 @@
 use ropey::Rope;
 
-use crate::selection::Selection;
-
 pub type Pos = (usize, usize);
 
 #[derive(Debug, Default)]
@@ -130,4 +128,35 @@ pub enum Mode {
     Normal,
     Insert,
     Visual,
+}
+
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq)]
+pub struct Selection {
+    anchor: usize,
+    head: usize,
+}
+
+impl Selection {
+    pub const fn new(pos: usize) -> Self {
+        Self {
+            anchor: pos,
+            head: pos,
+        }
+    }
+
+    pub fn start(&self) -> usize {
+        self.head.min(self.anchor)
+    }
+
+    pub fn end(&self) -> usize {
+        self.head.max(self.anchor)
+    }
+
+    pub fn range(&self) -> Pos {
+        (self.start(), self.end())
+    }
+
+    pub fn update(&mut self, pos: usize) {
+        self.head = pos;
+    }
 }
