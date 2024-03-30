@@ -41,8 +41,8 @@ pub enum Keymap {
 pub struct Keymaps(HashMap<Mode, Bindings>);
 
 impl Keymaps {
-    pub fn get(&self, kind: &Mode) -> Option<&Bindings> {
-        self.0.get(kind)
+    pub fn get(&self, mode: &Mode) -> Option<&Bindings> {
+        self.0.get(mode)
     }
 }
 
@@ -50,7 +50,7 @@ impl Keymaps {
     pub fn init() -> &'static Self {
         let mut map = HashMap::<Mode, Bindings>::new();
 
-        map.insert(Mode::Insert, Self::normal_mode());
+        map.insert(Mode::Normal, Self::normal_mode());
         map.insert(Mode::Visual, Self::visual_mode());
 
         Box::leak(Box::new(Self(map)))
@@ -165,7 +165,6 @@ mod tests {
     #[test]
     fn test_keymap() {
         let keymap = super::Keymaps::init();
-
         let normal = keymap.get(&Mode::Normal).unwrap();
 
         let node = normal
