@@ -2,11 +2,17 @@ use crossterm::cursor::SetCursorStyle;
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    text::Text,
+    style::{Color, Style},
+    text::{Line, Text},
     widgets::{Paragraph, Widget},
 };
+use ropey::RopeSlice;
 
-use crate::{buffer::Mode, editor::DuzzyEditor};
+use crate::{
+    buffer::Mode,
+    editor::DuzzyEditor,
+    selection::{SelectedRange, Span, SpanIterator, SpanKind},
+};
 
 #[derive(Default)]
 pub(super) struct Viewport {
@@ -45,9 +51,51 @@ impl Cursor {
 
 pub struct Renderer<'a>(&'a DuzzyEditor);
 
+impl<'a> From<Span<'a>> for ratatui::text::Span<'a> {
+    fn from(span: Span<'a>) -> Self {
+        let mut style = Style::default();
+
+        if span.kind == SpanKind::Selection {
+            style = style.bg(Color::Gray);
+        }
+
+        ratatui::text::Span::styled(span.slice, style)
+    }
+}
+
 impl<'a> Renderer<'a> {
     pub const fn new(editor: &'a DuzzyEditor) -> Self {
         Self(editor)
+    }
+
+    fn line(
+        line_idx: usize,
+        max_len: usize,
+        line: RopeSlice<'_>,
+        selection: Option<SelectedRange>,
+    ) -> Line<'_> {
+        let Some((start, end)) = selection else {
+            return Line::raw(line);
+        };
+
+        if start == end {
+            return Line::raw(line);
+        }
+
+        let overlaps = start <= line_idx + max_len && line_idx <= end;
+        let selection_start = start.saturating_sub(line_idx).min(max_len);
+        let selection_end = end.saturating_sub(line_idx).min(max_len);
+
+        if overlaps {
+            let range = (selection_start, selection_end);
+            let spans = SpanIterator::new(line, range)
+                .map(Into::<ratatui::text::Span>::into)
+                .collect::<Vec<_>>();
+
+            return Line::from(spans);
+        }
+
+        Line::raw(line)
     }
 
     #[inline]
@@ -55,14 +103,24 @@ impl<'a> Renderer<'a> {
         let buf = self.0.workspace.curr().buf();
 
         let text = buf.text();
+        let viewport = self.0.viewport();
+        let selection = buf.selection().map(|s| s.range());
+
         let vscroll = buf.vscroll();
+        let max_y = viewport.1.min(text.len_lines());
 
-        let start_byte = text.line_to_byte(vscroll);
+        let mut lines = Vec::with_capacity(max_y);
+        for y in 0..max_y {
+            let index = y + vscroll;
+            let line = text.line(index);
 
-        let end_index = vscroll + self.0.viewport().1 - 1;
-        let end_byte = text.line_to_byte(end_index.min(buf.len_lines()));
+            let line_idx = text.line_to_char(index);
+            let max_len = viewport.0.min(line.len_chars());
 
-        Some(Text::raw(text.slice(start_byte..end_byte)))
+            lines.push(Self::line(line_idx, max_len, line, selection));
+        }
+
+        Some(Text::from(lines))
     }
 }
 
