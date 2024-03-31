@@ -28,7 +28,7 @@ pub(super) fn normal_mode(ws: &mut Workspace) {
 
 pub(super) fn visual_mode(ws: &mut Workspace) {
     let buf = ws.curr_mut().buf_mut();
-    let pos = buf.as_byte_pos();
+    let pos = buf.char_pos();
 
     buf.new_selection(pos);
     buf.set_mode(Mode::Visual);
@@ -101,7 +101,7 @@ fn switch_line_prev(doc: &mut Document) {
 
 fn switch_with_new_line(doc: &mut Document, line_pos: usize) {
     doc.with_transaction(|tx, buf| {
-        tx.shift(buf.as_byte_pos());
+        tx.shift(buf.byte_pos());
         tx.insert_char(line_pos, '\n');
         tx.shift(line_pos);
         tx.apply(buf.text_mut());

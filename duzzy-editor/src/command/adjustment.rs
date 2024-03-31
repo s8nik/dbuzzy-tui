@@ -7,7 +7,7 @@ pub(super) fn insert_char(ws: &mut Workspace, ch: char) {
     let doc = ws.curr_mut();
 
     doc.with_transaction(|insert_tx, buf| {
-        let pos = buf.as_byte_pos();
+        let pos = buf.byte_pos();
         let mut tx = Transaction::new();
 
         tx.insert_char(pos, ch);
@@ -25,7 +25,7 @@ pub(super) fn new_line(ws: &mut Workspace) {
     let doc = ws.curr_mut();
 
     doc.with_transaction(|insert_tx, buf| {
-        let pos = buf.as_byte_pos();
+        let pos = buf.byte_pos();
         let mut tx = Transaction::new();
 
         tx.insert_char(pos, '\n');
@@ -46,7 +46,7 @@ pub(super) fn delete_char_inplace(ws: &mut Workspace) {
     let doc = ws.curr_mut();
 
     doc.with_transaction(|tx, buf| {
-        let pos = buf.as_byte_pos();
+        let pos = buf.byte_pos();
 
         if pos < buf.len_chars() {
             let ch = buf.char(pos);
@@ -65,7 +65,7 @@ pub(super) fn delete_char(ws: &mut Workspace) {
     let doc = ws.curr_mut();
 
     doc.with_transaction(|delete_tx, buf| {
-        let pos = buf.as_byte_pos();
+        let pos = buf.byte_pos();
 
         if pos > 0 {
             let char_pos = pos - 1;

@@ -1,5 +1,7 @@
 use ropey::Rope;
 
+use crate::selection::Selection;
+
 pub type Pos = (usize, usize);
 
 #[derive(Debug, Default)]
@@ -58,11 +60,15 @@ impl Buffer {
         self.offset = pos.1;
     }
 
-    pub fn as_byte_pos(&self) -> usize {
+    pub fn byte_pos(&self) -> usize {
         self.offset + self.text.line_to_byte(self.index)
     }
 
-    pub fn as_curs_pos(&self, pos: usize) -> Pos {
+    pub fn char_pos(&self) -> usize {
+        self.offset + self.text.line_to_char(self.index)
+    }
+
+    pub fn curs_pos(&self, pos: usize) -> Pos {
         let index = self.text.byte_to_line(pos);
         let start = self.text.line_to_byte(index);
         let offset = pos - start;
@@ -128,35 +134,4 @@ pub enum Mode {
     Normal,
     Insert,
     Visual,
-}
-
-#[derive(Debug, Default, Clone, Copy, Eq, PartialEq)]
-pub struct Selection {
-    anchor: usize,
-    head: usize,
-}
-
-impl Selection {
-    pub const fn new(pos: usize) -> Self {
-        Self {
-            anchor: pos,
-            head: pos,
-        }
-    }
-
-    pub fn start(&self) -> usize {
-        self.head.min(self.anchor)
-    }
-
-    pub fn end(&self) -> usize {
-        self.head.max(self.anchor)
-    }
-
-    pub fn range(&self) -> Pos {
-        (self.start(), self.end())
-    }
-
-    pub fn update(&mut self, pos: usize) {
-        self.head = pos;
-    }
 }

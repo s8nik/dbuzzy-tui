@@ -5,7 +5,7 @@ pub(super) fn undo(ws: &mut Workspace) {
 
     if let Some(pos) = doc.undo() {
         let buf = doc.buf_mut();
-        buf.set_pos(buf.as_curs_pos(pos));
+        buf.set_pos(buf.curs_pos(pos));
     }
 }
 
@@ -14,6 +14,6 @@ pub(super) fn redo(ws: &mut Workspace) {
 
     if let Some(pos) = doc.redo() {
         let buf = doc.buf_mut();
-        buf.set_pos(buf.as_curs_pos(pos));
+        buf.set_pos(buf.curs_pos(pos));
     }
 }
