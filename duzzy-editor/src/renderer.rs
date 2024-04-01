@@ -11,7 +11,7 @@ use ropey::RopeSlice;
 use crate::{
     buffer::Mode,
     editor::DuzzyEditor,
-    selection::{SelectedRange, SelectionSpan, SpanIterator, SpanKind},
+    selection::{selection_spans, SelectedRange, SelectionSpan, SpanKind},
 };
 
 #[derive(Default)]
@@ -59,7 +59,7 @@ impl<'a> From<SelectionSpan<'a>> for Span<'a> {
             style = style.bg(Color::Gray);
         }
 
-        ratatui::text::Span::styled(span.slice, style)
+        Span::styled(span.slice, style)
     }
 }
 
@@ -74,28 +74,22 @@ impl<'a> Renderer<'a> {
         line: RopeSlice<'_>,
         selection: Option<SelectedRange>,
     ) -> Line<'_> {
-        let Some((start, end)) = selection else {
+        let Some(range) = selection else {
             return Line::raw(line);
         };
 
-        if start == end {
+        if range.0 == range.1 {
             return Line::raw(line);
         }
 
-        let overlaps = start <= line_idx + max_len && line_idx <= end;
-        let selection_start = start.saturating_sub(line_idx).min(max_len);
-        let selection_end = end.saturating_sub(line_idx).min(max_len);
+        let spans = selection_spans(line_idx, max_len, line, range)
+            .into_iter()
+            .map(Into::<Span>::into)
+            .collect::<Vec<_>>();
 
-        if overlaps {
-            let range = (selection_start, selection_end);
-            let spans = SpanIterator::new(line, range)
-                .map(Into::<Span>::into)
-                .collect::<Vec<_>>();
-
-            return Line::from(spans);
-        }
-
-        Line::raw(line)
+        (!spans.is_empty())
+            .then_some(Line::from(spans))
+            .unwrap_or_else(|| Line::raw(line))
     }
 
     #[inline]
@@ -134,11 +128,4 @@ impl<'a> Widget for Renderer<'a> {
             None => log::warn!("nothing to render!"),
         }
     }
-}
-
-#[cfg(test)]
-mod tests {
-
-    #[test]
-    fn test_renderer_lines() {}
 }

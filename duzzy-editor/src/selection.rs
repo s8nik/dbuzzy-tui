@@ -97,6 +97,26 @@ impl<'a> Iterator for SpanIterator<'a> {
     }
 }
 
+pub fn selection_spans(
+    line_idx: usize,
+    max_len: usize,
+    line: RopeSlice<'_>,
+    selection: SelectedRange,
+) -> Vec<SelectionSpan> {
+    let (start, end) = selection;
+
+    let overlaps = start <= line_idx + max_len && line_idx <= end;
+
+    let in_line_range = (
+        start.saturating_sub(line_idx).min(max_len),
+        end.saturating_sub(line_idx).min(max_len),
+    );
+
+    overlaps
+        .then_some(SpanIterator::new(line, in_line_range).collect())
+        .unwrap_or_default()
+}
+
 #[cfg(test)]
 mod tests {
     use ropey::RopeSlice;
@@ -125,7 +145,7 @@ mod tests {
     }
 
     #[test]
-    fn test_selection() {
+    fn test_select_slice() {
         let text = ropey::Rope::from_str("test test");
 
         let mut selection = Selection::new(3);
