@@ -11,7 +11,7 @@ use ropey::RopeSlice;
 use crate::{
     buffer::Mode,
     editor::DuzzyEditor,
-    selection::{selection_spans, SelectedRange, SelectionSpan, SpanKind},
+    selection::{selection_spans, SelectedRange, SpanKind},
 };
 
 #[derive(Default)]
@@ -51,18 +51,6 @@ impl Cursor {
 
 pub struct Renderer<'a>(&'a DuzzyEditor);
 
-impl<'a> From<SelectionSpan<'a>> for Span<'a> {
-    fn from(span: SelectionSpan<'a>) -> Self {
-        let mut style = Style::default();
-
-        if span.kind == SpanKind::Selection {
-            style = style.bg(Color::Gray);
-        }
-
-        Span::styled(span.slice, style)
-    }
-}
-
 impl<'a> Renderer<'a> {
     pub const fn new(editor: &'a DuzzyEditor) -> Self {
         Self(editor)
@@ -74,22 +62,34 @@ impl<'a> Renderer<'a> {
         line: RopeSlice<'_>,
         selection: Option<SelectedRange>,
     ) -> Line<'_> {
+        let default_style = Style::default().fg(Color::Yellow);
+        let selection_style = default_style.bg(Color::Gray);
+
+        let default = Line::raw(line).style(default_style);
+
         let Some(range) = selection else {
-            return Line::raw(line);
+            return default;
         };
 
         if range.0 == range.1 {
-            return Line::raw(line);
+            return default;
         }
+
+        let span_style = |kind: SpanKind| match kind {
+            SpanKind::Nothing => default_style,
+            SpanKind::Selection => selection_style,
+        };
 
         let spans = selection_spans(line_idx, max_len, line, range)
             .into_iter()
-            .map(Into::<Span>::into)
+            .map(|s| Span::styled(s.slice, span_style(s.kind)))
             .collect::<Vec<_>>();
 
-        (!spans.is_empty())
-            .then_some(Line::from(spans))
-            .unwrap_or_else(|| Line::raw(line))
+        if !spans.is_empty() {
+            Line::from(spans)
+        } else {
+            default
+        }
     }
 
     #[inline]
@@ -108,7 +108,7 @@ impl<'a> Renderer<'a> {
             let index = y + vscroll;
             let line = text.line(index);
 
-            let line_idx = text.line_to_char(index);
+            let line_idx = text.line_to_byte(index);
             let max_len = viewport.0.min(line.len_chars());
 
             lines.push(Self::line(line_idx, max_len, line, selection));

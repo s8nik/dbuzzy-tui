@@ -64,10 +64,6 @@ impl Buffer {
         self.offset + self.text.line_to_byte(self.index)
     }
 
-    pub fn char_pos(&self) -> usize {
-        self.offset + self.text.line_to_char(self.index)
-    }
-
     pub fn curs_pos(&self, pos: usize) -> Pos {
         let index = self.text.byte_to_line(pos);
         let start = self.text.line_to_byte(index);

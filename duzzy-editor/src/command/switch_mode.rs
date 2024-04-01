@@ -28,7 +28,7 @@ pub(super) fn normal_mode(ws: &mut Workspace) {
 
 pub(super) fn visual_mode(ws: &mut Workspace) {
     let buf = ws.curr_mut().buf_mut();
-    let pos = buf.char_pos();
+    let pos = buf.byte_pos();
 
     buf.new_selection(pos);
     buf.set_mode(Mode::Visual);

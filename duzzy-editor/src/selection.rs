@@ -70,6 +70,10 @@ impl<'a> Iterator for SpanIterator<'a> {
         let (start, end) = self.range;
         let line_len = self.line.len_chars();
 
+        if start == end {
+            return None;
+        }
+
         if current == start {
             self.cursor = end;
 
@@ -106,17 +110,21 @@ pub fn selection_spans(
     let (start, end) = selection;
 
     let overlaps = start <= line_idx + max_len && line_idx <= end;
-    dbg!(overlaps);
+
+    if overlaps && line == "\n" {
+        return vec![SelectionSpan {
+            slice: RopeSlice::from(" "),
+            kind: SpanKind::Selection,
+        }];
+    }
 
     let in_line_range = (
         start.saturating_sub(line_idx).min(max_len),
         end.saturating_sub(line_idx).min(max_len),
     );
 
-    dbg!(in_line_range);
-
     overlaps
-        .then_some(SpanIterator::new(line, in_line_range).collect())
+        .then(|| SpanIterator::new(line, in_line_range).collect())
         .unwrap_or_default()
 }
 

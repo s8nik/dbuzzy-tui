@@ -62,7 +62,7 @@ fn shift_cursor(ws: &mut Workspace, shift: Shift) {
     };
 
     buf.set_pos(pos);
-    buf.update_selection(buf.char_pos());
+    buf.update_selection(buf.byte_pos());
 }
 
 pub(super) fn shift_up(n: usize, buf: &mut Buffer) -> Pos {
