@@ -3,7 +3,7 @@ use ratatui::{
     buffer::Buffer,
     layout::Rect,
     style::{Color, Style},
-    text::{Line, Text},
+    text::{Line, Span, Text},
     widgets::{Paragraph, Widget},
 };
 use ropey::RopeSlice;
@@ -11,7 +11,7 @@ use ropey::RopeSlice;
 use crate::{
     buffer::Mode,
     editor::DuzzyEditor,
-    selection::{SelectedRange, Span, SpanIterator, SpanKind},
+    selection::{SelectedRange, SelectionSpan, SpanIterator, SpanKind},
 };
 
 #[derive(Default)]
@@ -51,8 +51,8 @@ impl Cursor {
 
 pub struct Renderer<'a>(&'a DuzzyEditor);
 
-impl<'a> From<Span<'a>> for ratatui::text::Span<'a> {
-    fn from(span: Span<'a>) -> Self {
+impl<'a> From<SelectionSpan<'a>> for Span<'a> {
+    fn from(span: SelectionSpan<'a>) -> Self {
         let mut style = Style::default();
 
         if span.kind == SpanKind::Selection {
@@ -89,7 +89,7 @@ impl<'a> Renderer<'a> {
         if overlaps {
             let range = (selection_start, selection_end);
             let spans = SpanIterator::new(line, range)
-                .map(Into::<ratatui::text::Span>::into)
+                .map(Into::<Span>::into)
                 .collect::<Vec<_>>();
 
             return Line::from(spans);
@@ -134,4 +134,11 @@ impl<'a> Widget for Renderer<'a> {
             None => log::warn!("nothing to render!"),
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn test_renderer_lines() {}
 }

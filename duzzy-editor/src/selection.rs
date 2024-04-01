@@ -41,7 +41,7 @@ pub enum SpanKind {
 
 #[cfg_attr(test, derive(PartialEq))]
 #[derive(Debug)]
-pub struct Span<'a> {
+pub struct SelectionSpan<'a> {
     pub slice: RopeSlice<'a>,
     pub kind: SpanKind,
 }
@@ -63,7 +63,7 @@ impl<'a> SpanIterator<'a> {
 }
 
 impl<'a> Iterator for SpanIterator<'a> {
-    type Item = Span<'a>;
+    type Item = SelectionSpan<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let current = self.cursor;
@@ -73,21 +73,21 @@ impl<'a> Iterator for SpanIterator<'a> {
         if current == start {
             self.cursor = end;
 
-            Some(Span {
+            Some(SelectionSpan {
                 slice: self.line.slice(current..end),
                 kind: SpanKind::Selection,
             })
         } else if current == end && current != line_len {
             self.cursor = line_len;
 
-            Some(Span {
+            Some(SelectionSpan {
                 slice: self.line.slice(end..line_len),
                 kind: SpanKind::Nothing,
             })
         } else if current == 0 {
             self.cursor = start;
 
-            Some(Span {
+            Some(SelectionSpan {
                 slice: self.line.slice(current..start),
                 kind: SpanKind::Nothing,
             })
@@ -101,7 +101,7 @@ impl<'a> Iterator for SpanIterator<'a> {
 mod tests {
     use ropey::RopeSlice;
 
-    use super::{Selection, Span, SpanIterator, SpanKind};
+    use super::{Selection, SelectionSpan, SpanIterator, SpanKind};
 
     #[test]
     fn test_select_all() {
@@ -115,7 +115,7 @@ mod tests {
 
         assert_eq!(
             iter.next(),
-            Some(Span {
+            Some(SelectionSpan {
                 kind: SpanKind::Selection,
                 slice: RopeSlice::from("test test")
             })
@@ -135,7 +135,7 @@ mod tests {
 
         assert_eq!(
             iter.next(),
-            Some(Span {
+            Some(SelectionSpan {
                 kind: SpanKind::Nothing,
                 slice: RopeSlice::from("tes")
             })
@@ -143,7 +143,7 @@ mod tests {
 
         assert_eq!(
             iter.next(),
-            Some(Span {
+            Some(SelectionSpan {
                 kind: SpanKind::Selection,
                 slice: RopeSlice::from("t t")
             })
@@ -151,7 +151,7 @@ mod tests {
 
         assert_eq!(
             iter.next(),
-            Some(Span {
+            Some(SelectionSpan {
                 kind: SpanKind::Nothing,
                 slice: RopeSlice::from("est")
             })
