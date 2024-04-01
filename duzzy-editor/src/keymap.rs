@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    buffer::CursorMode,
+    buffer::Mode,
     command::CmdType,
     input::{Event, Input, Modifiers},
 };
@@ -38,19 +38,20 @@ pub enum Keymap {
 }
 
 #[derive(Debug, Default)]
-pub struct Keymaps(HashMap<CursorMode, Bindings>);
+pub struct Keymaps(HashMap<Mode, Bindings>);
 
 impl Keymaps {
-    pub fn get(&self, mode: &CursorMode) -> Option<&Bindings> {
+    pub fn get(&self, mode: &Mode) -> Option<&Bindings> {
         self.0.get(mode)
     }
 }
 
 impl Keymaps {
     pub fn init() -> &'static Self {
-        let mut map = HashMap::<CursorMode, Bindings>::new();
+        let mut map = HashMap::<Mode, Bindings>::new();
 
-        map.insert(CursorMode::Normal, Self::normal_mode());
+        map.insert(Mode::Normal, Self::normal_mode());
+        map.insert(Mode::Visual, Self::visual_mode());
 
         Box::leak(Box::new(Self(map)))
     }
@@ -73,6 +74,23 @@ impl Keymaps {
             ("gh", CmdType::GoToLineStart),
             ("u", CmdType::Undo),
             ("U", CmdType::Redo),
+            ("v", CmdType::VisualMode),
+        ];
+
+        mappings.into()
+    }
+
+    fn visual_mode() -> Bindings {
+        let mappings = vec![
+            ("<Esc>", CmdType::NormalMode),
+            ("h", CmdType::MoveLeft),
+            ("j", CmdType::MoveDown),
+            ("k", CmdType::MoveUp),
+            ("l", CmdType::MoveRight),
+            ("gg", CmdType::GoToTopLine),
+            ("ge", CmdType::GoToBottomLine),
+            ("gl", CmdType::GoToLineEnd),
+            ("gh", CmdType::GoToLineStart),
         ];
 
         mappings.into()
@@ -142,13 +160,12 @@ impl Keymaps {
 
 #[cfg(test)]
 mod tests {
-    use crate::command::CmdType;
+    use crate::{buffer::Mode, command::CmdType};
 
     #[test]
     fn test_keymap() {
         let keymap = super::Keymaps::init();
-
-        let normal = keymap.get(&super::CursorMode::Normal).unwrap();
+        let normal = keymap.get(&Mode::Normal).unwrap();
 
         let node = normal
             .get(super::Input {

@@ -46,23 +46,21 @@ impl Action {
 }
 
 #[derive(Debug, Default)]
-pub struct Transaction {
-    changes: Vec<Action>,
-}
+pub struct Transaction(Vec<Action>);
 
 impl Transaction {
     pub const fn new() -> Self {
-        Self { changes: vec![] }
+        Self(vec![])
     }
 
     pub fn inverse(&self) -> Self {
-        let changes = self.changes.iter().rev().map(Action::inverse).collect();
+        let actions = self.0.iter().rev().map(Action::inverse).collect();
 
-        Self { changes }
+        Self(actions)
     }
 
     pub fn merge(&mut self, tx: Self) {
-        for change in tx.changes {
+        for change in tx.0 {
             match change {
                 Action::Insert(c) => self.insert_str(c.pos, &c.content),
                 Action::Delete(c) => self.delete_str(c.pos, &c.content),
@@ -74,7 +72,7 @@ impl Transaction {
     pub fn apply(&self, text: &mut ropey::Rope) -> Option<usize> {
         let mut last_pos = None;
 
-        for change in self.changes.iter() {
+        for change in self.0.iter() {
             match change {
                 Action::Insert(c) => {
                     text.insert(c.pos, &c.content);
@@ -92,10 +90,10 @@ impl Transaction {
     }
 
     pub fn shift(&mut self, pos: usize) {
-        if let Some(Action::Move(p)) = self.changes.last_mut() {
+        if let Some(Action::Move(p)) = self.0.last_mut() {
             *p = pos;
         } else {
-            self.changes.push(Action::Move(pos));
+            self.0.push(Action::Move(pos));
         }
     }
 
@@ -111,10 +109,10 @@ impl Transaction {
     where
         F: Fn(&mut SmartString),
     {
-        let maybe_change = self.changes.last_mut().and_then(|c| c.as_insert_mut());
+        let maybe_change = self.0.last_mut().and_then(|c| c.as_insert_mut());
 
         if let Some(change) = Self::merge_or_new(maybe_change, pos, func) {
-            self.changes.push(Action::Insert(change));
+            self.0.push(Action::Insert(change));
         }
     }
 
@@ -132,14 +130,14 @@ impl Transaction {
     where
         F: Fn(&mut SmartString),
     {
-        let mut maybe_change = self.changes.last_mut().and_then(|c| c.as_delete_mut());
+        let mut maybe_change = self.0.last_mut().and_then(|c| c.as_delete_mut());
 
         if let Some(change) = maybe_change.as_deref_mut() {
             change.pos = pos;
         };
 
         if let Some(change) = Self::merge_or_new(maybe_change, pos, func) {
-            self.changes.push(Action::Delete(change));
+            self.0.push(Action::Delete(change));
         }
     }
 

@@ -1,20 +1,25 @@
 use ropey::Rope;
 
+use crate::selection::Selection;
+
+pub type Pos = (usize, usize);
+
 #[derive(Debug, Default)]
 pub struct Buffer {
     text: Rope,
     index: usize,
     offset: usize,
     vscroll: usize,
-    mode: CursorMode,
+    mode: Mode,
+    selection: Selection,
 }
 
 impl Buffer {
-    pub const fn mode(&self) -> CursorMode {
+    pub const fn mode(&self) -> Mode {
         self.mode
     }
 
-    pub fn set_mode(&mut self, mode: CursorMode) {
+    pub fn set_mode(&mut self, mode: Mode) {
         self.mode = mode;
     }
 
@@ -46,20 +51,20 @@ impl Buffer {
         self.offset = offset;
     }
 
-    pub const fn pos(&self) -> (usize, usize) {
+    pub const fn pos(&self) -> Pos {
         (self.index, self.offset)
     }
 
-    pub fn set_pos(&mut self, pos: (usize, usize)) {
+    pub fn set_pos(&mut self, pos: Pos) {
         self.index = pos.0;
         self.offset = pos.1;
     }
 
-    pub fn as_byte_pos(&self) -> usize {
+    pub fn byte_pos(&self) -> usize {
         self.offset + self.text.line_to_byte(self.index)
     }
 
-    pub fn as_curs_pos(&self, pos: usize) -> (usize, usize) {
+    pub fn curs_pos(&self, pos: usize) -> Pos {
         let index = self.text.byte_to_line(pos);
         let start = self.text.line_to_byte(index);
         let offset = pos - start;
@@ -80,6 +85,20 @@ impl Buffer {
         }
     }
 
+    pub fn selection(&self) -> Option<Selection> {
+        (self.mode == Mode::Visual).then_some(self.selection)
+    }
+
+    pub fn update_selection(&mut self, pos: usize) {
+        if self.mode == Mode::Visual {
+            self.selection.update(pos);
+        }
+    }
+
+    pub fn new_selection(&mut self, pos: usize) {
+        self.selection = Selection::new(pos);
+    }
+
     pub fn line_byte(&self, index: usize) -> usize {
         self.text.line_to_byte(index)
     }
@@ -97,7 +116,7 @@ impl Buffer {
     }
 
     pub fn is_insert(&self) -> bool {
-        self.mode == CursorMode::Insert
+        self.mode == Mode::Insert
     }
 
     pub fn char(&self, pos: usize) -> char {
@@ -106,9 +125,9 @@ impl Buffer {
 }
 
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
-pub enum CursorMode {
-    Insert,
+pub enum Mode {
     #[default]
     Normal,
+    Insert,
     Visual,
 }

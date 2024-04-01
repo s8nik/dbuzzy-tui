@@ -1,5 +1,5 @@
 use crate::{
-    buffer::{Buffer, CursorMode},
+    buffer::{Buffer, Mode},
     document::Document,
     editor::Workspace,
     transaction::TransactionResult,
@@ -13,12 +13,25 @@ enum Switch {
     LinePrev,
 }
 
-pub(super) fn normal_mode_inplace(ws: &mut Workspace) {
+pub(super) fn normal_mode(ws: &mut Workspace) {
     let doc = ws.curr_mut();
-    doc.with_transaction(|_, buf| {
-        buf.set_mode(CursorMode::Normal);
-        TransactionResult::Commit
-    });
+
+    match doc.buf().mode() {
+        Mode::Visual => doc.buf_mut().set_mode(Mode::Normal),
+        Mode::Insert => doc.with_transaction(|_, buf| {
+            buf.set_mode(Mode::Normal);
+            TransactionResult::Commit
+        }),
+        _ => (),
+    }
+}
+
+pub(super) fn visual_mode(ws: &mut Workspace) {
+    let buf = ws.curr_mut().buf_mut();
+    let pos = buf.byte_pos();
+
+    buf.new_selection(pos);
+    buf.set_mode(Mode::Visual);
 }
 
 pub(super) fn insert_mode_inplace(ws: &mut Workspace) {
@@ -52,7 +65,7 @@ fn switch_mode(ws: &mut Workspace, switch: Switch) {
         _ => (),
     };
 
-    doc.buf_mut().set_mode(CursorMode::Insert);
+    doc.buf_mut().set_mode(Mode::Insert);
 }
 
 fn switch_line_end(buf: &mut Buffer) {
@@ -88,7 +101,7 @@ fn switch_line_prev(doc: &mut Document) {
 
 fn switch_with_new_line(doc: &mut Document, line_pos: usize) {
     doc.with_transaction(|tx, buf| {
-        tx.shift(buf.as_byte_pos());
+        tx.shift(buf.byte_pos());
         tx.insert_char(line_pos, '\n');
         tx.shift(line_pos);
         tx.apply(buf.text_mut());

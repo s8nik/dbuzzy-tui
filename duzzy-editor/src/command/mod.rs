@@ -38,6 +38,8 @@ pub enum CmdType {
     GoToLineEnd,
     Undo,
     Redo,
+    NormalMode,
+    VisualMode,
 }
 
 pub struct Command {
@@ -78,6 +80,8 @@ impl CommandRegistry {
             Command::new(CmdType::GoToLineStart, go_to_line_start),
             Command::new(CmdType::Undo, undo),
             Command::new(CmdType::Redo, redo),
+            Command::new(CmdType::VisualMode, visual_mode),
+            Command::new(CmdType::NormalMode, normal_mode),
         ];
 
         let mut map = HashMap::new();

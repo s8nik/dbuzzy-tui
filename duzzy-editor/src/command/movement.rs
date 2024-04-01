@@ -1,4 +1,7 @@
-use crate::{buffer::Buffer, editor::Workspace};
+use crate::{
+    buffer::{Buffer, Pos},
+    editor::Workspace,
+};
 
 enum Shift {
     Up(usize),
@@ -59,9 +62,10 @@ fn shift_cursor(ws: &mut Workspace, shift: Shift) {
     };
 
     buf.set_pos(pos);
+    buf.update_selection(buf.byte_pos());
 }
 
-pub(super) fn shift_up(n: usize, buf: &mut Buffer) -> (usize, usize) {
+pub(super) fn shift_up(n: usize, buf: &mut Buffer) -> Pos {
     let (idx, ofs) = buf.pos();
 
     let idx = idx.saturating_sub(n);
@@ -70,7 +74,7 @@ pub(super) fn shift_up(n: usize, buf: &mut Buffer) -> (usize, usize) {
     (idx, ofs)
 }
 
-pub(super) fn shift_down(n: usize, buf: &mut Buffer) -> (usize, usize) {
+pub(super) fn shift_down(n: usize, buf: &mut Buffer) -> Pos {
     let (idx, ofs) = buf.pos();
 
     let idx = (idx + n).min(buf.len_lines() - 1);
@@ -79,7 +83,7 @@ pub(super) fn shift_down(n: usize, buf: &mut Buffer) -> (usize, usize) {
     (idx, ofs)
 }
 
-pub(super) fn shift_left(buf: &mut Buffer) -> (usize, usize) {
+pub(super) fn shift_left(buf: &mut Buffer) -> Pos {
     let (idx, ofs) = buf.pos();
 
     match (ofs > 0, idx > 0) {
@@ -89,7 +93,7 @@ pub(super) fn shift_left(buf: &mut Buffer) -> (usize, usize) {
     }
 }
 
-pub(super) fn shift_right(buf: &mut Buffer) -> (usize, usize) {
+pub(super) fn shift_right(buf: &mut Buffer) -> Pos {
     let (idx, ofs) = buf.pos();
 
     match (

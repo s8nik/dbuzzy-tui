@@ -22,7 +22,7 @@ pub fn on_key(ws: &mut Workspace, input: Input) -> EventOutcome {
         } => super::adjustment::insert_char(ws, ch),
         Input {
             event: Event::Esc, ..
-        } => super::switch_mode::normal_mode_inplace(ws),
+        } => super::switch_mode::normal_mode(ws),
         Input {
             event: Event::Left, ..
         } => super::movement::move_left(ws),

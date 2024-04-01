@@ -2,11 +2,17 @@ use crossterm::cursor::SetCursorStyle;
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    text::Text,
+    style::{Color, Style},
+    text::{Line, Span, Text},
     widgets::{Paragraph, Widget},
 };
+use ropey::RopeSlice;
 
-use crate::{buffer::CursorMode, editor::DuzzyEditor};
+use crate::{
+    buffer::Mode,
+    editor::DuzzyEditor,
+    selection::{selection_spans, SelectedRange, SpanKind},
+};
 
 #[derive(Default)]
 pub(super) struct Viewport {
@@ -24,7 +30,7 @@ impl Viewport {
 pub struct Cursor {
     pub x: u16,
     pub y: u16,
-    pub mode: CursorMode,
+    pub mode: Mode,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -37,8 +43,8 @@ pub enum EventOutcome {
 impl Cursor {
     pub const fn style(&self) -> SetCursorStyle {
         match self.mode {
-            CursorMode::Insert => SetCursorStyle::BlinkingBar,
-            CursorMode::Normal | CursorMode::Visual => SetCursorStyle::BlinkingBlock,
+            Mode::Insert => SetCursorStyle::BlinkingBar,
+            Mode::Normal | Mode::Visual => SetCursorStyle::BlinkingBlock,
         }
     }
 }
@@ -50,19 +56,65 @@ impl<'a> Renderer<'a> {
         Self(editor)
     }
 
+    fn line(
+        line_idx: usize,
+        max_len: usize,
+        line: RopeSlice<'_>,
+        selection: Option<SelectedRange>,
+    ) -> Line<'_> {
+        let default_style = Style::default().fg(Color::Yellow);
+        let selection_style = default_style.bg(Color::Gray);
+
+        let default = Line::raw(line).style(default_style);
+
+        let Some(range) = selection else {
+            return default;
+        };
+
+        if range.0 == range.1 {
+            return default;
+        }
+
+        let span_style = |kind: SpanKind| match kind {
+            SpanKind::Nothing => default_style,
+            SpanKind::Selection => selection_style,
+        };
+
+        let spans = selection_spans(line_idx, max_len, line, range)
+            .into_iter()
+            .map(|s| Span::styled(s.slice, span_style(s.kind)))
+            .collect::<Vec<_>>();
+
+        if !spans.is_empty() {
+            Line::from(spans)
+        } else {
+            default
+        }
+    }
+
     #[inline]
     pub fn text(&self) -> Option<Text> {
         let buf = self.0.workspace.curr().buf();
 
         let text = buf.text();
+        let viewport = self.0.viewport();
+        let selection = buf.selection().map(|s| s.range());
+
         let vscroll = buf.vscroll();
+        let max_y = viewport.1.min(text.len_lines());
 
-        let start_byte = text.line_to_byte(vscroll);
+        let mut lines = Vec::with_capacity(max_y);
+        for y in 0..max_y {
+            let index = y + vscroll;
+            let line = text.line(index);
 
-        let end_index = vscroll + self.0.viewport().1 - 1;
-        let end_byte = text.line_to_byte(end_index.min(buf.len_lines()));
+            let line_idx = text.line_to_byte(index);
+            let max_len = viewport.0.min(line.len_chars());
 
-        Some(Text::raw(text.slice(start_byte..end_byte)))
+            lines.push(Self::line(line_idx, max_len, line, selection));
+        }
+
+        Some(Text::from(lines))
     }
 }
 

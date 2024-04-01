@@ -1,6 +1,7 @@
 use std::{collections::HashMap, path::Path};
 
 use crate::{
+    buffer::Pos,
     command::{insert_mode, CommandFinder},
     document::{Document, DocumentId},
     keymap::Keymaps,
@@ -38,7 +39,7 @@ impl DuzzyEditor {
         Renderer::new(self)
     }
 
-    pub const fn viewport(&self) -> (usize, usize) {
+    pub const fn viewport(&self) -> Pos {
         (self.viewport.width, self.viewport.height)
     }
 
