@@ -46,7 +46,7 @@ pub struct SelectionSpan<'a> {
     pub kind: SpanKind,
 }
 
-pub struct SpanIterator<'a> {
+struct SpanIterator<'a> {
     cursor: usize,
     line: RopeSlice<'a>,
     range: SelectedRange,
@@ -106,11 +106,14 @@ pub fn selection_spans(
     let (start, end) = selection;
 
     let overlaps = start <= line_idx + max_len && line_idx <= end;
+    dbg!(overlaps);
 
     let in_line_range = (
         start.saturating_sub(line_idx).min(max_len),
         end.saturating_sub(line_idx).min(max_len),
     );
+
+    dbg!(in_line_range);
 
     overlaps
         .then_some(SpanIterator::new(line, in_line_range).collect())
@@ -121,7 +124,7 @@ pub fn selection_spans(
 mod tests {
     use ropey::RopeSlice;
 
-    use super::{Selection, SelectionSpan, SpanIterator, SpanKind};
+    use super::{selection_spans, Selection, SelectionSpan, SpanIterator, SpanKind};
 
     #[test]
     fn test_select_all() {
@@ -178,5 +181,57 @@ mod tests {
         );
 
         assert_eq!(iter.next(), None,);
+    }
+
+    #[test]
+    fn test_selection_spans() {
+        let text = ropey::Rope::from_str("test test\ntest line 2");
+        let selection = (3, 14);
+
+        let line = text.line(0);
+        let line_idx = text.line_to_char(0);
+        let max_len = line.len_chars();
+        let spans = selection_spans(line_idx, max_len, line, selection);
+
+        assert_eq!(spans.len(), 2);
+
+        assert_eq!(
+            spans[0],
+            SelectionSpan {
+                kind: SpanKind::Nothing,
+                slice: RopeSlice::from("tes"),
+            }
+        );
+
+        assert_eq!(
+            spans[1],
+            SelectionSpan {
+                kind: SpanKind::Selection,
+                slice: RopeSlice::from("t test\n"),
+            }
+        );
+
+        let line = text.line(1);
+        let line_idx = text.line_to_char(1);
+        let max_len = line.len_chars();
+        let spans = selection_spans(line_idx, max_len, line, selection);
+
+        assert_eq!(spans.len(), 2);
+
+        assert_eq!(
+            spans[0],
+            SelectionSpan {
+                kind: SpanKind::Selection,
+                slice: RopeSlice::from("test"),
+            }
+        );
+
+        assert_eq!(
+            spans[1],
+            SelectionSpan {
+                kind: SpanKind::Nothing,
+                slice: RopeSlice::from(" line 2"),
+            }
+        );
     }
 }
