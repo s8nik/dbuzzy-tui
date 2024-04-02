@@ -108,8 +108,7 @@ pub fn selection_spans(
     selection: SelectedRange,
 ) -> Vec<SelectionSpan> {
     let (start, end) = selection;
-
-    let overlaps = start <= line_idx + max_len && line_idx <= end;
+    let overlaps = start < line_idx + max_len && line_idx <= end;
 
     if overlaps && line == "\n" {
         return vec![SelectionSpan {
