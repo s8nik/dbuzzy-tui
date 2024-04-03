@@ -77,7 +77,7 @@ impl Keymaps {
             ("v", CmdType::VisualMode),
             ("w", CmdType::NextWordStart),
             ("e", CmdType::NextWordEnd),
-            ("b", CmdType::PrevWord),
+            ("b", CmdType::PrevWordStart),
         ];
 
         mappings.into()

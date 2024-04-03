@@ -14,7 +14,7 @@ enum Shift {
     LineEnd,
     NextWordStart,
     NextWordEnd,
-    PrevWord,
+    PrevWordStart,
 }
 
 pub(super) fn move_left(ws: &mut Workspace) {
@@ -57,8 +57,8 @@ pub(super) fn next_word_end(ws: &mut Workspace) {
     shift_cursor(ws, Shift::NextWordEnd);
 }
 
-pub(super) fn prev_word(ws: &mut Workspace) {
-    shift_cursor(ws, Shift::PrevWord);
+pub(super) fn prev_word_start(ws: &mut Workspace) {
+    shift_cursor(ws, Shift::PrevWordStart);
 }
 
 fn shift_cursor(ws: &mut Workspace, shift: Shift) {
@@ -70,17 +70,29 @@ fn shift_cursor(ws: &mut Workspace, shift: Shift) {
         Shift::Down(n) => shift_down(n, buf),
         Shift::Left => shift_left(buf),
         Shift::Right => shift_right(buf),
+        Shift::NextWordStart => shift_next_word_start(buf),
+        Shift::NextWordEnd => shift_next_word_end(buf),
+        Shift::PrevWordStart => shift_prev_word_start(buf),
         Shift::Top => (0, 0),
         Shift::Bottom => (buf.len_lines() - 1, 0),
         Shift::LineStart => (idx, 0),
         Shift::LineEnd => (idx, buf.len_bytes(idx).saturating_sub(1)),
-        Shift::NextWordStart => todo!(),
-        Shift::NextWordEnd => todo!(),
-        Shift::PrevWord => todo!(),
     };
 
     buf.set_pos(pos);
     buf.update_selection(buf.byte_pos());
+}
+
+fn shift_next_word_start(buf: &mut Buffer) -> Pos {
+    todo!()
+}
+
+fn shift_next_word_end(buf: &mut Buffer) -> Pos {
+    todo!()
+}
+
+fn shift_prev_word_start(buf: &mut Buffer) -> Pos {
+    todo!()
 }
 
 pub(super) fn shift_up(n: usize, buf: &mut Buffer) -> Pos {
