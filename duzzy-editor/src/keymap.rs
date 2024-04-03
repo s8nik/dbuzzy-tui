@@ -75,6 +75,9 @@ impl Keymaps {
             ("u", CmdType::Undo),
             ("U", CmdType::Redo),
             ("v", CmdType::VisualMode),
+            ("w", CmdType::NextWordStart),
+            ("e", CmdType::NextWordEnd),
+            ("b", CmdType::PrevWord),
         ];
 
         mappings.into()

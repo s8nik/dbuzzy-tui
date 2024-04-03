@@ -12,6 +12,9 @@ enum Shift {
     Bottom,
     LineStart,
     LineEnd,
+    NextWordStart,
+    NextWordEnd,
+    PrevWord,
 }
 
 pub(super) fn move_left(ws: &mut Workspace) {
@@ -46,6 +49,18 @@ pub(super) fn go_to_line_start(ws: &mut Workspace) {
     shift_cursor(ws, Shift::LineStart);
 }
 
+pub(super) fn next_word_start(ws: &mut Workspace) {
+    shift_cursor(ws, Shift::NextWordStart);
+}
+
+pub(super) fn next_word_end(ws: &mut Workspace) {
+    shift_cursor(ws, Shift::NextWordEnd);
+}
+
+pub(super) fn prev_word(ws: &mut Workspace) {
+    shift_cursor(ws, Shift::PrevWord);
+}
+
 fn shift_cursor(ws: &mut Workspace, shift: Shift) {
     let buf = ws.curr_mut().buf_mut();
     let idx = buf.index();
@@ -59,6 +74,9 @@ fn shift_cursor(ws: &mut Workspace, shift: Shift) {
         Shift::Bottom => (buf.len_lines() - 1, 0),
         Shift::LineStart => (idx, 0),
         Shift::LineEnd => (idx, buf.len_bytes(idx).saturating_sub(1)),
+        Shift::NextWordStart => todo!(),
+        Shift::NextWordEnd => todo!(),
+        Shift::PrevWord => todo!(),
     };
 
     buf.set_pos(pos);
