@@ -83,12 +83,54 @@ fn shift_cursor(ws: &mut Workspace, shift: Shift) {
     buf.update_selection(buf.byte_pos());
 }
 
+#[derive(Clone, Copy, PartialEq)]
+enum CharKind {
+    Space,
+    Other,
+}
+
+impl CharKind {
+    pub fn new(ch: char) -> Self {
+        if ch.is_whitespace() {
+            Self::Space
+        } else {
+            Self::Other
+        }
+    }
+}
+
 fn shift_next_word_start(buf: &mut Buffer) -> Pos {
-    todo!()
+    let (index, offset) = buf.pos();
+    let mut iter = buf.text_mut().line(index).chars().enumerate().skip(offset);
+    let mut prev = CharKind::new(iter.next().unwrap().1);
+    for (offset, ch) in iter {
+        let cur = CharKind::new(ch);
+
+        if cur != CharKind::Space && prev != cur {
+            return (index, offset).into();
+        }
+
+        prev = cur;
+    }
+
+    (index, offset).into()
 }
 
 fn shift_next_word_end(buf: &mut Buffer) -> Pos {
-    todo!()
+    let (index, offset) = buf.pos();
+    let mut iter = buf.text_mut().line(index).chars().enumerate().skip(offset);
+    let mut prev = CharKind::new(iter.next().unwrap().1);
+    for (offset, ch) in iter {
+        let cur = CharKind::new(ch);
+
+        if prev != CharKind::Space && prev != cur {
+            return (index, offset).into();
+        }
+
+        prev = cur;
+    }
+
+    (index, offset).into()
 }
 
 fn shift_prev_word_start(buf: &mut Buffer) -> Pos {
