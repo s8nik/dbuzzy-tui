@@ -11,7 +11,7 @@ pub struct Buffer {
     offset: usize,
     vscroll: usize,
     mode: Mode,
-    selection: Selection,
+    selection: Option<Selection>,
 }
 
 impl Buffer {
@@ -85,18 +85,22 @@ impl Buffer {
         }
     }
 
-    pub fn selection(&self) -> Option<Selection> {
-        (self.mode == Mode::Visual).then_some(self.selection)
+    pub fn selection(&self) -> Option<&Selection> {
+        self.selection.as_ref()
     }
 
     pub fn update_selection(&mut self, pos: usize) {
-        if self.mode == Mode::Visual {
-            self.selection.update(pos);
+        if let Some(selection) = self.selection.as_mut() {
+            selection.update(pos);
         }
     }
 
     pub fn new_selection(&mut self, pos: usize) {
-        self.selection = Selection::new(pos);
+        self.selection = Some(Selection::new(pos));
+    }
+
+    pub fn reset_selection(&mut self) {
+        self.selection = None
     }
 
     pub fn line_byte(&self, index: usize) -> usize {
@@ -115,12 +119,20 @@ impl Buffer {
         self.text.len_chars()
     }
 
+    pub fn char(&self, pos: usize) -> char {
+        self.text.char(pos)
+    }
+
+    pub fn is_normal(&self) -> bool {
+        self.mode == Mode::Normal
+    }
+
     pub fn is_insert(&self) -> bool {
         self.mode == Mode::Insert
     }
 
-    pub fn char(&self, pos: usize) -> char {
-        self.text.char(pos)
+    pub fn is_visual(&self) -> bool {
+        self.mode == Mode::Visual
     }
 }
 

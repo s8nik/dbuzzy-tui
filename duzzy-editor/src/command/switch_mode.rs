@@ -17,7 +17,11 @@ pub(super) fn normal_mode(ws: &mut Workspace) {
     let doc = ws.curr_mut();
 
     match doc.buf().mode() {
-        Mode::Visual => doc.buf_mut().set_mode(Mode::Normal),
+        Mode::Visual => {
+            let buf = doc.buf_mut();
+            buf.reset_selection();
+            buf.set_mode(Mode::Normal);
+        }
         Mode::Insert => doc.with_transaction(|_, buf| {
             buf.set_mode(Mode::Normal);
             TransactionResult::Commit
