@@ -75,6 +75,9 @@ impl Keymaps {
             ("u", CmdType::Undo),
             ("U", CmdType::Redo),
             ("v", CmdType::VisualMode),
+            ("w", CmdType::MoveNextWordStart),
+            ("e", CmdType::MoveNextWordEnd),
+            ("b", CmdType::MovePrevWordStart),
         ];
 
         mappings.into()
@@ -91,6 +94,9 @@ impl Keymaps {
             ("ge", CmdType::GoToBottomLine),
             ("gl", CmdType::GoToLineEnd),
             ("gh", CmdType::GoToLineStart),
+            ("w", CmdType::MoveNextWordStart),
+            ("e", CmdType::MoveNextWordEnd),
+            ("b", CmdType::MovePrevWordStart),
         ];
 
         mappings.into()
