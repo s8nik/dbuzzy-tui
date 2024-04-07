@@ -94,6 +94,9 @@ impl Keymaps {
             ("ge", CmdType::GoToBottomLine),
             ("gl", CmdType::GoToLineEnd),
             ("gh", CmdType::GoToLineStart),
+            ("w", CmdType::MoveNextWordStart),
+            ("e", CmdType::MoveNextWordEnd),
+            ("b", CmdType::MovePrevWordStart),
         ];
 
         mappings.into()
