@@ -75,10 +75,6 @@ fn shift_cursor_impl(ws: &mut Workspace, shift: Shift) {
     let buf = ws.curr_mut().buf_mut();
     let idx = buf.index();
 
-    if !buf.is_visual() {
-        buf.reset_selection();
-    }
-
     let pos = match shift {
         Shift::Up(n) => shift_up(n, buf),
         Shift::Down(n) => shift_down(n, buf),
@@ -138,11 +134,6 @@ pub(super) fn shift_right(buf: &mut Buffer) -> Pos {
 
 fn shift_by_word(buf: &mut Buffer, kind: ShiftWord) -> Pos {
     let (idx, ofs) = buf.pos();
-
-    if buf.is_normal() {
-        buf.new_selection(buf.byte_pos());
-    }
-
     let text = buf.text();
 
     match kind {
@@ -156,7 +147,7 @@ fn shift_word_next(kind: ShiftWord, text: &Rope, index: usize, offset: usize) ->
     let len_lines = line.len_lines();
     let slice = line.slice(offset..);
 
-    if let Some(ofs) = shift_word_next_impl(slice, kind) {
+    if let Some(ofs) = shift_word_next_impl(slice, kind, offset) {
         return (index, ofs);
     }
 
@@ -167,7 +158,7 @@ fn shift_word_next(kind: ShiftWord, text: &Rope, index: usize, offset: usize) ->
     (index, line.chars().count())
 }
 
-fn shift_word_next_impl(slice: RopeSlice<'_>, kind: ShiftWord) -> Option<usize> {
+fn shift_word_next_impl(slice: RopeSlice<'_>, kind: ShiftWord, offset: usize) -> Option<usize> {
     let mut it = slice.chars().enumerate();
     let mut prev: Char = it.next()?.into();
 
@@ -180,8 +171,8 @@ fn shift_word_next_impl(slice: RopeSlice<'_>, kind: ShiftWord) -> Option<usize> 
             _ => unreachable!(),
         };
 
-        if ch.kind != CharKind::Space && cur != prev {
-            return Some(ch.pos);
+        if ch.kind != CharKind::Space && cur != prev && ch.pos != 0 {
+            return Some(offset + ch.pos);
         }
 
         prev = cur;
@@ -322,7 +313,10 @@ mod tests {
         assert_eq!(shift_by_word(&mut buf, ShiftWord::NextStart), (0, 5));
         assert_eq!(shift_by_word(&mut buf, ShiftWord::NextEnd), (0, 3));
 
+        buf.set_pos((0, 3));
+        assert_eq!(shift_by_word(&mut buf, ShiftWord::NextEnd), (0, 8));
+
         buf.set_pos((0, 9));
-        assert_eq!(shift_by_word(&mut buf, ShiftWord::PrevStart), (0, 5))
+        assert_eq!(shift_by_word(&mut buf, ShiftWord::PrevStart), (0, 5));
     }
 }
