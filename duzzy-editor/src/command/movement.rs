@@ -88,13 +88,11 @@ fn shift_cursor_impl(ws: &mut Workspace, shift: Shift) {
         Shift::Bottom => (buf.len_lines() - 1, 0),
         Shift::LineStart => (idx, 0),
         Shift::LineEnd => (idx, buf.len_bytes(idx).saturating_sub(1)),
-        Shift::ByWord(kind) => shift_by_word_impl(buf, kind),
+        Shift::ByWord(kind) => shift_by_word(buf, kind),
     };
 
     buf.set_pos(pos);
-    if buf.selection().is_some() {
-        buf.update_selection(buf.byte_pos());
-    }
+    buf.update_selection(buf.byte_pos());
 }
 
 pub(super) fn shift_up(n: usize, buf: &mut Buffer) -> Pos {
@@ -138,7 +136,7 @@ pub(super) fn shift_right(buf: &mut Buffer) -> Pos {
     }
 }
 
-fn shift_by_word_impl(buf: &mut Buffer, kind: ShiftWord) -> Pos {
+fn shift_by_word(buf: &mut Buffer, kind: ShiftWord) -> Pos {
     let (idx, ofs) = buf.pos();
 
     if buf.is_normal() {
@@ -176,14 +174,14 @@ fn shift_word_next_impl(slice: RopeSlice<'_>, kind: ShiftWord) -> Option<usize> 
     for e in it {
         let cur: Char = e.into();
 
-        let pos = match kind {
+        let ch = match kind {
             ShiftWord::NextStart => cur,
             ShiftWord::NextEnd => prev,
             _ => unreachable!(),
         };
 
-        if pos.kind != CharKind::Space && cur != prev {
-            return Some(cur.pos);
+        if ch.kind != CharKind::Space && cur != prev {
+            return Some(ch.pos);
         }
 
         prev = cur;
@@ -277,10 +275,9 @@ mod tests {
         let mut ws = Workspace::default();
         ws.add_doc(Document::default());
 
-        {
-            let buf = ws.curr_mut().buf_mut();
-            buf.text_mut().insert(0, "test\n\ntest");
-        }
+        let buf = ws.curr_mut().buf_mut();
+        let text = Rope::from("test\n\ntest");
+        buf.set_text(text);
 
         shift_cursor_impl(&mut ws, Shift::Up(10));
         assert_eq!((0, 0), ws.curr().buf().pos());
@@ -317,5 +314,15 @@ mod tests {
     }
 
     #[test]
-    fn test_move_by_word() {}
+    fn test_move_by_word() {
+        let mut buf = Buffer::default();
+        let text = Rope::from("test test test");
+        buf.set_text(text);
+
+        assert_eq!(shift_by_word(&mut buf, ShiftWord::NextStart), (0, 5));
+        assert_eq!(shift_by_word(&mut buf, ShiftWord::NextEnd), (0, 3));
+
+        buf.set_pos((0, 9));
+        assert_eq!(shift_by_word(&mut buf, ShiftWord::PrevStart), (0, 5))
+    }
 }
