@@ -144,7 +144,7 @@ fn shift_by_word(buf: &mut Buffer, kind: ShiftWord) -> Pos {
 
 fn shift_word_next(kind: ShiftWord, text: &Rope, index: usize, offset: usize) -> Pos {
     let line = text.line(index);
-    let len_lines = line.len_lines();
+    let len_lines = text.len_lines();
     let slice = line.slice(offset..);
 
     if let Some(ofs) = shift_word_next_impl(slice, kind, offset) {
@@ -190,7 +190,7 @@ fn shift_word_prev(text: &Rope, index: usize, offset: usize) -> Pos {
     }
 
     if index > 0 {
-        return (index - 1, text.line(index - 1).chars().count());
+        return (index - 1, text.line(index - 1).chars().count() - 1);
     }
 
     (index, 0)
@@ -242,6 +242,7 @@ impl From<(usize, char)> for Char {
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum CharKind {
     Space,
+    Punct,
     Other,
 }
 
@@ -249,6 +250,8 @@ impl From<char> for CharKind {
     fn from(ch: char) -> Self {
         if ch.is_whitespace() {
             Self::Space
+        } else if ch.is_ascii_punctuation() {
+            Self::Punct
         } else {
             Self::Other
         }
@@ -318,5 +321,20 @@ mod tests {
 
         buf.set_pos((0, 9));
         assert_eq!(shift_by_word(&mut buf, ShiftWord::PrevStart), (0, 5));
+
+        let text = Rope::from(".te?/");
+        buf.set_text(text);
+        buf.set_pos((0, 0));
+
+        assert_eq!(shift_by_word(&mut buf, ShiftWord::NextStart), (0, 1));
+        assert_eq!(shift_by_word(&mut buf, ShiftWord::NextEnd), (0, 2));
+
+        buf.set_pos((0, 4));
+        assert_eq!(shift_by_word(&mut buf, ShiftWord::PrevStart), (0, 3));
+
+        let text = Rope::from("test\n\n\ntest");
+        buf.set_text(text);
+        buf.set_pos((2, 0));
+        assert_eq!(shift_by_word(&mut buf, ShiftWord::NextStart), (3, 0));
     }
 }
