@@ -155,7 +155,7 @@ fn shift_word_next(kind: ShiftWord, text: &Rope, index: usize, offset: usize) ->
         return (index + 1, 0);
     }
 
-    (index, line.chars().count())
+    (index, line.chars().count() - 1)
 }
 
 fn shift_word_next_impl(slice: RopeSlice<'_>, kind: ShiftWord, offset: usize) -> Option<usize> {
