@@ -1,3 +1,7 @@
+use std::borrow::Cow;
+
+use ropey::{Rope, RopeSlice};
+
 use crate::{
     buffer::{Buffer, Pos},
     editor::Workspace,
@@ -16,7 +20,7 @@ enum Shift {
     ByWord(ShiftWord),
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 enum ShiftWord {
     NextStart,
     PrevStart,
@@ -141,54 +145,88 @@ fn shift_by_word(buf: &mut Buffer, kind: ShiftWord) -> Pos {
         buf.new_selection(buf.byte_pos());
     }
 
-    let len_lines = buf.len_lines();
-    let line = buf.text().line(idx);
+    let text = buf.text();
 
-    // let slice = if kind == ShiftWord::PrevStart {
-    //     line.slice(..ofs)
-    // } else {
-    //     line.slice(ofs..)
-    // };
-
-    // let slice = slice.to_string();
-    let slice = line.to_string();
-
-    let pos = match kind {
-        ShiftWord::NextStart => shift_by_word_impl(slice.chars().enumerate(), |_, cur| {
-            (cur.kind != CharKind::Space).then_some(cur.pos)
-        }),
-        ShiftWord::NextEnd => shift_by_word_impl(slice.chars().enumerate(), |prev, cur| {
-            (prev.kind != CharKind::Space).then_some(cur.pos)
-        }),
-        ShiftWord::PrevStart => shift_by_word_impl(slice.chars().rev().enumerate(), |cur, next| {
-            (cur.kind != CharKind::Space).then_some(ofs - next.pos)
-        }),
-    };
-
-    let ofs = pos.unwrap_or(ofs);
-
-    (idx, ofs).into()
+    match kind {
+        ShiftWord::PrevStart => shift_word_prev(text, idx, ofs),
+        other => shift_word_next(other, text, idx, ofs),
+    }
 }
 
-fn shift_by_word_impl<F: Fn(Char, Char) -> Option<usize>>(
-    mut it: impl Iterator<Item = (usize, char)>,
-    is_not_space: F,
-) -> Option<usize> {
-    let mut prev = it.next()?.into();
+fn shift_word_next(kind: ShiftWord, text: &Rope, index: usize, offset: usize) -> Pos {
+    let line = text.line(index);
+    let len_lines = line.len_lines();
+    let slice = line.slice(offset..);
 
-    for c in it {
-        let cur = c.into();
+    if let Some(ofs) = shift_word_next_impl(slice, kind) {
+        return (index, ofs);
+    }
 
-        if prev != cur {
-            if let Some(pos) = is_not_space(prev, cur) {
-                return Some(pos);
-            }
+    if index + 1 < len_lines {
+        return (index + 1, 0);
+    }
+
+    (index, line.chars().count())
+}
+
+fn shift_word_next_impl(slice: RopeSlice<'_>, kind: ShiftWord) -> Option<usize> {
+    let mut it = slice.chars().enumerate();
+    let mut prev: Char = it.next()?.into();
+
+    for e in it {
+        let cur: Char = e.into();
+
+        let pos = match kind {
+            ShiftWord::NextStart => cur,
+            ShiftWord::NextEnd => prev,
+            _ => unreachable!(),
+        };
+
+        if pos.kind != CharKind::Space && cur != prev {
+            return Some(cur.pos);
         }
 
         prev = cur;
     }
 
     None
+}
+
+fn shift_word_prev(text: &Rope, index: usize, offset: usize) -> Pos {
+    let line = text.line(index);
+    let slice = line.slice(..offset);
+
+    if let Some(ofs) = shift_word_prev_impl(slice, offset) {
+        return (index, ofs);
+    }
+
+    if index > 0 {
+        return (index - 1, text.line(index - 1).chars().count());
+    }
+
+    (index, 0)
+}
+
+fn shift_word_prev_impl(slice: RopeSlice<'_>, offset: usize) -> Option<usize> {
+    let slice = match slice.as_str() {
+        Some(s) => Cow::from(s),
+        None => Cow::from(slice.to_string()),
+    };
+
+    let mut it = slice.chars().rev().enumerate();
+    let mut cur: Char = it.next()?.into();
+
+    for e in it {
+        let next: Char = e.into();
+
+        if cur.kind != CharKind::Space && next != cur {
+            return Some(offset - next.pos);
+        }
+
+        cur = next;
+    }
+
+    (cur.kind != CharKind::Space).then_some(0)
 }
 
 #[derive(Clone, Copy)]

@@ -85,7 +85,7 @@ impl Buffer {
         }
     }
 
-    pub fn selection(&self) -> Option<&Selection> {
+    pub const fn selection(&self) -> Option<&Selection> {
         self.selection.as_ref()
     }
 
@@ -100,7 +100,7 @@ impl Buffer {
     }
 
     pub fn reset_selection(&mut self) {
-        self.selection = None
+        self.selection = None;
     }
 
     pub fn line_byte(&self, index: usize) -> usize {
