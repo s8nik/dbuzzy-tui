@@ -88,7 +88,7 @@ fn shift_cursor_impl(ws: &mut Workspace, shift: Shift) {
         Shift::Bottom => (buf.len_lines() - 1, 0),
         Shift::LineStart => (idx, 0),
         Shift::LineEnd => (idx, buf.len_bytes(idx).saturating_sub(1)),
-        Shift::ByWord(kind) => shift_by_word(buf, kind),
+        Shift::ByWord(kind) => shift_by_word_impl(buf, kind),
     };
 
     buf.set_pos(pos);
@@ -138,7 +138,7 @@ pub(super) fn shift_right(buf: &mut Buffer) -> Pos {
     }
 }
 
-fn shift_by_word(buf: &mut Buffer, kind: ShiftWord) -> Pos {
+fn shift_by_word_impl(buf: &mut Buffer, kind: ShiftWord) -> Pos {
     let (idx, ofs) = buf.pos();
 
     if buf.is_normal() {
@@ -315,4 +315,7 @@ mod tests {
         shift_cursor_impl(&mut ws, Shift::Right);
         assert_eq!((2, 4), ws.curr().buf().pos());
     }
+
+    #[test]
+    fn test_move_by_word() {}
 }
