@@ -76,7 +76,7 @@ mod tests {
 
         let mut tx = Transaction::new();
         tx.insert_str(4, "test");
-        tx.delete_str(8, "testtest");
+        tx.delete_str(0, "testtest");
 
         tx.apply(&mut text);
         history.commit(tx);

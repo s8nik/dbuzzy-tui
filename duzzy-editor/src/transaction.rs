@@ -33,13 +33,7 @@ impl Action {
     fn inverse(&self) -> Self {
         match self {
             Self::Insert(change) => Self::Delete(change.clone()),
-            Self::Delete(change) => {
-                let content = change.content.chars().rev().collect();
-                Self::Insert(Change {
-                    content,
-                    pos: change.pos,
-                })
-            }
+            Self::Delete(change) => Self::Insert(change.clone()),
             Self::Move(pos) => Self::Move(*pos),
         }
     }
@@ -121,9 +115,7 @@ impl Transaction {
     }
 
     pub fn delete_str(&mut self, pos: usize, slice: &str) {
-        let pos = pos.saturating_sub(slice.chars().count());
-        let slice: SmartString = slice.chars().rev().collect();
-        self.delete_impl(pos, |content| content.push_str(&slice));
+        self.delete_impl(pos, |content| content.push_str(slice));
     }
 
     fn delete_impl<F>(&mut self, pos: usize, func: F)

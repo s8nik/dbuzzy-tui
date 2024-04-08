@@ -1,7 +1,7 @@
 use crate::editor::Workspace;
 
 pub(super) fn undo(ws: &mut Workspace) {
-    let doc = ws.curr_mut();
+    let doc = ws.cur_mut();
 
     if let Some(pos) = doc.undo() {
         let buf = doc.buf_mut();
@@ -10,7 +10,7 @@ pub(super) fn undo(ws: &mut Workspace) {
 }
 
 pub(super) fn redo(ws: &mut Workspace) {
-    let doc = ws.curr_mut();
+    let doc = ws.cur_mut();
 
     if let Some(pos) = doc.redo() {
         let buf = doc.buf_mut();

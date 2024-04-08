@@ -39,7 +39,7 @@ pub fn on_key(ws: &mut Workspace, input: Input) -> EventOutcome {
         Input {
             event: Event::Backspace,
             ..
-        } => super::adjustment::delete_char(ws),
+        } => super::adjustment::delete_backspace(ws),
         Input {
             event: Event::Enter,
             ..

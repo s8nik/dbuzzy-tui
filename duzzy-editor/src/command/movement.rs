@@ -72,7 +72,7 @@ pub(super) fn move_prev_word_start(ws: &mut Workspace) {
 }
 
 fn shift_cursor_impl(ws: &mut Workspace, shift: Shift) {
-    let buf = ws.curr_mut().buf_mut();
+    let buf = ws.cur_mut().buf_mut();
     let idx = buf.index();
 
     let pos = match shift {
@@ -269,42 +269,42 @@ mod tests {
         let mut ws = Workspace::default();
         ws.add_doc(Document::default());
 
-        let buf = ws.curr_mut().buf_mut();
+        let buf = ws.cur_mut().buf_mut();
         let text = Rope::from("test\n\ntest");
         buf.set_text(text);
 
         shift_cursor_impl(&mut ws, Shift::Up(10));
-        assert_eq!((0, 0), ws.curr().buf().pos());
+        assert_eq!((0, 0), ws.cur().buf().pos());
 
         shift_cursor_impl(&mut ws, Shift::Bottom);
-        assert_eq!((2, 0), ws.curr().buf().pos());
+        assert_eq!((2, 0), ws.cur().buf().pos());
 
         shift_cursor_impl(&mut ws, Shift::Top);
-        assert_eq!((0, 0), ws.curr().buf().pos());
+        assert_eq!((0, 0), ws.cur().buf().pos());
 
         shift_cursor_impl(&mut ws, Shift::Right);
-        assert_eq!((0, 1), ws.curr().buf().pos());
+        assert_eq!((0, 1), ws.cur().buf().pos());
 
         shift_cursor_impl(&mut ws, Shift::Down(1));
-        assert_eq!((1, 0), ws.curr().buf().pos());
+        assert_eq!((1, 0), ws.cur().buf().pos());
 
         shift_cursor_impl(&mut ws, Shift::LineEnd);
-        assert_eq!((1, 0), ws.curr().buf().pos());
+        assert_eq!((1, 0), ws.cur().buf().pos());
 
         shift_cursor_impl(&mut ws, Shift::Left);
-        assert_eq!((0, 4), ws.curr().buf().pos());
+        assert_eq!((0, 4), ws.cur().buf().pos());
 
         shift_cursor_impl(&mut ws, Shift::Right);
-        assert_eq!((1, 0), ws.curr().buf().pos());
+        assert_eq!((1, 0), ws.cur().buf().pos());
 
         shift_cursor_impl(&mut ws, Shift::Right);
-        assert_eq!((2, 0), ws.curr().buf().pos());
+        assert_eq!((2, 0), ws.cur().buf().pos());
 
         shift_cursor_impl(&mut ws, Shift::LineEnd);
-        assert_eq!((2, 3), ws.curr().buf().pos());
+        assert_eq!((2, 3), ws.cur().buf().pos());
 
         shift_cursor_impl(&mut ws, Shift::Right);
-        assert_eq!((2, 4), ws.curr().buf().pos());
+        assert_eq!((2, 4), ws.cur().buf().pos());
     }
 
     #[test]

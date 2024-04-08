@@ -94,7 +94,7 @@ impl<'a> Renderer<'a> {
 
     #[inline]
     pub fn text(&self) -> Option<Text> {
-        let buf = self.0.workspace.curr().buf();
+        let buf = self.0.workspace.cur().buf();
 
         let text = buf.text();
         let viewport = self.0.viewport();
