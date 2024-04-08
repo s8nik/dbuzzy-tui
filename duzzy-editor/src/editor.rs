@@ -44,7 +44,7 @@ impl DuzzyEditor {
     }
 
     pub fn cursor(&self) -> Cursor {
-        let buf = self.workspace.curr().buf();
+        let buf = self.workspace.cur().buf();
         let mode = buf.mode();
 
         let (mut y, mut x) = buf.pos();
@@ -72,7 +72,7 @@ impl DuzzyEditor {
         };
 
         let input = e.into();
-        let buf = self.workspace.curr().buf();
+        let buf = self.workspace.cur().buf();
         let command = self.command.find(self.keymaps, buf, input);
 
         let outcome = match command {
@@ -87,7 +87,7 @@ impl DuzzyEditor {
 
         if matches!(outcome, EventOutcome::Render) {
             self.workspace
-                .curr_mut()
+                .cur_mut()
                 .buf_mut()
                 .update_vscroll(self.viewport.height);
         }
@@ -121,11 +121,11 @@ impl Workspace {
         self.current = id;
     }
 
-    pub fn curr(&self) -> &Document {
+    pub fn cur(&self) -> &Document {
         self.documents.get(&self.current).expect("current doc")
     }
 
-    pub fn curr_mut(&mut self) -> &mut Document {
+    pub fn cur_mut(&mut self) -> &mut Document {
         self.documents
             .get_mut(&self.current)
             .expect("current mut doc")

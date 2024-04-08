@@ -6,7 +6,7 @@ use crate::{
 };
 
 pub(super) fn insert_char(ws: &mut Workspace, ch: char) {
-    let doc = ws.curr_mut();
+    let doc = ws.cur_mut();
 
     doc.with_transaction(|insert_tx, buf| {
         let pos = buf.byte_pos();
@@ -24,7 +24,7 @@ pub(super) fn insert_char(ws: &mut Workspace, ch: char) {
 }
 
 pub(super) fn new_line(ws: &mut Workspace) {
-    let doc = ws.curr_mut();
+    let doc = ws.cur_mut();
 
     doc.with_transaction(|insert_tx, buf| {
         let pos = buf.byte_pos();
@@ -45,7 +45,7 @@ pub(super) fn new_line(ws: &mut Workspace) {
 }
 
 pub(super) fn delete(ws: &mut Workspace) {
-    let doc = ws.curr_mut();
+    let doc = ws.cur_mut();
 
     doc.with_transaction(|tx, buf| {
         let pos = buf.byte_pos();
@@ -83,7 +83,7 @@ pub(super) fn delete(ws: &mut Workspace) {
 }
 
 pub(super) fn delete_backspace(ws: &mut Workspace) {
-    let doc = ws.curr_mut();
+    let doc = ws.cur_mut();
 
     doc.with_transaction(|delete_tx, buf| {
         let pos = buf.byte_pos();
@@ -123,34 +123,34 @@ mod tests {
         insert_char(&mut ws, 's');
         insert_char(&mut ws, 't');
 
-        let buf = ws.curr().buf();
+        let buf = ws.cur().buf();
         assert_eq!((0, 4), buf.pos());
         assert_eq!(&buf.text().to_string(), "test");
 
         delete_backspace(&mut ws);
         delete_backspace(&mut ws);
 
-        let buf = ws.curr().buf();
+        let buf = ws.cur().buf();
         assert_eq!((0, 2), buf.pos());
         assert_eq!(&buf.text().to_string(), "te");
 
-        ws.curr_mut().buf_mut().set_pos((0, 0));
+        ws.cur_mut().buf_mut().set_pos((0, 0));
         new_line(&mut ws);
         new_line(&mut ws);
         new_line(&mut ws);
         new_line(&mut ws);
 
-        let buf = ws.curr().buf();
+        let buf = ws.cur().buf();
         assert_eq!((4, 0), buf.pos());
         assert_eq!(&buf.text().to_string(), "\n\n\n\nte");
 
-        ws.curr_mut().commit();
+        ws.cur_mut().commit();
 
         delete(&mut ws);
         delete(&mut ws);
         delete(&mut ws);
 
-        let buf = ws.curr().buf();
+        let buf = ws.cur().buf();
         assert_eq!((4, 0), buf.pos());
         assert_eq!(&buf.text().to_string(), "\n\n\n\n");
     }
@@ -161,7 +161,7 @@ mod tests {
         ws.add_doc(Document::default());
 
         let text = ropey::Rope::from_str("test \ntest");
-        let doc = ws.curr_mut();
+        let doc = ws.cur_mut();
         let buf = doc.buf_mut();
         buf.set_text(text);
         buf.new_selection(buf.len_chars());
@@ -169,6 +169,6 @@ mod tests {
 
         delete(&mut ws);
 
-        assert_eq!(&ws.curr().buf().text().to_string(), "test");
+        assert_eq!(&ws.cur().buf().text().to_string(), "test");
     }
 }

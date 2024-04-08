@@ -14,7 +14,7 @@ enum Switch {
 }
 
 pub(super) fn normal_mode(ws: &mut Workspace) {
-    let doc = ws.curr_mut();
+    let doc = ws.cur_mut();
 
     match doc.buf().mode() {
         Mode::Visual => visual_to_normal_impl(doc.buf_mut()),
@@ -36,7 +36,7 @@ pub(super) fn visual_to_normal_impl(buf: &mut Buffer) {
 }
 
 pub(super) fn visual_mode(ws: &mut Workspace) {
-    let buf = ws.curr_mut().buf_mut();
+    let buf = ws.cur_mut().buf_mut();
     let pos = buf.byte_pos();
 
     buf.new_selection(pos);
@@ -64,7 +64,7 @@ pub(super) fn insert_mode_line_prev(ws: &mut Workspace) {
 }
 
 fn switch_mode(ws: &mut Workspace, switch: Switch) {
-    let doc = ws.curr_mut();
+    let doc = ws.cur_mut();
 
     match switch {
         Switch::LineStart => doc.buf_mut().set_offset(0),
