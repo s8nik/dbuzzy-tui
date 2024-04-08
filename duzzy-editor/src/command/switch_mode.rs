@@ -17,17 +17,22 @@ pub(super) fn normal_mode(ws: &mut Workspace) {
     let doc = ws.curr_mut();
 
     match doc.buf().mode() {
-        Mode::Visual => {
-            let buf = doc.buf_mut();
-            buf.reset_selection();
-            buf.set_mode(Mode::Normal);
-        }
-        Mode::Insert => doc.with_transaction(|_, buf| {
-            buf.set_mode(Mode::Normal);
-            TransactionResult::Commit
-        }),
+        Mode::Visual => visual_to_normal_impl(doc.buf_mut()),
+        Mode::Insert => insert_to_normal_impl(doc),
         _ => (),
     }
+}
+
+fn insert_to_normal_impl(doc: &mut Document) {
+    doc.with_transaction(|_, buf| {
+        buf.set_mode(Mode::Normal);
+        TransactionResult::Commit
+    });
+}
+
+pub(super) fn visual_to_normal_impl(buf: &mut Buffer) {
+    buf.reset_selection();
+    buf.set_mode(Mode::Normal);
 }
 
 pub(super) fn visual_mode(ws: &mut Workspace) {
