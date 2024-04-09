@@ -78,6 +78,7 @@ impl Keymaps {
             ("w", CmdType::MoveNextWordStart),
             ("e", CmdType::MoveNextWordEnd),
             ("b", CmdType::MovePrevWordStart),
+            ("x", CmdType::SelectLine),
         ];
 
         mappings.into()
@@ -98,6 +99,7 @@ impl Keymaps {
             ("w", CmdType::MoveNextWordStart),
             ("e", CmdType::MoveNextWordEnd),
             ("b", CmdType::MovePrevWordStart),
+            ("x", CmdType::SelectLine),
         ];
 
         mappings.into()

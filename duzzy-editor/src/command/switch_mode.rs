@@ -79,7 +79,7 @@ fn switch_mode(ws: &mut Workspace, switch: Switch) {
 
 fn switch_line_end(buf: &mut Buffer) {
     let idx = buf.index();
-    buf.set_offset(buf.len_bytes(idx));
+    buf.set_offset(buf.line_len_bytes(idx));
 
     if idx < buf.len_lines() - 1 {
         let ofs = buf.offset() - 1;

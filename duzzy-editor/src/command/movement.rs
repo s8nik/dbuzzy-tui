@@ -75,6 +75,10 @@ fn shift_cursor_impl(ws: &mut Workspace, shift: Shift) {
     let buf = ws.cur_mut().buf_mut();
     let idx = buf.index();
 
+    if !buf.is_visual() {
+        buf.reset_selection();
+    }
+
     let pos = match shift {
         Shift::Up(n) => shift_up(n, buf),
         Shift::Down(n) => shift_down(n, buf),
@@ -83,7 +87,7 @@ fn shift_cursor_impl(ws: &mut Workspace, shift: Shift) {
         Shift::Top => (0, 0),
         Shift::Bottom => (buf.len_lines() - 1, 0),
         Shift::LineStart => (idx, 0),
-        Shift::LineEnd => (idx, buf.len_bytes(idx).saturating_sub(1)),
+        Shift::LineEnd => (idx, buf.line_len_bytes(idx).saturating_sub(1)),
         Shift::ByWord(kind) => shift_by_word(buf, kind),
     };
 
@@ -95,7 +99,7 @@ pub(super) fn shift_up(n: usize, buf: &mut Buffer) -> Pos {
     let (idx, ofs) = buf.pos();
 
     let idx = idx.saturating_sub(n);
-    let ofs = ofs.min(buf.len_bytes(idx).saturating_sub(1));
+    let ofs = ofs.min(buf.line_len_bytes(idx).saturating_sub(1));
 
     (idx, ofs)
 }
@@ -104,7 +108,7 @@ pub(super) fn shift_down(n: usize, buf: &mut Buffer) -> Pos {
     let (idx, ofs) = buf.pos();
 
     let idx = (idx + n).min(buf.len_lines() - 1);
-    let ofs = ofs.min(buf.len_bytes(idx).saturating_sub(1));
+    let ofs = ofs.min(buf.line_len_bytes(idx).saturating_sub(1));
 
     (idx, ofs)
 }
@@ -114,7 +118,7 @@ pub(super) fn shift_left(buf: &mut Buffer) -> Pos {
 
     match (ofs > 0, idx > 0) {
         (true, _) => (idx, ofs - 1),
-        (false, true) => (idx - 1, buf.len_bytes(idx - 1).saturating_sub(1)),
+        (false, true) => (idx - 1, buf.line_len_bytes(idx - 1).saturating_sub(1)),
         _ => (idx, ofs),
     }
 }
@@ -123,12 +127,12 @@ pub(super) fn shift_right(buf: &mut Buffer) -> Pos {
     let (idx, ofs) = buf.pos();
 
     match (
-        ofs < buf.len_bytes(idx).saturating_sub(1),
+        ofs < buf.line_len_bytes(idx).saturating_sub(1),
         idx < buf.len_lines().saturating_sub(1),
     ) {
         (true, _) => (idx, ofs + 1),
         (false, true) => ((idx + 1).min(buf.len_lines() - 1), 0),
-        (false, false) => (idx, (ofs + 1).min(buf.len_bytes(idx))),
+        (false, false) => (idx, (ofs + 1).min(buf.line_len_bytes(idx))),
     }
 }
 

@@ -1,4 +1,4 @@
-use ropey::Rope;
+use ropey::{Rope, RopeSlice};
 
 use crate::selection::Selection;
 
@@ -107,8 +107,12 @@ impl Buffer {
         self.text.line_to_byte(index)
     }
 
-    pub fn len_bytes(&self, index: usize) -> usize {
-        self.text.line(index).len_bytes()
+    pub fn line_len_bytes(&self, index: usize) -> usize {
+        self.line(index).len_bytes()
+    }
+
+    pub fn line_len_chars(&self, index: usize) -> usize {
+        self.line(index).len_chars()
     }
 
     pub fn len_lines(&self) -> usize {
@@ -117,6 +121,10 @@ impl Buffer {
 
     pub fn len_chars(&self) -> usize {
         self.text.len_chars()
+    }
+
+    pub fn line(&self, index: usize) -> RopeSlice<'_> {
+        self.text.line(index)
     }
 
     pub fn char(&self, pos: usize) -> char {
