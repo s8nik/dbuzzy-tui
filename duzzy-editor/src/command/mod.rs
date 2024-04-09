@@ -3,6 +3,7 @@ mod history;
 pub mod insert_mode;
 mod movement;
 mod switch_mode;
+mod visual;
 
 use std::{collections::HashMap, sync::Arc};
 
@@ -10,6 +11,7 @@ use adjustment::*;
 use history::{redo, undo};
 use movement::*;
 use switch_mode::*;
+use visual::*;
 
 use crate::{
     buffer::Buffer,
@@ -43,6 +45,7 @@ pub enum CmdType {
     Redo,
     NormalMode,
     VisualMode,
+    SelectLine,
 }
 
 pub struct Command {
@@ -88,6 +91,7 @@ impl CommandRegistry {
             Command::new(CmdType::Redo, redo),
             Command::new(CmdType::VisualMode, visual_mode),
             Command::new(CmdType::NormalMode, normal_mode),
+            Command::new(CmdType::SelectLine, select_line),
         ];
 
         let mut map = HashMap::new();
