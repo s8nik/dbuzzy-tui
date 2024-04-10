@@ -137,12 +137,56 @@ pub(super) fn shift_right(buf: &mut Buffer) -> Pos {
 }
 
 fn shift_by_word(buf: &mut Buffer, kind: ShiftWord) -> Pos {
-    let (idx, ofs) = buf.pos();
     let text = buf.text();
+    let (idx, ofs) = buf.pos();
 
-    match kind {
+    let pos = match kind {
         ShiftWord::PrevStart => shift_word_prev(text, idx, ofs),
         other => shift_word_next(other, text, idx, ofs),
+    };
+
+    shift_word_selection(buf, kind);
+
+    pos
+}
+
+fn shift_word_selection(buf: &mut Buffer, kind: ShiftWord) {
+    if buf.selection().is_some() {
+        return;
+    }
+
+    let (idx, ofs) = buf.pos();
+    let len_chars = buf.len_chars();
+    let line_byte = buf.line_byte(idx);
+
+    let ofs_prv = ofs.saturating_sub(1);
+    let ofs_nxt = (ofs + 1).min(buf.line_len_chars(idx));
+
+    let into_char_kind =
+        |bp: usize| (bp != len_chars).then(|| Into::<CharKind>::into(buf.char(bp)));
+
+    let byte_cur = line_byte + ofs;
+    let byte_nxt = match kind {
+        ShiftWord::PrevStart => line_byte + ofs_prv,
+        _ => line_byte + ofs_nxt,
+    };
+
+    let cur = into_char_kind(byte_cur);
+    let nxt = into_char_kind(byte_nxt);
+
+    let (Some(cur), Some(nxt)) = (cur, nxt) else {
+        buf.new_selection(byte_cur);
+        return;
+    };
+
+    match (
+        kind == ShiftWord::PrevStart,
+        cur != CharKind::Space && nxt == CharKind::Space,
+    ) {
+        (true, true) => buf.new_selection(byte_cur),
+        (false, true) => buf.new_selection(byte_nxt),
+        (false, false) => buf.new_selection(byte_cur),
+        (true, false) => buf.new_selection(line_byte + ofs_nxt),
     }
 }
 

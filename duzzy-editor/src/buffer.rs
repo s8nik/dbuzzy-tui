@@ -61,7 +61,7 @@ impl Buffer {
     }
 
     pub fn byte_pos(&self) -> usize {
-        self.offset + self.text.line_to_byte(self.index)
+        self.offset + self.line_byte(self.index)
     }
 
     pub fn curs_pos(&self, pos: usize) -> Pos {
