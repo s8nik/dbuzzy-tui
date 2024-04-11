@@ -51,10 +51,14 @@ pub(super) fn delete(ws: &mut Workspace) {
         let pos = buf.byte_pos();
 
         if let Some(selection) = buf.selection() {
-            let (start, end) = selection.range();
+            let (start, mut end) = selection.range();
             let len_chars = buf.len_chars();
 
-            let slice = buf.text().slice(start..(end + 1).min(len_chars));
+            if selection.head() > selection.anchor() {
+                end += 1;
+            }
+
+            let slice = buf.text().slice(start..end.min(len_chars));
             let slice = match slice.as_str() {
                 Some(s) => Cow::from(s),
                 None => Cow::from(slice.to_string()),

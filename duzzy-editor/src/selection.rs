@@ -16,6 +16,14 @@ impl Selection {
         }
     }
 
+    pub const fn anchor(&self) -> usize {
+        self.anchor
+    }
+
+    pub const fn head(&self) -> usize {
+        self.head
+    }
+
     pub fn start(&self) -> usize {
         self.head.min(self.anchor)
     }

@@ -214,7 +214,10 @@ fn shift_word_next_impl(slice: RopeSlice<'_>, kind: ShiftWord, offset: usize) ->
         let cur: Char = e.into();
 
         let ch = match kind {
-            ShiftWord::NextStart => cur,
+            ShiftWord::NextStart => {
+                let (pos, ch) = e;
+                (pos - 1, ch).into()
+            }
             ShiftWord::NextEnd => prev,
             _ => unreachable!(),
         };
@@ -361,7 +364,7 @@ mod tests {
         let text = Rope::from("test test test");
         buf.set_text(text);
 
-        assert_eq!(shift_by_word(&mut buf, ShiftWord::NextStart), (0, 5));
+        assert_eq!(shift_by_word(&mut buf, ShiftWord::NextStart), (0, 4));
         assert_eq!(shift_by_word(&mut buf, ShiftWord::NextEnd), (0, 3));
 
         buf.set_pos((0, 3));
@@ -374,7 +377,7 @@ mod tests {
         buf.set_text(text);
         buf.set_pos((0, 0));
 
-        assert_eq!(shift_by_word(&mut buf, ShiftWord::NextStart), (0, 1));
+        assert_eq!(shift_by_word(&mut buf, ShiftWord::NextStart), (0, 2));
         assert_eq!(shift_by_word(&mut buf, ShiftWord::NextEnd), (0, 2));
 
         buf.set_pos((0, 4));
