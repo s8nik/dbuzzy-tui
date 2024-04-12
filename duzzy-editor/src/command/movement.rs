@@ -155,51 +155,6 @@ fn shift_by_word(buf: &mut Buffer, kind: ShiftWord) -> Pos {
     curs_pos_after
 }
 
-// fn shift_word_selection(buf: &mut Buffer, kind: ShiftWord) {
-//     if buf.selection().is_some() {
-//         return;
-//     }
-
-//     let (idx, ofs) = buf.pos();
-
-//     if kind == ShiftWord::PrevStart && ofs == 0 {
-//         return;
-//     }
-
-//     let len_chars = buf.len_chars();
-//     let line_byte = buf.line_byte(idx);
-
-//     let ofs_prev = ofs.saturating_sub(1);
-//     let ofs_next = (ofs + 1).min(buf.line_len_chars(idx));
-
-//     let into_char_kind = |byte_pos: usize| {
-//         (byte_pos != len_chars).then(|| Into::<CharKind>::into(buf.char(byte_pos)))
-//     };
-
-//     let byte_cur = line_byte + ofs;
-//     let byte_next = match kind {
-//         ShiftWord::PrevStart => line_byte + ofs_prev,
-//         _ => line_byte + ofs_next,
-//     };
-
-//     let cur_char = into_char_kind(byte_cur);
-//     let next_char = into_char_kind(byte_next);
-
-//     let (Some(cur), Some(next)) = (cur_char, next_char) else {
-//         buf.new_selection(byte_cur);
-//         return;
-//     };
-
-//     match (
-//         kind == ShiftWord::PrevStart,
-//         cur != CharKind::Space && next == CharKind::Space,
-//     ) {
-//         (false, true) => buf.new_selection(byte_next),
-//         (true, false) => buf.new_selection(line_byte + ofs_next),
-//         _ => buf.new_selection(byte_cur),
-//     }
-// }
-
 fn shift_word_selection_ofs(chars: ropey::iter::Chars<'_>) -> Option<usize> {
     let mut iter = chars.enumerate();
     let prev: Char = iter.next()?.into();
@@ -224,15 +179,17 @@ fn shift_word_next(kind: ShiftWord, text: &Rope, index: usize, offset: usize) ->
         };
     }
 
-    let curs_pos_after = if index + 1 < len_lines {
-        (index + 1, 0)
-    } else {
-        (index, line.chars().count() - 1)
-    };
+    if index + 1 < len_lines {
+        let curs_pos_after = (index + 1, 0);
+        return ShiftWordPos {
+            curs_pos_after,
+            sel_pos_before: None,
+        };
+    }
 
     ShiftWordPos {
-        curs_pos_after,
-        sel_pos_before: None,
+        curs_pos_after: (index, line.chars().count() - 1),
+        sel_pos_before: shift_word_selection_ofs(slice.chars()).map(|s| offset + s),
     }
 }
 
@@ -264,12 +221,12 @@ fn shift_word_next_impl(slice: RopeSlice<'_>, kind: ShiftWord, offset: usize) ->
 
 fn shift_word_prev(text: &Rope, index: usize, offset: usize) -> ShiftWordPos {
     let line = text.line(index);
-    let slice = line.slice(..offset);
 
-    if let Some(ofs) = shift_word_prev_impl(slice, offset) {
+    if let Some(ofs) = shift_word_prev_impl(line, offset) {
         return ShiftWordPos {
             curs_pos_after: (index, ofs),
-            sel_pos_before: shift_word_selection_ofs(slice.chars().reversed()).map(|s| offset - s),
+            sel_pos_before: shift_word_selection_ofs(line.chars_at(offset).reversed())
+                .map(|s| offset - s),
         };
     }
 
@@ -286,7 +243,7 @@ fn shift_word_prev(text: &Rope, index: usize, offset: usize) -> ShiftWordPos {
 }
 
 fn shift_word_prev_impl(slice: RopeSlice<'_>, offset: usize) -> Option<usize> {
-    let mut it = slice.chars().reversed().enumerate();
+    let mut it = slice.chars_at(offset).reversed().enumerate();
     let mut cur: Char = it.next()?.into();
 
     for e in it {
