@@ -15,11 +15,11 @@ enum Shift {
     Bottom,
     LineStart,
     LineEnd,
-    ByWord(ShiftWord),
+    ByWord(ShiftWordKind),
 }
 
-#[derive(Copy, Clone, PartialEq, Eq)]
-enum ShiftWord {
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+enum ShiftWordKind {
     NextStart,
     PrevStart,
     NextEnd,
@@ -58,15 +58,15 @@ pub(super) fn go_to_line_start(ws: &mut Workspace) {
 }
 
 pub(super) fn move_next_word_end(ws: &mut Workspace) {
-    shift_cursor_impl(ws, Shift::ByWord(ShiftWord::NextEnd));
+    shift_cursor_impl(ws, Shift::ByWord(ShiftWordKind::NextEnd));
 }
 
 pub(super) fn move_next_word_start(ws: &mut Workspace) {
-    shift_cursor_impl(ws, Shift::ByWord(ShiftWord::NextStart));
+    shift_cursor_impl(ws, Shift::ByWord(ShiftWordKind::NextStart));
 }
 
 pub(super) fn move_prev_word_start(ws: &mut Workspace) {
-    shift_cursor_impl(ws, Shift::ByWord(ShiftWord::PrevStart));
+    shift_cursor_impl(ws, Shift::ByWord(ShiftWordKind::PrevStart));
 }
 
 fn shift_cursor_impl(ws: &mut Workspace, shift: Shift) {
@@ -134,13 +134,13 @@ pub(super) fn shift_right(buf: &mut Buffer) -> Pos {
     }
 }
 
-fn shift_by_word(buf: &mut Buffer, kind: ShiftWord) -> Pos {
+fn shift_by_word(buf: &mut Buffer, kind: ShiftWordKind) -> Pos {
     let text = buf.text();
     let (idx, ofs) = buf.pos();
 
-    let LexShift { curs, sel } = match kind {
-        ShiftWord::PrevStart => shift_word_prev(text, idx, ofs),
-        other => shift_word_next(other, text, idx, ofs),
+    let WordShiftPos { curs, sel } = match kind {
+        ShiftWordKind::PrevStart => shift_word_backward(text, idx, ofs),
+        _ => shift_word_forward(kind, text, idx, ofs),
     };
 
     if buf.selection().is_none() {
@@ -152,110 +152,124 @@ fn shift_by_word(buf: &mut Buffer, kind: ShiftWord) -> Pos {
     curs
 }
 
-fn shift_word_selection_ofs(chars: ropey::iter::Chars<'_>) -> Option<usize> {
-    let mut iter = chars.enumerate();
+fn shift_word_forward(kind: ShiftWordKind, text: &Rope, idx: usize, ofs: usize) -> WordShiftPos {
+    let line = text.line(idx);
+    let sel = shift_word_sel(kind, line, ofs);
+
+    if let Some(shift_ofs) = shift_word_impl(kind, line, ofs) {
+        let curs = (idx, shift_ofs);
+        return WordShiftPos { curs, sel };
+    }
+
+    let len_lines = text.len_lines();
+    let curs = if idx + 1 < len_lines {
+        (idx + 1, 0)
+    } else {
+        (idx, line.chars().count() - 1)
+    };
+
+    WordShiftPos { curs, sel }
+}
+
+fn shift_word_backward(text: &Rope, idx: usize, ofs: usize) -> WordShiftPos {
+    let line = text.line(idx);
+    let kind = ShiftWordKind::PrevStart;
+
+    let ofs = if ofs != 0 {
+        (ofs + 1).min(line.len_chars())
+    } else {
+        ofs
+    };
+
+    if let Some(shift_ofs) = shift_word_impl(kind, line, ofs) {
+        return WordShiftPos {
+            curs: (idx, shift_ofs),
+            sel: shift_word_sel(kind, line, ofs),
+        };
+    }
+
+    let curs = if idx > 0 {
+        (idx - 1, text.line(idx - 1).chars().count() - 1)
+    } else {
+        (idx, 0)
+    };
+
+    WordShiftPos { curs, sel: None }
+}
+
+fn shift_word_impl(kind: ShiftWordKind, line: RopeSlice<'_>, ofs: usize) -> Option<usize> {
+    let mut iter = shift_word_chs(kind, line, ofs);
+    let mut prev: Char = iter.next()?.into();
+
+    for ch in iter {
+        let next: Char = ch.into();
+        let (cur, res) = shift_word_cur(kind, prev, next);
+
+        if cur.kind != CharKind::Space && next != prev && prev.pos != 0 {
+            let pos = res.map(|r| r.pos).unwrap_or(cur.pos);
+            return Some(shift_word_ofs(kind, ofs, pos));
+        }
+
+        prev = next;
+    }
+
+    shift_word_def(kind, prev)
+}
+
+fn shift_word_sel(kind: ShiftWordKind, line: RopeSlice<'_>, ofs: usize) -> Option<usize> {
+    let mut iter = shift_word_chs(kind, line, ofs);
+
     let prev: Char = iter.next()?.into();
     let next: Char = iter.next()?.into();
 
-    if prev.kind != CharKind::Space && next != prev {
-        Some(next.pos)
+    let pos = if prev.kind != CharKind::Space && next != prev {
+        next.pos
     } else {
-        Some(prev.pos)
-    }
-}
-
-fn shift_word_next(kind: ShiftWord, text: &Rope, index: usize, offset: usize) -> LexShift {
-    let line = text.line(index);
-    let len_lines = text.len_lines();
-    let slice = line.slice(offset..);
-
-    let mut sel = shift_word_selection_ofs(slice.chars()).map(|s| offset + s);
-
-    if let Some(ofs) = shift_word_next_impl(slice, kind, offset) {
-        return LexShift {
-            curs: (index, ofs),
-            sel,
-        };
-    }
-
-    let curs = if index + 1 < len_lines {
-        sel = None;
-        (index + 1, 0)
-    } else {
-        (index, line.chars().count() - 1)
+        prev.pos
     };
 
-    LexShift { curs, sel }
+    Some(shift_word_ofs(kind, ofs, pos))
 }
 
-fn shift_word_next_impl(slice: RopeSlice<'_>, kind: ShiftWord, offset: usize) -> Option<usize> {
-    let mut it = slice.chars().enumerate();
-    let mut prev: Char = it.next()?.into();
-
-    for e in it {
-        let cur: Char = e.into();
-
-        let ch = match kind {
-            ShiftWord::NextStart => {
-                let (pos, ch) = e;
-                (pos - 1, ch).into()
-            }
-            ShiftWord::NextEnd => prev,
-            _ => unreachable!(),
-        };
-
-        if ch.kind != CharKind::Space && cur != prev && ch.pos != 0 {
-            return Some(offset + ch.pos);
-        }
-
-        prev = cur;
+fn shift_word_chs(
+    kind: ShiftWordKind,
+    line: RopeSlice<'_>,
+    ofs: usize,
+) -> std::iter::Enumerate<ropey::iter::Chars<'_>> {
+    match kind {
+        ShiftWordKind::PrevStart => line.chars_at(ofs).reversed().enumerate(),
+        _ => line.slice(ofs..).chars().enumerate(),
     }
-
-    None
 }
 
-fn shift_word_prev(text: &Rope, index: usize, offset: usize) -> LexShift {
-    let line = text.line(index);
-
-    if let Some(ofs) = shift_word_prev_impl(line, offset) {
-        return LexShift {
-            curs: (index, ofs),
-            sel: shift_word_selection_ofs(line.chars_at(offset).reversed()).map(|s| offset - s),
-        };
+fn shift_word_def(kind: ShiftWordKind, last: Char) -> Option<usize> {
+    match kind {
+        ShiftWordKind::PrevStart => (last.kind != CharKind::Space).then_some(0),
+        _ => None,
     }
-
-    let curs = if index > 0 {
-        (index - 1, text.line(index - 1).chars().count() - 1)
-    } else {
-        (index, 0)
-    };
-
-    LexShift { curs, sel: None }
 }
 
-fn shift_word_prev_impl(slice: RopeSlice<'_>, offset: usize) -> Option<usize> {
-    let mut it = slice.chars_at(offset).reversed().enumerate();
-    let mut cur: Char = it.next()?.into();
-
-    for e in it {
-        let next: Char = e.into();
-
-        if cur.kind != CharKind::Space && next != cur {
-            return Some(offset - next.pos);
-        }
-
-        cur = next;
+const fn shift_word_ofs(kind: ShiftWordKind, ofs: usize, ch_ofs: usize) -> usize {
+    match kind {
+        ShiftWordKind::PrevStart => ofs - ch_ofs,
+        _ => ofs + ch_ofs,
     }
-
-    (cur.kind != CharKind::Space).then_some(0)
 }
 
-struct LexShift {
+const fn shift_word_cur(kind: ShiftWordKind, prev: Char, next: Char) -> (Char, Option<Char>) {
+    match kind {
+        ShiftWordKind::NextStart => (next, Some(prev)),
+        ShiftWordKind::PrevStart => (prev, Some(next)),
+        ShiftWordKind::NextEnd => (prev, None),
+    }
+}
+
+struct WordShiftPos {
     curs: Pos,
     sel: Option<usize>,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 struct Char {
     pos: usize,
     kind: CharKind,
@@ -276,7 +290,7 @@ impl From<(usize, char)> for Char {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum CharKind {
     Space,
     Punct,
@@ -350,28 +364,31 @@ mod tests {
         let text = Rope::from("test test test");
         buf.set_text(text);
 
-        assert_eq!(shift_by_word(&mut buf, ShiftWord::NextStart), (0, 4));
-        assert_eq!(shift_by_word(&mut buf, ShiftWord::NextEnd), (0, 3));
-
-        buf.set_pos((0, 3));
-        assert_eq!(shift_by_word(&mut buf, ShiftWord::NextEnd), (0, 8));
+        assert_eq!(shift_by_word(&mut buf, ShiftWordKind::NextStart), (0, 4));
+        assert_eq!(shift_by_word(&mut buf, ShiftWordKind::NextEnd), (0, 3));
 
         buf.set_pos((0, 9));
-        assert_eq!(shift_by_word(&mut buf, ShiftWord::PrevStart), (0, 5));
+        assert_eq!(shift_by_word(&mut buf, ShiftWordKind::NextStart), (0, 13));
+
+        buf.set_pos((0, 3));
+        assert_eq!(shift_by_word(&mut buf, ShiftWordKind::NextEnd), (0, 8));
+
+        buf.set_pos((0, 9));
+        assert_eq!(shift_by_word(&mut buf, ShiftWordKind::PrevStart), (0, 5));
 
         let text = Rope::from(".te?/");
         buf.set_text(text);
         buf.set_pos((0, 0));
 
-        assert_eq!(shift_by_word(&mut buf, ShiftWord::NextStart), (0, 2));
-        assert_eq!(shift_by_word(&mut buf, ShiftWord::NextEnd), (0, 2));
+        assert_eq!(shift_by_word(&mut buf, ShiftWordKind::NextStart), (0, 2));
+        assert_eq!(shift_by_word(&mut buf, ShiftWordKind::NextEnd), (0, 2));
 
         buf.set_pos((0, 4));
-        assert_eq!(shift_by_word(&mut buf, ShiftWord::PrevStart), (0, 3));
+        assert_eq!(shift_by_word(&mut buf, ShiftWordKind::PrevStart), (0, 3));
 
         let text = Rope::from("test\n\n\ntest");
         buf.set_text(text);
         buf.set_pos((2, 0));
-        assert_eq!(shift_by_word(&mut buf, ShiftWord::NextStart), (3, 0));
+        assert_eq!(shift_by_word(&mut buf, ShiftWordKind::NextStart), (3, 0));
     }
 }
