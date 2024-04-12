@@ -138,21 +138,18 @@ fn shift_by_word(buf: &mut Buffer, kind: ShiftWord) -> Pos {
     let text = buf.text();
     let (idx, ofs) = buf.pos();
 
-    let ShiftWordPos {
-        curs_pos_after,
-        sel_pos_before,
-    } = match kind {
+    let LexShift { curs, sel } = match kind {
         ShiftWord::PrevStart => shift_word_prev(text, idx, ofs),
         other => shift_word_next(other, text, idx, ofs),
     };
 
     if buf.selection().is_none() {
-        if let Some(sel_ofs) = sel_pos_before {
-            buf.new_selection(buf.line_byte(idx) + sel_ofs);
+        if let Some(ofs) = sel {
+            buf.new_selection(buf.line_byte(idx) + ofs);
         }
     }
 
-    curs_pos_after
+    curs
 }
 
 fn shift_word_selection_ofs(chars: ropey::iter::Chars<'_>) -> Option<usize> {
@@ -160,37 +157,35 @@ fn shift_word_selection_ofs(chars: ropey::iter::Chars<'_>) -> Option<usize> {
     let prev: Char = iter.next()?.into();
     let next: Char = iter.next()?.into();
 
-    if prev.kind != CharKind::Space && next.kind == CharKind::Space {
+    if prev.kind != CharKind::Space && next != prev {
         Some(next.pos)
     } else {
         Some(prev.pos)
     }
 }
 
-fn shift_word_next(kind: ShiftWord, text: &Rope, index: usize, offset: usize) -> ShiftWordPos {
+fn shift_word_next(kind: ShiftWord, text: &Rope, index: usize, offset: usize) -> LexShift {
     let line = text.line(index);
     let len_lines = text.len_lines();
     let slice = line.slice(offset..);
 
+    let mut sel = shift_word_selection_ofs(slice.chars()).map(|s| offset + s);
+
     if let Some(ofs) = shift_word_next_impl(slice, kind, offset) {
-        return ShiftWordPos {
-            curs_pos_after: (index, ofs),
-            sel_pos_before: shift_word_selection_ofs(slice.chars()).map(|s| offset + s),
+        return LexShift {
+            curs: (index, ofs),
+            sel,
         };
     }
 
-    if index + 1 < len_lines {
-        let curs_pos_after = (index + 1, 0);
-        return ShiftWordPos {
-            curs_pos_after,
-            sel_pos_before: None,
-        };
-    }
+    let curs = if index + 1 < len_lines {
+        sel = None;
+        (index + 1, 0)
+    } else {
+        (index, line.chars().count() - 1)
+    };
 
-    ShiftWordPos {
-        curs_pos_after: (index, line.chars().count() - 1),
-        sel_pos_before: shift_word_selection_ofs(slice.chars()).map(|s| offset + s),
-    }
+    LexShift { curs, sel }
 }
 
 fn shift_word_next_impl(slice: RopeSlice<'_>, kind: ShiftWord, offset: usize) -> Option<usize> {
@@ -219,27 +214,23 @@ fn shift_word_next_impl(slice: RopeSlice<'_>, kind: ShiftWord, offset: usize) ->
     None
 }
 
-fn shift_word_prev(text: &Rope, index: usize, offset: usize) -> ShiftWordPos {
+fn shift_word_prev(text: &Rope, index: usize, offset: usize) -> LexShift {
     let line = text.line(index);
 
     if let Some(ofs) = shift_word_prev_impl(line, offset) {
-        return ShiftWordPos {
-            curs_pos_after: (index, ofs),
-            sel_pos_before: shift_word_selection_ofs(line.chars_at(offset).reversed())
-                .map(|s| offset - s),
+        return LexShift {
+            curs: (index, ofs),
+            sel: shift_word_selection_ofs(line.chars_at(offset).reversed()).map(|s| offset - s),
         };
     }
 
-    let curs_pos_after = if index > 0 {
+    let curs = if index > 0 {
         (index - 1, text.line(index - 1).chars().count() - 1)
     } else {
         (index, 0)
     };
 
-    ShiftWordPos {
-        curs_pos_after,
-        sel_pos_before: None,
-    }
+    LexShift { curs, sel: None }
 }
 
 fn shift_word_prev_impl(slice: RopeSlice<'_>, offset: usize) -> Option<usize> {
@@ -259,9 +250,9 @@ fn shift_word_prev_impl(slice: RopeSlice<'_>, offset: usize) -> Option<usize> {
     (cur.kind != CharKind::Space).then_some(0)
 }
 
-struct ShiftWordPos {
-    curs_pos_after: Pos,
-    sel_pos_before: Option<usize>,
+struct LexShift {
+    curs: Pos,
+    sel: Option<usize>,
 }
 
 #[derive(Clone, Copy)]
