@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use ropey::{Rope, RopeSlice};
 
 use crate::{
@@ -140,70 +138,102 @@ fn shift_by_word(buf: &mut Buffer, kind: ShiftWord) -> Pos {
     let text = buf.text();
     let (idx, ofs) = buf.pos();
 
-    let pos = match kind {
+    let ShiftWordPos {
+        curs_pos_after,
+        sel_pos_before,
+    } = match kind {
         ShiftWord::PrevStart => shift_word_prev(text, idx, ofs),
         other => shift_word_next(other, text, idx, ofs),
     };
 
-    shift_word_selection(buf, kind);
-
-    pos
-}
-
-fn shift_word_selection(buf: &mut Buffer, kind: ShiftWord) {
-    if buf.selection().is_some() {
-        return;
+    if buf.selection().is_none() {
+        if let Some(sel_ofs) = sel_pos_before {
+            buf.new_selection(buf.line_byte(idx) + sel_ofs);
+        }
     }
 
-    let (idx, ofs) = buf.pos();
-    let len_chars = buf.len_chars();
-    let line_byte = buf.line_byte(idx);
+    curs_pos_after
+}
 
-    let ofs_prev = ofs.saturating_sub(1);
-    let ofs_next = (ofs + 1).min(buf.line_len_chars(idx));
+// fn shift_word_selection(buf: &mut Buffer, kind: ShiftWord) {
+//     if buf.selection().is_some() {
+//         return;
+//     }
 
-    let into_char_kind = |byte_pos: usize| {
-        (byte_pos != len_chars).then(|| Into::<CharKind>::into(buf.char(byte_pos)))
-    };
+//     let (idx, ofs) = buf.pos();
 
-    let byte_cur = line_byte + ofs;
-    let byte_next = match kind {
-        ShiftWord::PrevStart => line_byte + ofs_prev,
-        _ => line_byte + ofs_next,
-    };
+//     if kind == ShiftWord::PrevStart && ofs == 0 {
+//         return;
+//     }
 
-    let cur = into_char_kind(byte_cur);
-    let next = into_char_kind(byte_next);
+//     let len_chars = buf.len_chars();
+//     let line_byte = buf.line_byte(idx);
 
-    let (Some(cur), Some(next)) = (cur, next) else {
-        buf.new_selection(byte_cur);
-        return;
-    };
+//     let ofs_prev = ofs.saturating_sub(1);
+//     let ofs_next = (ofs + 1).min(buf.line_len_chars(idx));
 
-    match (
-        kind == ShiftWord::PrevStart,
-        cur != CharKind::Space && next == CharKind::Space,
-    ) {
-        (false, true) => buf.new_selection(byte_next),
-        (true, false) => buf.new_selection(line_byte + ofs_next),
-        _ => buf.new_selection(byte_cur),
+//     let into_char_kind = |byte_pos: usize| {
+//         (byte_pos != len_chars).then(|| Into::<CharKind>::into(buf.char(byte_pos)))
+//     };
+
+//     let byte_cur = line_byte + ofs;
+//     let byte_next = match kind {
+//         ShiftWord::PrevStart => line_byte + ofs_prev,
+//         _ => line_byte + ofs_next,
+//     };
+
+//     let cur_char = into_char_kind(byte_cur);
+//     let next_char = into_char_kind(byte_next);
+
+//     let (Some(cur), Some(next)) = (cur_char, next_char) else {
+//         buf.new_selection(byte_cur);
+//         return;
+//     };
+
+//     match (
+//         kind == ShiftWord::PrevStart,
+//         cur != CharKind::Space && next == CharKind::Space,
+//     ) {
+//         (false, true) => buf.new_selection(byte_next),
+//         (true, false) => buf.new_selection(line_byte + ofs_next),
+//         _ => buf.new_selection(byte_cur),
+//     }
+// }
+
+fn shift_word_selection_ofs(chars: ropey::iter::Chars<'_>) -> Option<usize> {
+    let mut iter = chars.enumerate();
+    let prev: Char = iter.next()?.into();
+    let next: Char = iter.next()?.into();
+
+    if prev.kind != CharKind::Space && next.kind == CharKind::Space {
+        Some(next.pos)
+    } else {
+        Some(prev.pos)
     }
 }
 
-fn shift_word_next(kind: ShiftWord, text: &Rope, index: usize, offset: usize) -> Pos {
+fn shift_word_next(kind: ShiftWord, text: &Rope, index: usize, offset: usize) -> ShiftWordPos {
     let line = text.line(index);
     let len_lines = text.len_lines();
     let slice = line.slice(offset..);
 
     if let Some(ofs) = shift_word_next_impl(slice, kind, offset) {
-        return (index, ofs);
+        return ShiftWordPos {
+            curs_pos_after: (index, ofs),
+            sel_pos_before: shift_word_selection_ofs(slice.chars()).map(|s| offset + s),
+        };
     }
 
-    if index + 1 < len_lines {
-        return (index + 1, 0);
-    }
+    let curs_pos_after = if index + 1 < len_lines {
+        (index + 1, 0)
+    } else {
+        (index, line.chars().count() - 1)
+    };
 
-    (index, line.chars().count() - 1)
+    ShiftWordPos {
+        curs_pos_after,
+        sel_pos_before: None,
+    }
 }
 
 fn shift_word_next_impl(slice: RopeSlice<'_>, kind: ShiftWord, offset: usize) -> Option<usize> {
@@ -232,28 +262,31 @@ fn shift_word_next_impl(slice: RopeSlice<'_>, kind: ShiftWord, offset: usize) ->
     None
 }
 
-fn shift_word_prev(text: &Rope, index: usize, offset: usize) -> Pos {
+fn shift_word_prev(text: &Rope, index: usize, offset: usize) -> ShiftWordPos {
     let line = text.line(index);
     let slice = line.slice(..offset);
 
     if let Some(ofs) = shift_word_prev_impl(slice, offset) {
-        return (index, ofs);
+        return ShiftWordPos {
+            curs_pos_after: (index, ofs),
+            sel_pos_before: shift_word_selection_ofs(slice.chars().reversed()).map(|s| offset - s),
+        };
     }
 
-    if index > 0 {
-        return (index - 1, text.line(index - 1).chars().count() - 1);
-    }
+    let curs_pos_after = if index > 0 {
+        (index - 1, text.line(index - 1).chars().count() - 1)
+    } else {
+        (index, 0)
+    };
 
-    (index, 0)
+    ShiftWordPos {
+        curs_pos_after,
+        sel_pos_before: None,
+    }
 }
 
 fn shift_word_prev_impl(slice: RopeSlice<'_>, offset: usize) -> Option<usize> {
-    let slice = match slice.as_str() {
-        Some(s) => Cow::from(s),
-        None => Cow::from(slice.to_string()),
-    };
-
-    let mut it = slice.chars().rev().enumerate();
+    let mut it = slice.chars().reversed().enumerate();
     let mut cur: Char = it.next()?.into();
 
     for e in it {
@@ -267,6 +300,11 @@ fn shift_word_prev_impl(slice: RopeSlice<'_>, offset: usize) -> Option<usize> {
     }
 
     (cur.kind != CharKind::Space).then_some(0)
+}
+
+struct ShiftWordPos {
+    curs_pos_after: Pos,
+    sel_pos_before: Option<usize>,
 }
 
 #[derive(Clone, Copy)]
