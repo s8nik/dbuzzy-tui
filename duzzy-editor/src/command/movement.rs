@@ -156,7 +156,7 @@ fn shift_word_forward(kind: ShiftWordKind, text: &Rope, idx: usize, ofs: usize) 
     let line = text.line(idx);
     let sel = shift_word_sel(kind, line, ofs);
 
-    if let Some(shift_ofs) = shift_word_impl(kind, line, ofs) {
+    if let Some(shift_ofs) = shift_word_impl(kind, line, ofs, 1) {
         let curs = (idx, shift_ofs);
         return WordShiftPos { curs, sel };
     }
@@ -175,13 +175,7 @@ fn shift_word_backward(text: &Rope, idx: usize, ofs: usize) -> WordShiftPos {
     let line = text.line(idx);
     let kind = ShiftWordKind::PrevStart;
 
-    let ofs = if ofs != 0 {
-        (ofs + 1).min(line.len_chars())
-    } else {
-        ofs
-    };
-
-    if let Some(shift_ofs) = shift_word_impl(kind, line, ofs) {
+    if let Some(shift_ofs) = shift_word_impl(kind, line, ofs, 0) {
         return WordShiftPos {
             curs: (idx, shift_ofs),
             sel: shift_word_sel(kind, line, ofs),
@@ -197,15 +191,20 @@ fn shift_word_backward(text: &Rope, idx: usize, ofs: usize) -> WordShiftPos {
     WordShiftPos { curs, sel: None }
 }
 
-fn shift_word_impl(kind: ShiftWordKind, line: RopeSlice<'_>, ofs: usize) -> Option<usize> {
-    let mut iter = kind.chars(line, ofs);
+fn shift_word_impl(
+    kind: ShiftWordKind,
+    line: RopeSlice<'_>,
+    ofs: usize,
+    skip_by: usize,
+) -> Option<usize> {
+    let mut iter = kind.chars(line, ofs).skip(skip_by);
     let mut prev: Char = iter.next()?.into();
 
     for ch in iter {
         let next: Char = ch.into();
         let (cur, res) = kind.current(prev, next);
 
-        if cur.kind != CharKind::Space && next != prev && prev.pos != 0 {
+        if cur.kind != CharKind::Space && next != prev {
             return Some(kind.offset(ofs, res.pos));
         }
 
@@ -243,7 +242,11 @@ impl ShiftWordKind {
     }
 }
 
-fn shift_word_sel(kind: ShiftWordKind, line: RopeSlice<'_>, ofs: usize) -> Option<usize> {
+fn shift_word_sel(kind: ShiftWordKind, line: RopeSlice<'_>, mut ofs: usize) -> Option<usize> {
+    if kind.goes_backward() {
+        ofs = (ofs + 1).min(line.len_chars());
+    }
+
     let mut iter = kind.chars(line, ofs);
 
     let prev: Char = iter.next()?.into();
@@ -355,6 +358,7 @@ mod tests {
     #[test]
     fn test_move_by_word() {
         let mut buf = Buffer::default();
+
         let text = Rope::from("test test test");
         buf.set_text(text);
 
@@ -384,5 +388,13 @@ mod tests {
         buf.set_text(text);
         buf.set_pos((2, 0));
         assert_eq!(shift_by_word(&mut buf, ShiftWordKind::NextStart), (3, 0));
+
+        let text = Rope::from("test t");
+        buf.set_text(text);
+        buf.set_pos((0, 6));
+        assert_eq!(shift_by_word(&mut buf, ShiftWordKind::PrevStart), (0, 5));
+
+        buf.set_pos((0, 5));
+        assert_eq!(shift_by_word(&mut buf, ShiftWordKind::PrevStart), (0, 0));
     }
 }
