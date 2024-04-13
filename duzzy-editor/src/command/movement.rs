@@ -1,4 +1,4 @@
-use ropey::{Rope, RopeSlice};
+use ropey::{iter::Chars, Rope, RopeSlice};
 
 use crate::{
     buffer::{Buffer, Pos},
@@ -198,26 +198,53 @@ fn shift_word_backward(text: &Rope, idx: usize, ofs: usize) -> WordShiftPos {
 }
 
 fn shift_word_impl(kind: ShiftWordKind, line: RopeSlice<'_>, ofs: usize) -> Option<usize> {
-    let mut iter = shift_word_chs(kind, line, ofs);
+    let mut iter = kind.chars(line, ofs);
     let mut prev: Char = iter.next()?.into();
 
     for ch in iter {
         let next: Char = ch.into();
-        let (cur, res) = shift_word_cur(kind, prev, next);
+        let (cur, res) = kind.current(prev, next);
 
         if cur.kind != CharKind::Space && next != prev && prev.pos != 0 {
-            let pos = res.map(|r| r.pos).unwrap_or(cur.pos);
-            return Some(shift_word_ofs(kind, ofs, pos));
+            return Some(kind.offset(ofs, res.pos));
         }
 
         prev = next;
     }
 
-    shift_word_def(kind, prev)
+    (kind.goes_backward() && prev.kind != CharKind::Space).then_some(0)
+}
+
+impl ShiftWordKind {
+    fn chars<'a>(&self, line: RopeSlice<'a>, ofs: usize) -> std::iter::Enumerate<Chars<'a>> {
+        match self {
+            Self::PrevStart => line.chars_at(ofs).reversed().enumerate(),
+            _ => line.slice(ofs..).chars().enumerate(),
+        }
+    }
+
+    const fn offset(&self, ofs: usize, ch_ofs: usize) -> usize {
+        match self {
+            Self::PrevStart => ofs - ch_ofs,
+            _ => ofs + ch_ofs,
+        }
+    }
+
+    const fn current(&self, prev: Char, next: Char) -> (Char, Char) {
+        match self {
+            Self::NextStart => (next, prev),
+            Self::PrevStart => (prev, next),
+            Self::NextEnd => (prev, prev),
+        }
+    }
+
+    fn goes_backward(&self) -> bool {
+        &Self::PrevStart == self
+    }
 }
 
 fn shift_word_sel(kind: ShiftWordKind, line: RopeSlice<'_>, ofs: usize) -> Option<usize> {
-    let mut iter = shift_word_chs(kind, line, ofs);
+    let mut iter = kind.chars(line, ofs);
 
     let prev: Char = iter.next()?.into();
     let next: Char = iter.next()?.into();
@@ -228,40 +255,7 @@ fn shift_word_sel(kind: ShiftWordKind, line: RopeSlice<'_>, ofs: usize) -> Optio
         prev.pos
     };
 
-    Some(shift_word_ofs(kind, ofs, pos))
-}
-
-fn shift_word_chs(
-    kind: ShiftWordKind,
-    line: RopeSlice<'_>,
-    ofs: usize,
-) -> std::iter::Enumerate<ropey::iter::Chars<'_>> {
-    match kind {
-        ShiftWordKind::PrevStart => line.chars_at(ofs).reversed().enumerate(),
-        _ => line.slice(ofs..).chars().enumerate(),
-    }
-}
-
-fn shift_word_def(kind: ShiftWordKind, last: Char) -> Option<usize> {
-    match kind {
-        ShiftWordKind::PrevStart => (last.kind != CharKind::Space).then_some(0),
-        _ => None,
-    }
-}
-
-const fn shift_word_ofs(kind: ShiftWordKind, ofs: usize, ch_ofs: usize) -> usize {
-    match kind {
-        ShiftWordKind::PrevStart => ofs - ch_ofs,
-        _ => ofs + ch_ofs,
-    }
-}
-
-const fn shift_word_cur(kind: ShiftWordKind, prev: Char, next: Char) -> (Char, Option<Char>) {
-    match kind {
-        ShiftWordKind::NextStart => (next, Some(prev)),
-        ShiftWordKind::PrevStart => (prev, Some(next)),
-        ShiftWordKind::NextEnd => (prev, None),
-    }
+    Some(kind.offset(ofs, pos))
 }
 
 struct WordShiftPos {
