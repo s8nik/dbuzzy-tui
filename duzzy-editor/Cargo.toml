@@ -12,5 +12,5 @@ ratatui.workspace = true
 crossterm.workspace = true
 
 regex = "1.9.3"
-ropey = "1.6.0"
+ropey = "1.6.1"
 smartstring = "1.0.1"
