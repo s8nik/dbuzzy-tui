@@ -135,7 +135,7 @@ mod tests {
         assert_eq!(&text.to_string(), "test");
 
         let pos = history.redo(&mut text);
-        assert_eq!(Some(4), pos);
+        assert_eq!(Some(0), pos);
         assert_eq!(&text.to_string(), "test\ntest");
     }
 
@@ -145,16 +145,19 @@ mod tests {
         let mut text = ropey::Rope::from("test");
 
         let mut tx = Transaction::new();
-        tx.delete_char(2, 's');
+        tx.delete_char(0, 't');
         tx.apply(&mut text);
+        history.commit(tx);
 
-        tx.delete_char(2, 't');
+        let mut tx = Transaction::new();
+        tx.delete_char(0, 'e');
         tx.apply(&mut text);
+        history.commit(tx);
 
         let pos = history.undo(&mut text);
-        assert_eq!(Some(2), pos);
+        assert_eq!(Some(0), pos);
 
         let pos = history.undo(&mut text);
-        assert_eq!(Some(2), pos);
+        assert_eq!(Some(0), pos);
     }
 }
