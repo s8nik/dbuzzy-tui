@@ -9,17 +9,19 @@ enum Action {
 
 impl Action {
     fn as_insert_mut(&mut self) -> Option<&mut Change> {
-        match self {
-            Self::Insert(change) => Some(change),
-            _ => None,
+        if let Self::Insert(change) = self {
+            return Some(change);
         }
+
+        None
     }
 
     fn as_delete_mut(&mut self) -> Option<&mut Change> {
-        match self {
-            Self::Delete(change) => Some(change),
-            _ => None,
+        if let Self::Delete(change) = self {
+            return Some(change);
         }
+
+        None
     }
 }
 
