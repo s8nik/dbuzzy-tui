@@ -138,4 +138,23 @@ mod tests {
         assert_eq!(Some(4), pos);
         assert_eq!(&text.to_string(), "test\ntest");
     }
+
+    #[test]
+    fn test_undo_redo_pos() {
+        let mut history = History::default();
+        let mut text = ropey::Rope::from("test");
+
+        let mut tx = Transaction::new();
+        tx.delete_char(2, 's');
+        tx.apply(&mut text);
+
+        tx.delete_char(2, 't');
+        tx.apply(&mut text);
+
+        let pos = history.undo(&mut text);
+        assert_eq!(Some(2), pos);
+
+        let pos = history.undo(&mut text);
+        assert_eq!(Some(2), pos);
+    }
 }
