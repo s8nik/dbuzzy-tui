@@ -9,17 +9,19 @@ enum Action {
 
 impl Action {
     fn as_insert_mut(&mut self) -> Option<&mut Change> {
-        match self {
-            Self::Insert(change) => Some(change),
-            _ => None,
+        if let Self::Insert(change) = self {
+            return Some(change);
         }
+
+        None
     }
 
     fn as_delete_mut(&mut self) -> Option<&mut Change> {
-        match self {
-            Self::Delete(change) => Some(change),
-            _ => None,
+        if let Self::Delete(change) = self {
+            return Some(change);
         }
+
+        None
     }
 }
 
@@ -67,16 +69,16 @@ impl Transaction {
         let mut last_pos = None;
 
         for change in self.0.iter() {
-            match change {
+            last_pos = match change {
                 Action::Insert(c) => {
                     text.insert(c.pos, &c.content);
-                    last_pos = Some(c.pos + c.content.chars().count());
+                    Some(c.pos)
                 }
                 Action::Delete(c) => {
                     text.remove(c.pos..c.pos + c.content.chars().count());
-                    last_pos = Some(c.pos);
+                    Some(c.pos)
                 }
-                Action::Move(pos) => last_pos = Some(*pos),
+                Action::Move(pos) => Some(*pos),
             }
         }
 

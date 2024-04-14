@@ -1,8 +1,9 @@
-use ropey::{Rope, RopeSlice};
+use ropey::{iter::Chars, Rope, RopeSlice};
 
 use crate::{
     buffer::{Buffer, Pos},
     editor::Workspace,
+    transaction::TransactionResult,
 };
 
 #[derive(PartialEq, Eq)]
@@ -70,7 +71,8 @@ pub(super) fn move_prev_word_start(ws: &mut Workspace) {
 }
 
 fn shift_cursor_impl(ws: &mut Workspace, shift: Shift) {
-    let buf = ws.cur_mut().buf_mut();
+    let doc = ws.cur_mut();
+    let buf = doc.buf_mut();
     let idx = buf.index();
 
     if !buf.is_visual() {
@@ -91,6 +93,13 @@ fn shift_cursor_impl(ws: &mut Workspace, shift: Shift) {
 
     buf.set_pos(pos);
     buf.update_selection(buf.byte_pos());
+
+    if buf.is_insert() {
+        doc.with_transaction(|tx, buf| {
+            tx.shift(buf.byte_pos());
+            TransactionResult::Keep
+        });
+    }
 }
 
 pub(super) fn shift_up(n: usize, buf: &mut Buffer) -> Pos {
@@ -156,7 +165,7 @@ fn shift_word_forward(kind: ShiftWordKind, text: &Rope, idx: usize, ofs: usize) 
     let line = text.line(idx);
     let sel = shift_word_sel(kind, line, ofs);
 
-    if let Some(shift_ofs) = shift_word_impl(kind, line, ofs) {
+    if let Some(shift_ofs) = shift_word_impl(kind, line, ofs, 1) {
         let curs = (idx, shift_ofs);
         return WordShiftPos { curs, sel };
     }
@@ -175,13 +184,7 @@ fn shift_word_backward(text: &Rope, idx: usize, ofs: usize) -> WordShiftPos {
     let line = text.line(idx);
     let kind = ShiftWordKind::PrevStart;
 
-    let ofs = if ofs != 0 {
-        (ofs + 1).min(line.len_chars())
-    } else {
-        ofs
-    };
-
-    if let Some(shift_ofs) = shift_word_impl(kind, line, ofs) {
+    if let Some(shift_ofs) = shift_word_impl(kind, line, ofs, 0) {
         return WordShiftPos {
             curs: (idx, shift_ofs),
             sel: shift_word_sel(kind, line, ofs),
@@ -197,27 +200,63 @@ fn shift_word_backward(text: &Rope, idx: usize, ofs: usize) -> WordShiftPos {
     WordShiftPos { curs, sel: None }
 }
 
-fn shift_word_impl(kind: ShiftWordKind, line: RopeSlice<'_>, ofs: usize) -> Option<usize> {
-    let mut iter = shift_word_chs(kind, line, ofs);
+fn shift_word_impl(
+    kind: ShiftWordKind,
+    line: RopeSlice<'_>,
+    ofs: usize,
+    skip_by: usize,
+) -> Option<usize> {
+    let mut iter = kind.chars(line, ofs).skip(skip_by);
     let mut prev: Char = iter.next()?.into();
 
     for ch in iter {
         let next: Char = ch.into();
-        let (cur, res) = shift_word_cur(kind, prev, next);
+        let (cur, res) = kind.current(prev, next);
 
-        if cur.kind != CharKind::Space && next != prev && prev.pos != 0 {
-            let pos = res.map(|r| r.pos).unwrap_or(cur.pos);
-            return Some(shift_word_ofs(kind, ofs, pos));
+        if cur.kind != CharKind::Space && next != prev {
+            return Some(kind.offset(ofs, res.pos));
         }
 
         prev = next;
     }
 
-    shift_word_def(kind, prev)
+    (kind.goes_backward() && prev.kind != CharKind::Space).then_some(0)
 }
 
-fn shift_word_sel(kind: ShiftWordKind, line: RopeSlice<'_>, ofs: usize) -> Option<usize> {
-    let mut iter = shift_word_chs(kind, line, ofs);
+impl ShiftWordKind {
+    fn chars<'a>(&self, line: RopeSlice<'a>, ofs: usize) -> std::iter::Enumerate<Chars<'a>> {
+        match self {
+            Self::PrevStart => line.chars_at(ofs).reversed().enumerate(),
+            _ => line.slice(ofs..).chars().enumerate(),
+        }
+    }
+
+    const fn offset(&self, ofs: usize, ch_ofs: usize) -> usize {
+        match self {
+            Self::PrevStart => ofs - ch_ofs,
+            _ => ofs + ch_ofs,
+        }
+    }
+
+    const fn current(&self, prev: Char, next: Char) -> (Char, Char) {
+        match self {
+            Self::NextStart => (next, prev),
+            Self::PrevStart => (prev, next),
+            Self::NextEnd => (prev, prev),
+        }
+    }
+
+    fn goes_backward(&self) -> bool {
+        &Self::PrevStart == self
+    }
+}
+
+fn shift_word_sel(kind: ShiftWordKind, line: RopeSlice<'_>, mut ofs: usize) -> Option<usize> {
+    if kind.goes_backward() {
+        ofs = (ofs + 1).min(line.len_chars());
+    }
+
+    let mut iter = kind.chars(line, ofs);
 
     let prev: Char = iter.next()?.into();
     let next: Char = iter.next()?.into();
@@ -228,40 +267,7 @@ fn shift_word_sel(kind: ShiftWordKind, line: RopeSlice<'_>, ofs: usize) -> Optio
         prev.pos
     };
 
-    Some(shift_word_ofs(kind, ofs, pos))
-}
-
-fn shift_word_chs(
-    kind: ShiftWordKind,
-    line: RopeSlice<'_>,
-    ofs: usize,
-) -> std::iter::Enumerate<ropey::iter::Chars<'_>> {
-    match kind {
-        ShiftWordKind::PrevStart => line.chars_at(ofs).reversed().enumerate(),
-        _ => line.slice(ofs..).chars().enumerate(),
-    }
-}
-
-fn shift_word_def(kind: ShiftWordKind, last: Char) -> Option<usize> {
-    match kind {
-        ShiftWordKind::PrevStart => (last.kind != CharKind::Space).then_some(0),
-        _ => None,
-    }
-}
-
-const fn shift_word_ofs(kind: ShiftWordKind, ofs: usize, ch_ofs: usize) -> usize {
-    match kind {
-        ShiftWordKind::PrevStart => ofs - ch_ofs,
-        _ => ofs + ch_ofs,
-    }
-}
-
-const fn shift_word_cur(kind: ShiftWordKind, prev: Char, next: Char) -> (Char, Option<Char>) {
-    match kind {
-        ShiftWordKind::NextStart => (next, Some(prev)),
-        ShiftWordKind::PrevStart => (prev, Some(next)),
-        ShiftWordKind::NextEnd => (prev, None),
-    }
+    Some(kind.offset(ofs, pos))
 }
 
 struct WordShiftPos {
@@ -361,6 +367,7 @@ mod tests {
     #[test]
     fn test_move_by_word() {
         let mut buf = Buffer::default();
+
         let text = Rope::from("test test test");
         buf.set_text(text);
 
@@ -390,5 +397,13 @@ mod tests {
         buf.set_text(text);
         buf.set_pos((2, 0));
         assert_eq!(shift_by_word(&mut buf, ShiftWordKind::NextStart), (3, 0));
+
+        let text = Rope::from("test t");
+        buf.set_text(text);
+        buf.set_pos((0, 6));
+        assert_eq!(shift_by_word(&mut buf, ShiftWordKind::PrevStart), (0, 5));
+
+        buf.set_pos((0, 5));
+        assert_eq!(shift_by_word(&mut buf, ShiftWordKind::PrevStart), (0, 0));
     }
 }
