@@ -1,22 +1,22 @@
-mod adjustment;
-mod history;
-pub mod insert_mode;
-mod movement;
-mod switch_mode;
-mod visual;
+pub mod input;
+mod modify;
+mod motion;
+mod revert;
+mod select;
+mod switch;
 
 use std::{collections::HashMap, sync::Arc};
 
-use adjustment::*;
-use history::{redo, undo};
-use movement::*;
-use switch_mode::*;
-use visual::*;
+use modify::*;
+use motion::*;
+use revert::{redo, undo};
+use select::*;
+use switch::*;
 
 use crate::{
     buffer::Buffer,
     editor::Workspace,
-    input::Input,
+    event::Input,
     keymap::{Keymap, Keymaps},
 };
 

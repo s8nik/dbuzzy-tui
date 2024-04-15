@@ -6,7 +6,7 @@ use std::{
 use crate::{
     buffer::Mode,
     command::CmdType,
-    input::{Event, Input, Modifiers},
+    event::{Event, Input, Modifiers},
 };
 
 #[cfg_attr(test, derive(PartialEq))]

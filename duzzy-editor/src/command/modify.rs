@@ -69,7 +69,7 @@ pub(super) fn delete(ws: &mut Workspace) {
                 buf.set_pos(buf.curs_pos(pos));
             }
 
-            super::switch_mode::visual_to_normal_impl(buf);
+            super::switch::visual_to_normal_impl(buf);
             return TransactionResult::Commit;
         }
 

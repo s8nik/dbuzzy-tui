@@ -2,7 +2,7 @@ use std::{collections::HashMap, path::Path};
 
 use crate::{
     buffer::Pos,
-    command::{insert_mode, CommandFinder},
+    command::{input, CommandFinder},
     document::{Document, DocumentId},
     keymap::Keymaps,
     renderer::{Cursor, EventOutcome, Renderer, Viewport},
@@ -81,7 +81,7 @@ impl DuzzyEditor {
                 self.command.reset();
                 EventOutcome::Render
             }
-            None if buf.is_insert() => insert_mode::on_key(&mut self.workspace, input),
+            None if buf.is_insert() => input::on_key(&mut self.workspace, input),
             _ => EventOutcome::Ignore,
         };
 
