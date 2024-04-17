@@ -13,4 +13,5 @@ crossterm.workspace = true
 
 regex = "1.9.3"
 ropey = "1.6.1"
+arboard = "3.3.2"
 smartstring = "1.0.1"
