@@ -102,6 +102,8 @@ impl Keymaps {
             ("e", CmdType::MoveNextWordEnd),
             ("b", CmdType::MovePrevWordStart),
             ("x", CmdType::SelectLine),
+            ("y", CmdType::LocalCopy),
+            ("<Space>y", CmdType::GlobalCopy),
         ];
 
         mappings.into()
