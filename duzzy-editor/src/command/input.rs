@@ -21,6 +21,10 @@ pub fn on_key(ws: &mut Workspace, input: Input) -> EventOutcome {
             ..
         } => super::modify::insert_char(ws, ch),
         Input {
+            event: Event::Space,
+            ..
+        } => super::modify::insert_char(ws, ' '),
+        Input {
             event: Event::Esc, ..
         } => super::switch::normal_mode(ws),
         Input {

@@ -63,6 +63,7 @@ impl Modifiers {
 pub enum Event {
     Char(char),
     Backspace,
+    Space,
     Enter,
     Left,
     Right,
@@ -94,6 +95,7 @@ impl TryFrom<&str> for Event {
             match value.to_lowercase().as_str() {
                 "backspace" => Self::Backspace,
                 "enter" => Self::Enter,
+                "space" => Self::Space,
                 "left" => Self::Left,
                 "right" => Self::Right,
                 "up" => Self::Up,
@@ -132,6 +134,7 @@ impl From<CrosstermEvent> for Input {
 impl From<KeyEvent> for Input {
     fn from(key: KeyEvent) -> Self {
         let event = match key.code {
+            KeyCode::Char(' ') => Event::Space,
             KeyCode::Char(c) => Event::Char(c),
             KeyCode::Backspace => Event::Backspace,
             KeyCode::Enter => Event::Enter,
