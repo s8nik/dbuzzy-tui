@@ -46,6 +46,8 @@ pub enum CmdType {
     NormalMode,
     VisualMode,
     SelectLine,
+    LocalCopy,
+    GlobalCopy,
 }
 
 pub struct Command {
