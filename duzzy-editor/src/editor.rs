@@ -100,7 +100,7 @@ impl DuzzyEditor {
 pub struct Workspace {
     documents: HashMap<DocumentId, Document>,
     current: DocumentId,
-    pub(crate) clipboard: Clipboard,
+    clipboard: Clipboard,
 }
 
 impl Default for Workspace {
@@ -122,6 +122,10 @@ impl Workspace {
         let id = doc.id();
         self.documents.insert(id, doc);
         self.current = id;
+    }
+
+    pub fn clipboard(&mut self) -> &mut Clipboard {
+        &mut self.clipboard
     }
 
     pub fn cur(&self) -> &Document {
