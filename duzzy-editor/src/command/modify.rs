@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use crate::{
     editor::Workspace,
     transaction::{Transaction, TransactionResult},
@@ -50,21 +48,10 @@ pub(super) fn delete(ws: &mut Workspace) {
     doc.with_transaction(|tx, buf| {
         let pos = buf.byte_pos();
 
-        if let Some(selection) = buf.selection() {
-            let (start, mut end) = selection.range();
-            let len_chars = buf.len_chars();
+        if let Some(text) = super::selected_text(buf) {
+            let start = buf.selection().unwrap().start();
 
-            if selection.head() > selection.anchor() {
-                end += 1;
-            }
-
-            let slice = buf.text().slice(start..end.min(len_chars));
-            let slice = match slice.as_str() {
-                Some(s) => Cow::from(s),
-                None => Cow::from(slice.to_string()),
-            };
-
-            tx.delete_str(start, &slice);
+            tx.delete_str(start, &text);
             if let Some(pos) = tx.apply(buf.text_mut()) {
                 buf.set_pos(buf.curs_pos(pos));
             }
