@@ -48,8 +48,10 @@ pub enum CmdType {
     NormalMode,
     VisualMode,
     SelectLine,
-    LocalCopy,
-    GlobalCopy,
+    CopyLocal,
+    CopyGlobal,
+    PasteLocal,
+    PasteGlobal,
 }
 
 pub struct Command {
@@ -96,8 +98,8 @@ impl CommandRegistry {
             Command::new(CmdType::VisualMode, visual_mode),
             Command::new(CmdType::NormalMode, normal_mode),
             Command::new(CmdType::SelectLine, select_line),
-            Command::new(CmdType::LocalCopy, local_copy),
-            Command::new(CmdType::GlobalCopy, global_copy),
+            Command::new(CmdType::CopyLocal, copy_local),
+            Command::new(CmdType::CopyGlobal, copy_global),
         ];
 
         let mut map = HashMap::new();

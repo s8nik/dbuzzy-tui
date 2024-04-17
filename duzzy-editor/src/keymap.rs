@@ -79,8 +79,10 @@ impl Keymaps {
             ("e", CmdType::MoveNextWordEnd),
             ("b", CmdType::MovePrevWordStart),
             ("x", CmdType::SelectLine),
-            ("y", CmdType::LocalCopy),
-            ("<Space>y", CmdType::GlobalCopy),
+            ("y", CmdType::CopyLocal),
+            ("<Space>y", CmdType::CopyGlobal),
+            ("p", CmdType::PasteLocal),
+            ("<Space>p", CmdType::PasteGlobal),
         ];
 
         mappings.into()
@@ -102,8 +104,10 @@ impl Keymaps {
             ("e", CmdType::MoveNextWordEnd),
             ("b", CmdType::MovePrevWordStart),
             ("x", CmdType::SelectLine),
-            ("y", CmdType::LocalCopy),
-            ("<Space>y", CmdType::GlobalCopy),
+            ("y", CmdType::CopyLocal),
+            ("<Space>y", CmdType::CopyGlobal),
+            ("p", CmdType::PasteLocal),
+            ("<Space>p", CmdType::PasteGlobal),
         ];
 
         mappings.into()

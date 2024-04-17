@@ -5,11 +5,11 @@ enum ClipboardType {
     Global,
 }
 
-pub(super) fn local_copy(ws: &mut Workspace) {
+pub(super) fn copy_local(ws: &mut Workspace) {
     copy_clipboard_impl(ws, ClipboardType::Local);
 }
 
-pub(super) fn global_copy(ws: &mut Workspace) {
+pub(super) fn copy_global(ws: &mut Workspace) {
     copy_clipboard_impl(ws, ClipboardType::Global);
 }
 
