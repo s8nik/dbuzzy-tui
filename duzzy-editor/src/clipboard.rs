@@ -29,7 +29,7 @@ impl Clipboard {
 
     pub fn set_global(&mut self, text: String) {
         if let Some(clipboard) = self.global.as_mut() {
-            let _ = clipboard.set_text(text);
+            clipboard.set_text(text).ok();
         }
     }
 
