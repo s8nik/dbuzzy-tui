@@ -100,6 +100,8 @@ impl CommandRegistry {
             Command::new(CmdType::SelectLine, select_line),
             Command::new(CmdType::CopyLocal, copy_local),
             Command::new(CmdType::CopyGlobal, copy_global),
+            Command::new(CmdType::PasteLocal, paste_local),
+            Command::new(CmdType::PasteGlobal, paste_global),
         ];
 
         let mut map = HashMap::new();

@@ -13,6 +13,14 @@ pub(super) fn copy_global(ws: &mut Workspace) {
     copy_clipboard_impl(ws, ClipboardType::Global);
 }
 
+pub(super) fn paste_local(ws: &mut Workspace) {
+    paste_clipboard_impl(ws, ClipboardType::Local);
+}
+
+pub(super) fn paste_global(ws: &mut Workspace) {
+    paste_clipboard_impl(ws, ClipboardType::Global);
+}
+
 fn copy_clipboard_impl(ws: &mut Workspace, clipboard_type: ClipboardType) {
     let buf = ws.cur().buf();
     let selected_text = super::selected_text(buf).map(|x| x.to_string());
@@ -25,4 +33,8 @@ fn copy_clipboard_impl(ws: &mut Workspace, clipboard_type: ClipboardType) {
             ClipboardType::Global => clipboard.set_global(text),
         }
     }
+}
+
+fn paste_clipboard_impl(ws: &mut Workspace, clipboard_type: ClipboardType) {
+    todo!()
 }
