@@ -2,10 +2,23 @@ use crate::SmartString;
 
 pub struct Clipboard {
     local: SmartString,
-    global: arboard::Clipboard,
+    global: Option<arboard::Clipboard>,
+}
+
+impl Default for Clipboard {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Clipboard {
+    pub fn new() -> Self {
+        let local = SmartString::new_const();
+        let global = arboard::Clipboard::new().ok();
+
+        Self { local, global }
+    }
+
     pub fn set_local(&mut self, text: String) {
         self.local = text.into();
     }
@@ -15,10 +28,16 @@ impl Clipboard {
     }
 
     pub fn set_global(&mut self, text: String) {
-        let _ = self.global.set_text(text);
+        if let Some(clipboard) = self.global.as_mut() {
+            let _ = clipboard.set_text(text);
+        }
     }
 
     pub fn get_global(&mut self) -> SmartString {
-        self.global.get_text().unwrap_or_default().into()
+        self.global
+            .as_mut()
+            .and_then(|x| x.get_text().ok())
+            .unwrap_or_default()
+            .into()
     }
 }

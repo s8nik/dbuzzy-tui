@@ -2,6 +2,7 @@ use std::{collections::HashMap, path::Path};
 
 use crate::{
     buffer::Pos,
+    clipboard::Clipboard,
     command::{input, CommandFinder},
     document::{Document, DocumentId},
     keymap::Keymaps,
@@ -99,6 +100,7 @@ impl DuzzyEditor {
 pub struct Workspace {
     documents: HashMap<DocumentId, Document>,
     current: DocumentId,
+    pub(crate) clipboard: Clipboard,
 }
 
 impl Default for Workspace {
@@ -112,6 +114,7 @@ impl Workspace {
         Self {
             documents: HashMap::new(),
             current: DocumentId::MAX,
+            clipboard: Clipboard::new(),
         }
     }
 
