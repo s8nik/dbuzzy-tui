@@ -152,7 +152,7 @@ fn shift_by_word(buf: &mut Buffer, kind: ShiftWordKind) -> Pos {
         _ => shift_word_forward(kind, text, idx, ofs),
     };
 
-    if buf.selection().is_none() {
+    if !buf.is_selection() {
         if let Some(ofs) = sel {
             buf.new_selection(buf.line_byte(idx) + ofs);
         }

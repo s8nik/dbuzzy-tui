@@ -17,7 +17,7 @@ pub(super) fn select_line(ws: &mut Workspace) {
     let ofs = buf.line_len_chars(idx) - 1;
     let end = start + ofs;
 
-    if buf.selection().is_none() {
+    if !buf.is_selection() {
         buf.new_selection(start);
     }
 
