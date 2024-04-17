@@ -1,3 +1,4 @@
+mod clip;
 pub mod input;
 mod modify;
 mod motion;
@@ -7,6 +8,7 @@ mod switch;
 
 use std::{collections::HashMap, sync::Arc};
 
+use clip::*;
 use modify::*;
 use motion::*;
 use revert::{redo, undo};
@@ -94,6 +96,8 @@ impl CommandRegistry {
             Command::new(CmdType::VisualMode, visual_mode),
             Command::new(CmdType::NormalMode, normal_mode),
             Command::new(CmdType::SelectLine, select_line),
+            Command::new(CmdType::LocalCopy, local_copy),
+            Command::new(CmdType::GlobalCopy, global_copy),
         ];
 
         let mut map = HashMap::new();
