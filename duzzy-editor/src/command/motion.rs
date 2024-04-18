@@ -87,7 +87,7 @@ fn shift_cursor_impl(ws: &mut Workspace, shift: Shift) {
         Shift::Top => (0, 0),
         Shift::Bottom => (buf.len_lines() - 1, 0),
         Shift::LineStart => (idx, 0),
-        Shift::LineEnd => (idx, buf.line_len_bytes(idx).saturating_sub(1)),
+        Shift::LineEnd => shift_line_end(buf),
         Shift::ByWord(kind) => shift_by_word(buf, kind),
     };
 
@@ -141,6 +141,12 @@ pub(super) fn shift_right(buf: &mut Buffer) -> Pos {
         (false, true) => ((idx + 1).min(buf.len_lines() - 1), 0),
         (false, false) => (idx, (ofs + 1).min(buf.line_len_bytes(idx))),
     }
+}
+
+fn shift_line_end(buf: &mut Buffer) -> Pos {
+    let idx = buf.index();
+    let shift = if idx == buf.len_lines() - 1 { 1 } else { 2 };
+    (idx, buf.line_len_bytes(idx).saturating_sub(shift))
 }
 
 fn shift_by_word(buf: &mut Buffer, kind: ShiftWordKind) -> Pos {
