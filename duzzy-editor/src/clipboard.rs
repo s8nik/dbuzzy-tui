@@ -23,8 +23,8 @@ impl Clipboard {
         self.local = text.into();
     }
 
-    pub fn get_local(&self) -> &str {
-        &self.local
+    pub fn get_local(&self) -> SmartString {
+        self.local.to_owned()
     }
 
     pub fn set_global(&mut self, text: String) {

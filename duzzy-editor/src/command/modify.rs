@@ -1,4 +1,5 @@
 use crate::{
+    buffer::Buffer,
     editor::Workspace,
     transaction::{Transaction, TransactionResult},
 };
@@ -48,14 +49,7 @@ pub(super) fn delete(ws: &mut Workspace) {
     doc.with_transaction(|tx, buf| {
         let pos = buf.byte_pos();
 
-        if let Some(text) = super::selected_text(buf) {
-            let start = buf.selection().unwrap().start();
-
-            tx.delete_str(start, &text);
-            if let Some(pos) = tx.apply(buf.text_mut()) {
-                buf.set_pos(buf.curs_pos(pos));
-            }
-
+        if delete_selection(buf, tx) {
             super::switch::visual_to_normal_impl(buf);
             return TransactionResult::Commit;
         }
@@ -71,6 +65,22 @@ pub(super) fn delete(ws: &mut Workspace) {
 
         TransactionResult::Abort
     });
+}
+
+pub(super) fn delete_selection(buf: &mut Buffer, tx: &mut Transaction) -> bool {
+    let mut inner = || -> Option<_> {
+        let selected_text = super::selected_text(buf)?;
+        let start = buf.selection()?.start();
+
+        tx.delete_str(start, &selected_text);
+        if let Some(pos) = tx.apply(buf.text_mut()) {
+            buf.set_pos(buf.curs_pos(pos));
+        }
+
+        Some(())
+    };
+
+    inner().is_some()
 }
 
 pub(super) fn delete_backspace(ws: &mut Workspace) {

@@ -1,4 +1,4 @@
-use crate::editor::Workspace;
+use crate::{editor::Workspace, transaction::TransactionResult};
 
 enum ClipboardType {
     Local,
@@ -36,5 +36,26 @@ fn copy_clipboard_impl(ws: &mut Workspace, clipboard_type: ClipboardType) {
 }
 
 fn paste_clipboard_impl(ws: &mut Workspace, clipboard_type: ClipboardType) {
-    todo!()
+    let clipboard = ws.clipboard();
+
+    let text = match clipboard_type {
+        ClipboardType::Local => clipboard.get_local(),
+        ClipboardType::Global => clipboard.get_global(),
+    };
+
+    if text.is_empty() {
+        return;
+    }
+
+    let doc = ws.cur_mut();
+    doc.with_transaction(|tx, buf| {
+        if buf.is_visual() {
+            super::delete_selection(buf, tx);
+        }
+
+        tx.insert_str(buf.byte_pos(), &text);
+        tx.apply(buf.text_mut());
+
+        TransactionResult::Commit
+    });
 }
