@@ -101,8 +101,7 @@ fn switch_line_next(doc: &mut Document) {
 
 fn switch_line_prev(doc: &mut Document) {
     let buf = doc.buf();
-    let idx = buf.index() + 1;
-    let line_pos = buf.line_byte(idx);
+    let line_pos = buf.line_byte(buf.index());
 
     doc.buf_mut().set_offset(0);
     switch_with_new_line(doc, line_pos);
