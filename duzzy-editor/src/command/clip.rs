@@ -53,7 +53,11 @@ fn paste_clipboard_impl(ws: &mut Workspace, clipboard_type: ClipboardType) {
             super::delete_selection(buf, tx);
         }
 
-        tx.insert_str(buf.byte_pos(), &text);
+        let pos = buf.byte_pos();
+        let shift = (pos + 1).min(buf.len_chars());
+
+        tx.shift(pos);
+        tx.insert_str(shift, &text);
         tx.apply(buf.text_mut());
 
         TransactionResult::Commit
