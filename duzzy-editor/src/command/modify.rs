@@ -1,6 +1,5 @@
-use std::borrow::Cow;
-
 use crate::{
+    buffer::Buffer,
     editor::Workspace,
     transaction::{Transaction, TransactionResult},
 };
@@ -50,26 +49,12 @@ pub(super) fn delete(ws: &mut Workspace) {
     doc.with_transaction(|tx, buf| {
         let pos = buf.byte_pos();
 
-        if let Some(selection) = buf.selection() {
-            let (start, mut end) = selection.range();
-            let len_chars = buf.len_chars();
-
-            if selection.head() > selection.anchor() {
-                end += 1;
-            }
-
-            let slice = buf.text().slice(start..end.min(len_chars));
-            let slice = match slice.as_str() {
-                Some(s) => Cow::from(s),
-                None => Cow::from(slice.to_string()),
-            };
-
-            tx.delete_str(start, &slice);
+        if delete_selection(buf, tx) {
             if let Some(pos) = tx.apply(buf.text_mut()) {
                 buf.set_pos(buf.curs_pos(pos));
             }
 
-            super::switch_mode::visual_to_normal_impl(buf);
+            super::switch::visual_to_normal_impl(buf);
             return TransactionResult::Commit;
         }
 
@@ -84,6 +69,18 @@ pub(super) fn delete(ws: &mut Workspace) {
 
         TransactionResult::Abort
     });
+}
+
+pub(super) fn delete_selection(buf: &mut Buffer, tx: &mut Transaction) -> bool {
+    let mut inner = || -> Option<_> {
+        let selected_text = super::selected_text(buf)?;
+        let start = buf.selection()?.start();
+
+        tx.delete_str(start, &selected_text);
+        Some(())
+    };
+
+    inner().is_some()
 }
 
 pub(super) fn delete_backspace(ws: &mut Workspace) {

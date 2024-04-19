@@ -1,6 +1,6 @@
 use crate::{
     editor::Workspace,
-    input::{Event, Input, Modifiers},
+    event::{Event, Input, Modifiers},
     renderer::EventOutcome,
 };
 
@@ -19,39 +19,43 @@ pub fn on_key(ws: &mut Workspace, input: Input) -> EventOutcome {
         Input {
             event: Event::Char(ch),
             ..
-        } => super::adjustment::insert_char(ws, ch),
+        } => super::modify::insert_char(ws, ch),
+        Input {
+            event: Event::Space,
+            ..
+        } => super::modify::insert_char(ws, ' '),
         Input {
             event: Event::Esc, ..
-        } => super::switch_mode::normal_mode(ws),
+        } => super::switch::normal_mode(ws),
         Input {
             event: Event::Left, ..
-        } => super::movement::move_left(ws),
+        } => super::motion::move_left(ws),
         Input {
             event: Event::Right,
             ..
-        } => super::movement::move_right(ws),
+        } => super::motion::move_right(ws),
         Input {
             event: Event::Up, ..
-        } => super::movement::move_up(ws),
+        } => super::motion::move_up(ws),
         Input {
             event: Event::Down, ..
-        } => super::movement::move_down(ws),
+        } => super::motion::move_down(ws),
         Input {
             event: Event::Backspace,
             ..
-        } => super::adjustment::delete_backspace(ws),
+        } => super::modify::delete_backspace(ws),
         Input {
             event: Event::Enter,
             ..
-        } => super::adjustment::new_line(ws),
+        } => super::modify::new_line(ws),
         Input {
             event: Event::PageUp,
             ..
-        } => super::movement::go_to_top_line(ws),
+        } => super::motion::go_to_top_line(ws),
         Input {
             event: Event::PageDown,
             ..
-        } => super::movement::go_to_bottom_line(ws),
+        } => super::motion::go_to_bottom_line(ws),
         _ => outcome = EventOutcome::Ignore,
     }
 

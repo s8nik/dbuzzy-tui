@@ -103,6 +103,10 @@ impl Buffer {
         self.selection = None;
     }
 
+    pub const fn is_selection(&self) -> bool {
+        self.selection.is_some()
+    }
+
     pub fn line_byte(&self, index: usize) -> usize {
         self.text.line_to_byte(index)
     }

@@ -6,7 +6,7 @@ use std::{
 use crate::{
     buffer::Mode,
     command::CmdType,
-    input::{Event, Input, Modifiers},
+    event::{Event, Input, Modifiers},
 };
 
 #[cfg_attr(test, derive(PartialEq))]
@@ -79,6 +79,10 @@ impl Keymaps {
             ("e", CmdType::MoveNextWordEnd),
             ("b", CmdType::MovePrevWordStart),
             ("x", CmdType::SelectLine),
+            ("y", CmdType::CopyLocal),
+            ("<Space>y", CmdType::CopyGlobal),
+            ("p", CmdType::PasteLocal),
+            ("<Space>p", CmdType::PasteGlobal),
         ];
 
         mappings.into()
@@ -100,6 +104,10 @@ impl Keymaps {
             ("e", CmdType::MoveNextWordEnd),
             ("b", CmdType::MovePrevWordStart),
             ("x", CmdType::SelectLine),
+            ("y", CmdType::CopyLocal),
+            ("<Space>y", CmdType::CopyGlobal),
+            ("p", CmdType::PasteLocal),
+            ("<Space>p", CmdType::PasteGlobal),
         ];
 
         mappings.into()

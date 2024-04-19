@@ -2,7 +2,8 @@ use std::{collections::HashMap, path::Path};
 
 use crate::{
     buffer::Pos,
-    command::{insert_mode, CommandFinder},
+    clipboard::Clipboard,
+    command::{input, CommandFinder},
     document::{Document, DocumentId},
     keymap::Keymaps,
     renderer::{Cursor, EventOutcome, Renderer, Viewport},
@@ -81,7 +82,7 @@ impl DuzzyEditor {
                 self.command.reset();
                 EventOutcome::Render
             }
-            None if buf.is_insert() => insert_mode::on_key(&mut self.workspace, input),
+            None if buf.is_insert() => input::on_key(&mut self.workspace, input),
             _ => EventOutcome::Ignore,
         };
 
@@ -99,6 +100,7 @@ impl DuzzyEditor {
 pub struct Workspace {
     documents: HashMap<DocumentId, Document>,
     current: DocumentId,
+    clipboard: Clipboard,
 }
 
 impl Default for Workspace {
@@ -112,6 +114,7 @@ impl Workspace {
         Self {
             documents: HashMap::new(),
             current: DocumentId::MAX,
+            clipboard: Clipboard::new(),
         }
     }
 
@@ -119,6 +122,10 @@ impl Workspace {
         let id = doc.id();
         self.documents.insert(id, doc);
         self.current = id;
+    }
+
+    pub fn clipboard(&mut self) -> &mut Clipboard {
+        &mut self.clipboard
     }
 
     pub fn cur(&self) -> &Document {

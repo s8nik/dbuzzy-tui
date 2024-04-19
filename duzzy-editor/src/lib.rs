@@ -5,11 +5,12 @@
     clippy::use_self
 )]
 mod buffer;
+mod clipboard;
 mod command;
 mod document;
 pub mod editor;
+mod event;
 mod history;
-mod input;
 mod keymap;
 pub mod renderer;
 mod selection;

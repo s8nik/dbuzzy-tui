@@ -1,22 +1,24 @@
-mod adjustment;
-mod history;
-pub mod insert_mode;
-mod movement;
-mod switch_mode;
-mod visual;
+mod clip;
+pub mod input;
+mod modify;
+mod motion;
+mod revert;
+mod select;
+mod switch;
 
 use std::{collections::HashMap, sync::Arc};
 
-use adjustment::*;
-use history::{redo, undo};
-use movement::*;
-use switch_mode::*;
-use visual::*;
+use clip::*;
+use modify::*;
+use motion::*;
+use revert::{redo, undo};
+use select::*;
+use switch::*;
 
 use crate::{
     buffer::Buffer,
     editor::Workspace,
-    input::Input,
+    event::Input,
     keymap::{Keymap, Keymaps},
 };
 
@@ -46,6 +48,10 @@ pub enum CmdType {
     NormalMode,
     VisualMode,
     SelectLine,
+    CopyLocal,
+    CopyGlobal,
+    PasteLocal,
+    PasteGlobal,
 }
 
 pub struct Command {
@@ -92,6 +98,10 @@ impl CommandRegistry {
             Command::new(CmdType::VisualMode, visual_mode),
             Command::new(CmdType::NormalMode, normal_mode),
             Command::new(CmdType::SelectLine, select_line),
+            Command::new(CmdType::CopyLocal, copy_local),
+            Command::new(CmdType::CopyGlobal, copy_global),
+            Command::new(CmdType::PasteLocal, paste_local),
+            Command::new(CmdType::PasteGlobal, paste_global),
         ];
 
         let mut map = HashMap::new();
