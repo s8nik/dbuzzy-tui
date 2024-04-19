@@ -49,17 +49,43 @@ fn paste_clipboard_impl(ws: &mut Workspace, clipboard_type: ClipboardType) {
 
     let doc = ws.cur_mut();
     doc.with_transaction(|tx, buf| {
-        if buf.is_visual() {
-            super::delete_selection(buf, tx);
-        }
-
         let pos = buf.byte_pos();
-        let shift = (pos + 1).min(buf.len_chars());
 
-        tx.shift(pos);
-        tx.insert_str(shift, &text);
+        if buf.is_visual() && super::delete_selection(buf, tx) {
+            tx.insert_str(pos, &text);
+        } else {
+            let shift = (pos + 1).min(buf.len_chars());
+            tx.shift(pos);
+            tx.insert_str(shift, &text);
+        };
+
         tx.apply(buf.text_mut());
-
         TransactionResult::Commit
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{buffer::Mode, document::Document, editor::Workspace};
+
+    #[test]
+    fn test_past_in_visual() {
+        let mut ws = Workspace::default();
+        ws.add_doc(Document::default());
+        ws.clipboard().set_local("hello".to_owned());
+
+        let text = ropey::Rope::from_str("test test\ntest");
+        let doc = ws.cur_mut();
+        let buf = doc.buf_mut();
+
+        buf.set_mode(Mode::Visual);
+        buf.set_text(text);
+        buf.new_selection(buf.len_chars());
+        buf.update_selection(5);
+        buf.set_pos((0, 5));
+
+        super::paste_local(&mut ws);
+
+        assert_eq!(&ws.cur().buf().text().to_string(), "test hello");
+    }
 }
