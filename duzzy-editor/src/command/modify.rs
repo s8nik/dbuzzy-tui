@@ -50,6 +50,10 @@ pub(super) fn delete(ws: &mut Workspace) {
         let pos = buf.byte_pos();
 
         if delete_selection(buf, tx) {
+            if let Some(pos) = tx.apply(buf.text_mut()) {
+                buf.set_pos(buf.curs_pos(pos));
+            }
+
             super::switch::visual_to_normal_impl(buf);
             return TransactionResult::Commit;
         }
@@ -73,10 +77,6 @@ pub(super) fn delete_selection(buf: &mut Buffer, tx: &mut Transaction) -> bool {
         let start = buf.selection()?.start();
 
         tx.delete_str(start, &selected_text);
-        if let Some(pos) = tx.apply(buf.text_mut()) {
-            buf.set_pos(buf.curs_pos(pos));
-        }
-
         Some(())
     };
 
