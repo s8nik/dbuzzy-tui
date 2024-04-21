@@ -37,7 +37,7 @@ pub(super) fn visual_to_normal_impl(buf: &mut Buffer) {
 
 pub(super) fn visual_mode(ws: &mut Workspace) {
     let buf = ws.cur_mut().buf_mut();
-    let pos = buf.byte_pos();
+    let pos = (buf.byte_pos() + 1).min(buf.len_chars());
 
     buf.new_selection(pos);
     buf.set_mode(Mode::Visual);
