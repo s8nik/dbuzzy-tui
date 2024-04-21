@@ -165,7 +165,7 @@ mod tests {
         let doc = ws.cur_mut();
         let buf = doc.buf_mut();
         buf.set_text(text);
-        buf.new_selection(buf.len_chars());
+        buf.new_selection(buf.len_chars() - 1);
         buf.update_selection(4);
 
         delete(&mut ws);

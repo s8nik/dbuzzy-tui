@@ -1,4 +1,4 @@
-use ropey::RopeSlice;
+use ropey::{Rope, RopeSlice};
 
 pub type SelectedRange = (usize, usize);
 
@@ -16,14 +16,6 @@ impl Selection {
         }
     }
 
-    pub const fn anchor(&self) -> usize {
-        self.anchor
-    }
-
-    pub const fn head(&self) -> usize {
-        self.head
-    }
-
     pub fn start(&self) -> usize {
         self.head.min(self.anchor)
     }
@@ -34,6 +26,11 @@ impl Selection {
 
     pub fn range(&self) -> SelectedRange {
         (self.start(), self.end())
+    }
+
+    pub fn slice(self, rope: &Rope) -> RopeSlice<'_> {
+        let (start, end) = self.range();
+        rope.slice(start..=end)
     }
 
     pub fn update(&mut self, pos: usize) {

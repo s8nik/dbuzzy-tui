@@ -3,7 +3,6 @@ use ropey::{iter::Chars, Rope, RopeSlice};
 use crate::{
     buffer::{Buffer, Pos},
     editor::Workspace,
-    transaction::TransactionResult,
 };
 
 #[derive(PartialEq, Eq)]
@@ -73,8 +72,8 @@ pub(super) fn move_prev_word_start(ws: &mut Workspace) {
 fn shift_cursor_impl(ws: &mut Workspace, shift: Shift) {
     let doc = ws.cur_mut();
     let buf = doc.buf_mut();
-    let idx = buf.index();
 
+    let idx = buf.index();
     if !buf.is_visual() {
         buf.reset_selection();
     }
@@ -92,13 +91,16 @@ fn shift_cursor_impl(ws: &mut Workspace, shift: Shift) {
     };
 
     buf.set_pos(pos);
-    buf.update_selection(buf.byte_pos());
 
-    if buf.is_insert() {
-        doc.with_transaction(|tx, buf| {
-            tx.shift(buf.byte_pos());
-            TransactionResult::Keep
-        });
+    let byte_pos = buf.byte_pos();
+    let is_insert = buf.is_insert();
+
+    buf.update_selection(byte_pos);
+
+    if let Some(tx) = doc.transaction() {
+        if is_insert {
+            tx.shift(byte_pos);
+        }
     }
 }
 

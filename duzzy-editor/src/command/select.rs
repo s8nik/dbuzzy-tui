@@ -26,15 +26,7 @@ pub(super) fn select_line(ws: &mut Workspace) {
 }
 
 pub(super) fn selected_text(buf: &Buffer) -> Option<Cow<str>> {
-    let selection = buf.selection()?;
-    let (start, mut end) = selection.range();
-
-    if selection.head() > selection.anchor() {
-        let len_chars = buf.len_chars();
-        end = (end + 1).min(len_chars);
-    }
-
-    let slice = buf.text().slice(start..end);
+    let slice = buf.selection()?.slice(buf.text());
 
     let text = match slice.as_str() {
         Some(s) => Cow::from(s),

@@ -80,7 +80,7 @@ mod tests {
 
         buf.set_mode(Mode::Visual);
         buf.set_text(text);
-        buf.new_selection(buf.len_chars());
+        buf.new_selection(buf.len_chars() - 1);
         buf.update_selection(5);
         buf.set_pos((0, 5));
 
