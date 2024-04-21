@@ -79,27 +79,24 @@ impl<'a> Iterator for SpanIterator<'a> {
             return None;
         }
 
-        if current == start {
-            self.cursor = end;
+        let mut kind = SpanKind::Nothing;
 
-            Some(SelectionSpan {
-                slice: self.line.slice(current..end),
-                kind: SpanKind::Selection,
-            })
+        let slice = if current == start {
+            self.cursor = end;
+            kind = SpanKind::Selection;
+            self.line.slice(current..=end)
         } else if current == end && current != line_len {
             self.cursor = line_len;
-
-            Some(SelectionSpan {
-                slice: self.line.slice(end..line_len),
-                kind: SpanKind::Nothing,
-            })
+            self.line.slice((end + 1).min(line_len)..line_len)
         } else if current == 0 {
             self.cursor = start;
+            self.line.slice(current..start)
+        } else {
+            return None;
+        };
 
-            Some(SelectionSpan {
-                slice: self.line.slice(current..start),
-                kind: SpanKind::Nothing,
-            })
+        if slice.len_bytes() != 0 {
+            Some(Self::Item { slice, kind })
         } else {
             None
         }
@@ -141,10 +138,9 @@ mod tests {
     #[test]
     fn test_select_all() {
         let text = ropey::Rope::from_str("test test");
-        let len = text.len_chars();
 
         let mut selection = Selection::new(0);
-        selection.update(len);
+        selection.update(text.len_chars() - 1);
 
         let mut iter = SpanIterator::new(text.slice(..), selection.range());
 
@@ -180,7 +176,7 @@ mod tests {
             iter.next(),
             Some(SelectionSpan {
                 kind: SpanKind::Selection,
-                slice: RopeSlice::from("t t")
+                slice: RopeSlice::from("t te")
             })
         );
 
@@ -188,7 +184,38 @@ mod tests {
             iter.next(),
             Some(SelectionSpan {
                 kind: SpanKind::Nothing,
-                slice: RopeSlice::from("est")
+                slice: RopeSlice::from("st")
+            })
+        );
+
+        assert_eq!(iter.next(), None,);
+
+        let mut selection = Selection::new(3);
+        selection.update(2);
+
+        let mut iter = SpanIterator::new(text.slice(..), selection.range());
+
+        assert_eq!(
+            iter.next(),
+            Some(SelectionSpan {
+                kind: SpanKind::Nothing,
+                slice: RopeSlice::from("te")
+            })
+        );
+
+        assert_eq!(
+            iter.next(),
+            Some(SelectionSpan {
+                kind: SpanKind::Selection,
+                slice: RopeSlice::from("st")
+            })
+        );
+
+        assert_eq!(
+            iter.next(),
+            Some(SelectionSpan {
+                kind: SpanKind::Nothing,
+                slice: RopeSlice::from(" test")
             })
         );
 
@@ -202,48 +229,48 @@ mod tests {
 
         let line = text.line(0);
         let line_idx = text.line_to_char(0);
-        let max_len = line.len_chars();
-        let spans = selection_spans(line_idx, max_len, line, selection);
+        let max_len = line.len_chars() - 1;
+        let mut spans = selection_spans(line_idx, max_len, line, selection).into_iter();
 
         assert_eq!(spans.len(), 2);
 
         assert_eq!(
-            spans[0],
-            SelectionSpan {
+            spans.next(),
+            Some(SelectionSpan {
                 kind: SpanKind::Nothing,
                 slice: RopeSlice::from("tes"),
-            }
+            })
         );
 
         assert_eq!(
-            spans[1],
-            SelectionSpan {
+            spans.next(),
+            Some(SelectionSpan {
                 kind: SpanKind::Selection,
                 slice: RopeSlice::from("t test\n"),
-            }
+            })
         );
 
         let line = text.line(1);
         let line_idx = text.line_to_char(1);
         let max_len = line.len_chars();
-        let spans = selection_spans(line_idx, max_len, line, selection);
+        let mut spans = selection_spans(line_idx, max_len, line, selection).into_iter();
 
         assert_eq!(spans.len(), 2);
 
         assert_eq!(
-            spans[0],
-            SelectionSpan {
+            spans.next(),
+            Some(SelectionSpan {
                 kind: SpanKind::Selection,
-                slice: RopeSlice::from("test"),
-            }
+                slice: RopeSlice::from("test "),
+            })
         );
 
         assert_eq!(
-            spans[1],
-            SelectionSpan {
+            spans.next(),
+            Some(SelectionSpan {
                 kind: SpanKind::Nothing,
-                slice: RopeSlice::from(" line 2"),
-            }
+                slice: RopeSlice::from("line 2"),
+            })
         );
     }
 }
