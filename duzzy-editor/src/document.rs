@@ -36,6 +36,8 @@ impl Default for DocumentId {
     }
 }
 
+// @todo: open/save file
+#[allow(dead_code)]
 #[derive(Debug, Default)]
 pub struct FileMeta {
     pub path: Option<PathBuf>,
