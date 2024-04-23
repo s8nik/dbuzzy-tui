@@ -76,6 +76,7 @@ pub(super) fn delete_selection(buf: &mut Buffer, tx: &mut Transaction) -> bool {
         let selected_text = super::selected_text(buf)?;
         let start = buf.selection()?.start();
 
+        tx.shift(buf.byte_pos());
         tx.delete_str(start, &selected_text);
         Some(())
     };
