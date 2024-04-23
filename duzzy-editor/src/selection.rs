@@ -29,7 +29,12 @@ impl Selection {
     }
 
     pub fn slice(self, rope: &Rope) -> RopeSlice<'_> {
-        let (start, end) = self.range();
+        let (start, mut end) = self.range();
+
+        if end == rope.len_chars() {
+            end -= 1;
+        }
+
         rope.slice(start..=end)
     }
 
