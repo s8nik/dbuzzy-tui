@@ -154,7 +154,7 @@ fn shift_line_end(buf: &mut Buffer) -> Pos {
 fn shift_by_word(buf: &mut Buffer, kind: ShiftWordKind) -> Pos {
     let shift = ShiftWord::new(buf);
 
-    let WordShiftPos { cursor, anchor } = match kind {
+    let (cursor, anchor) = match kind {
         ShiftWordKind::PrevStart => shift.backward(),
         other => shift.forward(other),
     };
@@ -168,10 +168,7 @@ fn shift_by_word(buf: &mut Buffer, kind: ShiftWordKind) -> Pos {
     cursor
 }
 
-struct WordShiftPos {
-    cursor: Pos,
-    anchor: Option<usize>,
-}
+type ShiftWordPos = (Pos, Option<usize>);
 
 struct ShiftWord<'a> {
     text: &'a Rope,
@@ -206,12 +203,10 @@ impl<'a> ShiftWord<'a> {
         }
     }
 
-    fn forward(&self, kind: ShiftWordKind) -> WordShiftPos {
+    fn forward(&self, kind: ShiftWordKind) -> ShiftWordPos {
         if let Some((ofs, anchor)) = Self::forward_impl(self.line, self.ofs, kind) {
-            return WordShiftPos {
-                cursor: (self.idx, ofs),
-                anchor: Some(anchor),
-            };
+            let cursor = (self.idx, ofs);
+            return (cursor, Some(anchor));
         }
 
         let cursor = if self.idx + 1 < self.text.len_lines() {
@@ -220,10 +215,7 @@ impl<'a> ShiftWord<'a> {
             (self.idx, self.line.chars().count() - 1)
         };
 
-        WordShiftPos {
-            cursor,
-            anchor: None,
-        }
+        (cursor, None)
     }
 
     fn forward_impl(
@@ -263,12 +255,10 @@ impl<'a> ShiftWord<'a> {
         (ofs != len_chars).then_some((len_chars - 1, anch))
     }
 
-    fn backward(&self) -> WordShiftPos {
+    fn backward(&self) -> ShiftWordPos {
         if let Some((ofs, anchor)) = Self::backward_impl(self.line, self.ofs) {
-            return WordShiftPos {
-                cursor: (self.idx, ofs),
-                anchor: Some(anchor),
-            };
+            let cursor = (self.idx, ofs);
+            return (cursor, Some(anchor));
         }
 
         let idx = self.idx;
@@ -280,10 +270,7 @@ impl<'a> ShiftWord<'a> {
             (idx, 0)
         };
 
-        WordShiftPos {
-            cursor,
-            anchor: None,
-        }
+        (cursor, None)
     }
 
     fn backward_impl(line: RopeSlice<'a>, mut ofs: usize) -> Option<(usize, usize)> {
