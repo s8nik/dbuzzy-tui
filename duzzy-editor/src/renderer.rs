@@ -109,7 +109,7 @@ impl<'a> Renderer<'a> {
             let line = text.line(index);
 
             let line_idx = text.line_to_byte(index);
-            let max_len = viewport.0.min(line.len_chars());
+            let max_len = viewport.0.min(line.len_chars().saturating_sub(1));
 
             lines.push(Self::line(line_idx, max_len, line, selection));
         }

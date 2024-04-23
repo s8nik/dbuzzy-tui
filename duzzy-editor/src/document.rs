@@ -93,6 +93,10 @@ impl Document {
         &mut self.buffer
     }
 
+    pub fn transaction(&mut self) -> Option<&mut Transaction> {
+        self.transaction.as_mut()
+    }
+
     pub fn with_transaction<F>(&mut self, func: F)
     where
         F: Fn(&mut Transaction, &mut Buffer) -> TransactionResult,

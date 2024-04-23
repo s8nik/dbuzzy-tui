@@ -1,9 +1,8 @@
-use ropey::{iter::Chars, Rope, RopeSlice};
+use ropey::{Rope, RopeSlice};
 
 use crate::{
     buffer::{Buffer, Pos},
     editor::Workspace,
-    transaction::TransactionResult,
 };
 
 #[derive(PartialEq, Eq)]
@@ -73,8 +72,8 @@ pub(super) fn move_prev_word_start(ws: &mut Workspace) {
 fn shift_cursor_impl(ws: &mut Workspace, shift: Shift) {
     let doc = ws.cur_mut();
     let buf = doc.buf_mut();
-    let idx = buf.index();
 
+    let idx = buf.index();
     if !buf.is_visual() {
         buf.reset_selection();
     }
@@ -92,13 +91,16 @@ fn shift_cursor_impl(ws: &mut Workspace, shift: Shift) {
     };
 
     buf.set_pos(pos);
-    buf.update_selection(buf.byte_pos());
 
-    if buf.is_insert() {
-        doc.with_transaction(|tx, buf| {
-            tx.shift(buf.byte_pos());
-            TransactionResult::Keep
-        });
+    let byte_pos = buf.byte_pos();
+    let is_insert = buf.is_insert();
+
+    buf.update_selection(byte_pos);
+
+    if let Some(tx) = doc.transaction() {
+        if is_insert {
+            tx.shift(byte_pos);
+        }
     }
 }
 
@@ -150,135 +152,162 @@ fn shift_line_end(buf: &mut Buffer) -> Pos {
 }
 
 fn shift_by_word(buf: &mut Buffer, kind: ShiftWordKind) -> Pos {
-    let text = buf.text();
-    let (idx, ofs) = buf.pos();
+    let shift = ShiftWord::new(buf);
 
-    let WordShiftPos { curs, sel } = match kind {
-        ShiftWordKind::PrevStart => shift_word_backward(text, idx, ofs),
-        _ => shift_word_forward(kind, text, idx, ofs),
+    let (cursor, anchor) = match kind {
+        ShiftWordKind::PrevStart => shift.backward(),
+        other => shift.forward(other),
     };
 
     if !buf.is_selection() {
-        if let Some(ofs) = sel {
-            buf.new_selection(buf.line_byte(idx) + ofs);
+        if let Some(ofs) = anchor {
+            buf.new_selection(buf.line_byte(buf.index()) + ofs);
         }
     }
 
-    curs
+    cursor
 }
 
-fn shift_word_forward(kind: ShiftWordKind, text: &Rope, idx: usize, ofs: usize) -> WordShiftPos {
-    let line = text.line(idx);
-    let sel = shift_word_sel(kind, line, ofs);
+type ShiftWordPos = (Pos, Option<usize>);
 
-    if let Some(shift_ofs) = shift_word_impl(kind, line, ofs, 1) {
-        let curs = (idx, shift_ofs);
-        return WordShiftPos { curs, sel };
-    }
-
-    let len_lines = text.len_lines();
-    let curs = if idx + 1 < len_lines {
-        (idx + 1, 0)
-    } else {
-        (idx, line.chars().count() - 1)
-    };
-
-    WordShiftPos { curs, sel }
-}
-
-fn shift_word_backward(text: &Rope, idx: usize, ofs: usize) -> WordShiftPos {
-    let line = text.line(idx);
-    let kind = ShiftWordKind::PrevStart;
-
-    if let Some(shift_ofs) = shift_word_impl(kind, line, ofs, 0) {
-        return WordShiftPos {
-            curs: (idx, shift_ofs),
-            sel: shift_word_sel(kind, line, ofs),
-        };
-    }
-
-    let curs = if idx > 0 {
-        (idx - 1, text.line(idx - 1).chars().count() - 1)
-    } else {
-        (idx, 0)
-    };
-
-    WordShiftPos { curs, sel: None }
-}
-
-fn shift_word_impl(
-    kind: ShiftWordKind,
-    line: RopeSlice<'_>,
+struct ShiftWord<'a> {
+    text: &'a Rope,
+    line: RopeSlice<'a>,
+    idx: usize,
     ofs: usize,
-    skip_by: usize,
-) -> Option<usize> {
-    let mut iter = kind.chars(line, ofs).skip(skip_by);
-    let mut prev: Char = iter.next()?.into();
+}
 
-    for ch in iter {
-        let next: Char = ch.into();
-        let (cur, res) = kind.current(prev, next);
+impl<'a> ShiftWord<'a> {
+    fn new(buf: &'a Buffer) -> Self {
+        let text = buf.text();
+        let (idx, ofs) = buf.pos();
+        let line = text.line(idx);
 
-        if cur.kind != CharKind::Space && next != prev {
-            return Some(kind.offset(ofs, res.pos));
+        Self {
+            text,
+            line,
+            idx,
+            ofs,
+        }
+    }
+
+    fn end_chunk(prev: Char, next: Char) -> bool {
+        prev.kind != CharKind::Space && next != prev
+    }
+
+    fn selection_anchor(prev: Char, next: Char) -> usize {
+        if Self::end_chunk(prev, next) {
+            next.pos
+        } else {
+            prev.pos
+        }
+    }
+
+    fn forward(&self, kind: ShiftWordKind) -> ShiftWordPos {
+        if let Some((ofs, anchor)) = Self::forward_impl(self.line, self.ofs, kind) {
+            let cursor = (self.idx, ofs);
+            return (cursor, Some(anchor));
+        }
+
+        let cursor = if self.idx + 1 < self.text.len_lines() {
+            (self.idx + 1, 0)
+        } else {
+            (self.idx, self.line.chars().count() - 1)
+        };
+
+        (cursor, None)
+    }
+
+    fn forward_impl(
+        line: RopeSlice<'a>,
+        ofs: usize,
+        kind: ShiftWordKind,
+    ) -> Option<(usize, usize)> {
+        let mut it = line.slice(ofs..).chars().enumerate();
+
+        let mut prev: Char = it.next()?.into();
+        let next: Char = it.next()?.into();
+
+        let mut anch = ofs + Self::selection_anchor(prev, next);
+        if kind == ShiftWordKind::NextStart && (prev.kind == CharKind::Space && next != prev) {
+            anch += 1;
         }
 
         prev = next;
-    }
+        for ch in it {
+            let next: Char = ch.into();
 
-    (kind.goes_backward() && prev.kind != CharKind::Space).then_some(0)
-}
+            let (p, n) = match kind {
+                ShiftWordKind::NextStart => (next, prev),
+                ShiftWordKind::NextEnd => (prev, next),
+                ShiftWordKind::PrevStart => return None,
+            };
 
-impl ShiftWordKind {
-    fn chars<'a>(&self, line: RopeSlice<'a>, ofs: usize) -> std::iter::Enumerate<Chars<'a>> {
-        match self {
-            Self::PrevStart => line.chars_at(ofs).reversed().enumerate(),
-            _ => line.slice(ofs..).chars().enumerate(),
+            if Self::end_chunk(p, n) {
+                let ofs = ofs + prev.pos;
+                return Some((ofs, anch));
+            }
+
+            prev = next;
         }
+
+        let len_chars = line.len_chars();
+        (ofs != len_chars).then_some((len_chars - 1, anch))
     }
 
-    const fn offset(&self, ofs: usize, ch_ofs: usize) -> usize {
-        match self {
-            Self::PrevStart => ofs - ch_ofs,
-            _ => ofs + ch_ofs,
+    fn backward(&self) -> ShiftWordPos {
+        if let Some((ofs, anchor)) = Self::backward_impl(self.line, self.ofs) {
+            let cursor = (self.idx, ofs);
+            return (cursor, Some(anchor));
         }
+
+        let idx = self.idx;
+        let text = self.text;
+
+        let cursor = if idx > 0 {
+            (idx - 1, text.line(idx - 1).chars().count() - 1)
+        } else {
+            (idx, 0)
+        };
+
+        (cursor, None)
     }
 
-    const fn current(&self, prev: Char, next: Char) -> (Char, Char) {
-        match self {
-            Self::NextStart => (next, prev),
-            Self::PrevStart => (prev, next),
-            Self::NextEnd => (prev, prev),
+    fn backward_impl(line: RopeSlice<'a>, mut ofs: usize) -> Option<(usize, usize)> {
+        let len_chars = line.len_chars();
+
+        let mut it = line
+            .chars_at((ofs + 1).min(len_chars))
+            .reversed()
+            .enumerate();
+
+        let mut anch = ofs;
+        let mut prev: Char = it.next()?.into();
+
+        for ch in it {
+            let next: Char = ch.into();
+
+            if prev.pos == 0 {
+                anch -= Self::selection_anchor(prev, next);
+
+                if ofs != len_chars {
+                    prev = next;
+                    continue;
+                }
+
+                ofs -= 1;
+            }
+
+            if Self::end_chunk(prev, next) {
+                let ofs = ofs - prev.pos;
+                return Some((ofs, anch));
+            }
+
+            prev = next;
         }
+
+        (ofs != 0).then_some((0, anch))
     }
-
-    fn goes_backward(&self) -> bool {
-        &Self::PrevStart == self
-    }
-}
-
-fn shift_word_sel(kind: ShiftWordKind, line: RopeSlice<'_>, mut ofs: usize) -> Option<usize> {
-    if kind.goes_backward() {
-        ofs = (ofs + 1).min(line.len_chars());
-    }
-
-    let mut iter = kind.chars(line, ofs);
-
-    let prev: Char = iter.next()?.into();
-    let next: Char = iter.next()?.into();
-
-    let pos = if prev.kind != CharKind::Space && next != prev {
-        next.pos
-    } else {
-        prev.pos
-    };
-
-    Some(kind.offset(ofs, pos))
-}
-
-struct WordShiftPos {
-    curs: Pos,
-    sel: Option<usize>,
 }
 
 #[derive(Debug, Clone, Copy)]
