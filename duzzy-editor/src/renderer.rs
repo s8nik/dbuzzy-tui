@@ -4,7 +4,7 @@ use ratatui::{
     layout::Rect,
     style::{Color, Style},
     text::{Line, Span, Text},
-    widgets::{Paragraph, Widget},
+    widgets::{Block, Paragraph, Widget},
 };
 use ropey::RopeSlice;
 
@@ -128,4 +128,32 @@ impl<'a> Widget for Renderer<'a> {
             None => log::warn!("nothing to render!"),
         }
     }
+}
+
+pub struct Theme<'a> {
+    pub base_style: Style,
+    pub cursor_style: Style,
+    pub selection_style: Style,
+    pub block: Option<Block<'a>>,
+}
+
+impl Default for Theme<'_> {
+    fn default() -> Self {
+        Self {
+            block: None,
+            base_style: Style::default().bg(color::DARK_PURPLE),
+            cursor_style: Style::default().fg(color::YELLOW),
+            selection_style: Style::default()
+                .bg(color::LIGHT_GRAY)
+                .fg(color::DARK_PURPLE),
+        }
+    }
+}
+
+pub(crate) mod color {
+    use super::Color;
+
+    pub const YELLOW: Color = Color::Rgb(250, 204, 21);
+    pub const DARK_PURPLE: Color = Color::Rgb(88, 28, 135);
+    pub const LIGHT_GRAY: Color = Color::Rgb(248, 250, 252);
 }
