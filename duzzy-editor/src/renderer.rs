@@ -4,7 +4,7 @@ use ratatui::{
     layout::Rect,
     style::{Color, Style},
     text::{Line, Span, Text},
-    widgets::{Block, Paragraph, Widget},
+    widgets::{Block, BorderType, Borders, Paragraph, Widget},
 };
 use ropey::RopeSlice;
 
@@ -49,11 +49,16 @@ impl Cursor {
     }
 }
 
-pub struct Renderer<'a>(&'a Editor);
+pub struct Renderer<'a> {
+    editor: &'a Editor,
+    theme: Theme<'a>,
+}
 
 impl<'a> Renderer<'a> {
-    pub const fn new(editor: &'a Editor) -> Self {
-        Self(editor)
+    pub fn new(editor: &'a Editor) -> Self {
+        let theme = Theme::default();
+
+        Self { editor, theme }
     }
 
     fn line(
@@ -94,10 +99,10 @@ impl<'a> Renderer<'a> {
 
     #[inline]
     pub fn text(&self) -> Option<Text> {
-        let buf = self.0.workspace.cur().buf();
+        let buf = self.editor.workspace.cur().buf();
 
         let text = buf.text();
-        let viewport = self.0.viewport();
+        let viewport = self.editor.viewport();
         let selection = buf.selection().map(|s| s.range());
 
         let vscroll = buf.vscroll();
@@ -139,8 +144,12 @@ pub struct Theme<'a> {
 
 impl Default for Theme<'_> {
     fn default() -> Self {
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Thick);
+
         Self {
-            block: None,
+            block: Some(block),
             base_style: Style::default().bg(color::DARK_PURPLE),
             cursor_style: Style::default().fg(color::YELLOW),
             selection_style: Style::default()

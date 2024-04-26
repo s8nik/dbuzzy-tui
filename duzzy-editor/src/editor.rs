@@ -36,7 +36,7 @@ impl Editor {
         self.workspace.add_doc(Document::default());
     }
 
-    pub const fn widget(&self) -> Renderer<'_> {
+    pub fn widget(&self) -> Renderer<'_> {
         Renderer::new(self)
     }
 
