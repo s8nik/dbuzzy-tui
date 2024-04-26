@@ -1,6 +1,6 @@
 use std::{io::Write, time::Duration};
 
-use crossterm::{event::EventStream, execute, ExecutableCommand};
+use crossterm::{event::EventStream, ExecutableCommand};
 use duzzy_editor::{editor::Editor, renderer::EventOutcome};
 use futures_util::StreamExt;
 use ratatui::{backend::Backend, Terminal};
@@ -67,13 +67,9 @@ impl<B: Backend + Write> App<B> {
 
         let mut reader = EventStream::new();
 
-        // first render
-        let widget = self.editor.widget();
         self.terminal.draw(|ui| {
-            ui.render_widget(widget, ui.size());
+            ui.render_widget(self.editor.widget(), ui.size());
         })?;
-
-        self.render_cursor()?;
 
         loop {
             let Some(Ok(event)) = reader.next().await else {
@@ -81,9 +77,7 @@ impl<B: Backend + Write> App<B> {
                 continue;
             };
 
-            let outcome = self.editor.on_event(event);
-
-            match outcome {
+            match self.editor.on_event(event) {
                 EventOutcome::Exit => break,
                 EventOutcome::Render => {
                     let widget = self.editor.widget();
@@ -93,19 +87,7 @@ impl<B: Backend + Write> App<B> {
                 }
                 _ => (),
             };
-
-            self.render_cursor()?;
         }
-
-        Ok(())
-    }
-
-    fn render_cursor(&mut self) -> anyhow::Result<()> {
-        let cursor = self.editor.cursor();
-
-        self.terminal.set_cursor(cursor.x, cursor.y)?;
-        execute!(self.terminal.backend_mut(), cursor.style())?;
-        self.terminal.show_cursor()?;
 
         Ok(())
     }

@@ -125,6 +125,12 @@ impl<'a> Renderer<'a> {
 
 impl<'a> Widget for Renderer<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
+        buf.set_style(area, self.theme.base_style);
+
+        let cursor = self.editor.cursor();
+        buf.get_mut(cursor.x, cursor.y)
+            .set_style(self.theme.cursor_style);
+
         match self.text() {
             Some(text) => {
                 let inner = Paragraph::new(text);
@@ -150,11 +156,9 @@ impl Default for Theme<'_> {
 
         Self {
             block: Some(block),
-            base_style: Style::default().bg(color::DARK_PURPLE),
-            cursor_style: Style::default().fg(color::YELLOW),
-            selection_style: Style::default()
-                .bg(color::LIGHT_GRAY)
-                .fg(color::DARK_PURPLE),
+            base_style: Style::default().bg(color::DARK_BLUE),
+            cursor_style: Style::default().bg(color::YELLOW),
+            selection_style: Style::default().bg(color::LIGHT_YELLOW),
         }
     }
 }
@@ -162,7 +166,7 @@ impl Default for Theme<'_> {
 pub(crate) mod color {
     use super::Color;
 
+    pub const LIGHT_YELLOW: Color = Color::Rgb(255, 255, 205);
+    pub const DARK_BLUE: Color = Color::Rgb(0, 0, 20);
     pub const YELLOW: Color = Color::Rgb(250, 204, 21);
-    pub const DARK_PURPLE: Color = Color::Rgb(88, 28, 135);
-    pub const LIGHT_GRAY: Color = Color::Rgb(248, 250, 252);
 }
