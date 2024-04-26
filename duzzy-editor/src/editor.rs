@@ -9,14 +9,14 @@ use crate::{
     renderer::{Cursor, EventOutcome, Renderer, Viewport},
 };
 
-pub struct DuzzyEditor {
+pub struct Editor {
     pub(super) workspace: Workspace,
     keymaps: &'static Keymaps,
     command: CommandFinder,
     viewport: Viewport,
 }
 
-impl DuzzyEditor {
+impl Editor {
     pub fn new(width: usize, height: usize) -> Self {
         Self {
             workspace: Workspace::new(),

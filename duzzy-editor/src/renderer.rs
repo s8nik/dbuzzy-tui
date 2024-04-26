@@ -10,7 +10,7 @@ use ropey::RopeSlice;
 
 use crate::{
     buffer::Mode,
-    editor::DuzzyEditor,
+    editor::Editor,
     selection::{selection_spans, SelectedRange, SpanKind},
 };
 
@@ -49,10 +49,10 @@ impl Cursor {
     }
 }
 
-pub struct Renderer<'a>(&'a DuzzyEditor);
+pub struct Renderer<'a>(&'a Editor);
 
 impl<'a> Renderer<'a> {
-    pub const fn new(editor: &'a DuzzyEditor) -> Self {
+    pub const fn new(editor: &'a Editor) -> Self {
         Self(editor)
     }
 

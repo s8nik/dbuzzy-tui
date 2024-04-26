@@ -1,12 +1,12 @@
 use std::{io::Write, time::Duration};
 
 use crossterm::{event::EventStream, execute, ExecutableCommand};
-use duzzy_editor::{editor::DuzzyEditor, renderer::EventOutcome};
+use duzzy_editor::{editor::Editor, renderer::EventOutcome};
 use futures_util::StreamExt;
 use ratatui::{backend::Backend, Terminal};
 
 pub struct App<B: Backend + Write> {
-    editor: DuzzyEditor,
+    editor: Editor,
     terminal: Terminal<B>,
 }
 
@@ -15,7 +15,7 @@ impl<B: Backend + Write> App<B> {
         let mut terminal = Terminal::new(backend).expect("terminal");
         let size = terminal.size()?;
 
-        let mut editor = DuzzyEditor::new(size.width as usize, size.height as usize);
+        let mut editor = Editor::new(size.width as usize, size.height as usize);
 
         let mut opened = 0;
         let mut failed = 0;
