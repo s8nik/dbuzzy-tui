@@ -1,7 +1,7 @@
 use crossterm::cursor::SetCursorStyle;
 use ratatui::{
     buffer::Buffer,
-    layout::Rect,
+    layout::{Constraint, Layout, Rect},
     style::{Color, Style},
     text::{Line, Span, Text},
     widgets::{Paragraph, Widget},
@@ -51,6 +51,7 @@ impl Cursor {
 
 pub struct Renderer<'a> {
     editor: &'a Editor,
+    status: StatusLine,
     theme: Theme,
 }
 
@@ -58,7 +59,14 @@ impl<'a> Renderer<'a> {
     pub fn new(editor: &'a Editor) -> Self {
         let theme = Theme::default();
 
-        Self { editor, theme }
+        let mode = editor.workspace.cur().buf().mode();
+        let status = StatusLine::new(mode);
+
+        Self {
+            editor,
+            status,
+            theme,
+        }
     }
 
     fn line(
@@ -121,18 +129,23 @@ impl<'a> Renderer<'a> {
     }
 }
 
-impl<'a> Widget for Renderer<'a> {
+impl Widget for Renderer<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         buf.set_style(area, self.theme.base_style);
 
+        let [main, status] =
+            Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).areas(area);
+
         if let Some(text) = self.text() {
             let inner = Paragraph::new(text);
-            inner.render(area, buf);
+            inner.render(main, buf);
         }
 
         let cursor = self.editor.cursor();
         buf.get_mut(cursor.x, cursor.y)
             .set_style(self.theme.cursor_style);
+
+        self.status.render(status, buf);
     }
 }
 
@@ -149,8 +162,42 @@ impl Default for Theme {
             base_style: Style::default().bg(color::RICH_BLACK),
             text_style: Style::default().fg(color::MINT_GREEN),
             cursor_style: Style::default().bg(color::VIOLET),
-            selection_style: Style::default().bg(color::DIM_GRAY),
+            selection_style: Style::default().bg(color::VIOLET),
         }
+    }
+}
+
+pub struct StatusLine {
+    mode: Mode,
+    line_style: Style,
+    text_style: Style,
+}
+
+impl StatusLine {
+    fn new(mode: Mode) -> Self {
+        Self {
+            mode,
+            line_style: Style::default().fg(color::MINT_GREEN).bg(color::VIOLET),
+            text_style: Style::default().fg(color::VIOLET).bg(color::MINT_GREEN),
+        }
+    }
+}
+
+impl Widget for StatusLine {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        let constraints = [Constraint::Length(10), Constraint::Min(0)];
+        let [left, right] = Layout::horizontal(constraints).areas(area);
+
+        let mode_paragraph = Paragraph::new(Line::from(Span::from(self.mode.as_ref())))
+            .centered()
+            .style(self.text_style);
+
+        let search_paragraph = Paragraph::new(Line::from("search placeholder"))
+            .left_aligned()
+            .style(self.line_style);
+
+        mode_paragraph.render(left, buf);
+        search_paragraph.render(right, buf);
     }
 }
 
@@ -160,5 +207,4 @@ pub(crate) mod color {
     pub const VIOLET: Color = Color::Rgb(138, 112, 144);
     pub const RICH_BLACK: Color = Color::Rgb(17, 21, 28);
     pub const MINT_GREEN: Color = Color::Rgb(201, 237, 220);
-    pub const DIM_GRAY: Color = Color::Rgb(100, 110, 104);
 }
