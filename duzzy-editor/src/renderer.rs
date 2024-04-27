@@ -4,7 +4,7 @@ use ratatui::{
     layout::Rect,
     style::{Color, Style},
     text::{Line, Span, Text},
-    widgets::{Block, BorderType, Borders, Paragraph, Widget},
+    widgets::{Paragraph, Widget},
 };
 use ropey::RopeSlice;
 
@@ -51,7 +51,7 @@ impl Cursor {
 
 pub struct Renderer<'a> {
     editor: &'a Editor,
-    theme: Theme<'a>,
+    theme: Theme,
 }
 
 impl<'a> Renderer<'a> {
@@ -62,27 +62,25 @@ impl<'a> Renderer<'a> {
     }
 
     fn line(
+        &self,
         line_idx: usize,
         max_len: usize,
-        line: RopeSlice<'_>,
+        line: RopeSlice<'a>,
         selection: Option<SelectedRange>,
     ) -> Line<'_> {
-        let default_style = Style::default().fg(Color::Yellow);
-        let selection_style = default_style.bg(Color::Gray);
-
-        let default = Line::raw(line).style(default_style);
+        let default_line = |line: RopeSlice<'a>| Line::raw(line).style(self.theme.text_style);
 
         let Some(range) = selection else {
-            return default;
+            return default_line(line);
         };
 
         if range.0 == range.1 {
-            return default;
+            return default_line(line);
         }
 
         let span_style = |kind: SpanKind| match kind {
-            SpanKind::Nothing => default_style,
-            SpanKind::Selection => selection_style,
+            SpanKind::Nothing => self.theme.text_style,
+            SpanKind::Selection => self.theme.selection_style,
         };
 
         let spans = selection_spans(line_idx, max_len, line, range)
@@ -93,7 +91,7 @@ impl<'a> Renderer<'a> {
         if !spans.is_empty() {
             Line::from(spans)
         } else {
-            default
+            default_line(line)
         }
     }
 
@@ -116,7 +114,7 @@ impl<'a> Renderer<'a> {
             let line_idx = text.line_to_byte(index);
             let max_len = viewport.0.min(line.len_chars().saturating_sub(1));
 
-            lines.push(Self::line(line_idx, max_len, line, selection));
+            lines.push(self.line(line_idx, max_len, line, selection));
         }
 
         Some(Text::from(lines))
@@ -127,38 +125,31 @@ impl<'a> Widget for Renderer<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         buf.set_style(area, self.theme.base_style);
 
+        if let Some(text) = self.text() {
+            let inner = Paragraph::new(text);
+            inner.render(area, buf);
+        }
+
         let cursor = self.editor.cursor();
         buf.get_mut(cursor.x, cursor.y)
             .set_style(self.theme.cursor_style);
-
-        match self.text() {
-            Some(text) => {
-                let inner = Paragraph::new(text);
-                inner.render(area, buf);
-            }
-            None => log::warn!("nothing to render!"),
-        }
     }
 }
 
-pub struct Theme<'a> {
+pub struct Theme {
     pub base_style: Style,
+    pub text_style: Style,
     pub cursor_style: Style,
     pub selection_style: Style,
-    pub block: Option<Block<'a>>,
 }
 
-impl Default for Theme<'_> {
+impl Default for Theme {
     fn default() -> Self {
-        let block = Block::default()
-            .borders(Borders::ALL)
-            .border_type(BorderType::Thick);
-
         Self {
-            block: Some(block),
-            base_style: Style::default().bg(color::DARK_BLUE),
-            cursor_style: Style::default().bg(color::YELLOW),
-            selection_style: Style::default().bg(color::LIGHT_YELLOW),
+            base_style: Style::default().bg(color::RICH_BLACK),
+            text_style: Style::default().fg(color::MINT_GREEN),
+            cursor_style: Style::default().bg(color::VIOLET),
+            selection_style: Style::default().bg(color::DIM_GRAY),
         }
     }
 }
@@ -166,7 +157,8 @@ impl Default for Theme<'_> {
 pub(crate) mod color {
     use super::Color;
 
-    pub const LIGHT_YELLOW: Color = Color::Rgb(255, 255, 205);
-    pub const DARK_BLUE: Color = Color::Rgb(0, 0, 20);
-    pub const YELLOW: Color = Color::Rgb(250, 204, 21);
+    pub const VIOLET: Color = Color::Rgb(138, 112, 144);
+    pub const RICH_BLACK: Color = Color::Rgb(17, 21, 28);
+    pub const MINT_GREEN: Color = Color::Rgb(201, 237, 220);
+    pub const DIM_GRAY: Color = Color::Rgb(100, 110, 104);
 }
