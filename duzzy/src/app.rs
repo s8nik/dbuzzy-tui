@@ -1,21 +1,19 @@
 use std::{io::Write, time::Duration};
 
-use crossterm::{event::EventStream, execute, ExecutableCommand};
-use duzzy_editor::{editor::DuzzyEditor, renderer::EventOutcome};
+use crossterm::{event::EventStream, ExecutableCommand};
+use duzzy_editor::{editor::Editor, renderer::EventOutcome};
 use futures_util::StreamExt;
 use ratatui::{backend::Backend, Terminal};
 
 pub struct App<B: Backend + Write> {
-    editor: DuzzyEditor,
+    editor: Editor,
     terminal: Terminal<B>,
 }
 
 impl<B: Backend + Write> App<B> {
     pub fn new(args: impl Iterator<Item = String>, backend: B) -> anyhow::Result<Self> {
         let mut terminal = Terminal::new(backend).expect("terminal");
-        let size = terminal.size()?;
-
-        let mut editor = DuzzyEditor::new(size.width as usize, size.height as usize);
+        let mut editor = Editor::new();
 
         let mut opened = 0;
         let mut failed = 0;
@@ -67,13 +65,9 @@ impl<B: Backend + Write> App<B> {
 
         let mut reader = EventStream::new();
 
-        // first render
-        let widget = self.editor.widget();
         self.terminal.draw(|ui| {
-            ui.render_widget(widget, ui.size());
+            ui.render_widget(self.editor.widget(), ui.size());
         })?;
-
-        self.render_cursor()?;
 
         loop {
             let Some(Ok(event)) = reader.next().await else {
@@ -81,9 +75,7 @@ impl<B: Backend + Write> App<B> {
                 continue;
             };
 
-            let outcome = self.editor.on_event(event);
-
-            match outcome {
+            match self.editor.on_event(event) {
                 EventOutcome::Exit => break,
                 EventOutcome::Render => {
                     let widget = self.editor.widget();
@@ -93,19 +85,7 @@ impl<B: Backend + Write> App<B> {
                 }
                 _ => (),
             };
-
-            self.render_cursor()?;
         }
-
-        Ok(())
-    }
-
-    fn render_cursor(&mut self) -> anyhow::Result<()> {
-        let cursor = self.editor.cursor();
-
-        self.terminal.set_cursor(cursor.x, cursor.y)?;
-        execute!(self.terminal.backend_mut(), cursor.style())?;
-        self.terminal.show_cursor()?;
 
         Ok(())
     }

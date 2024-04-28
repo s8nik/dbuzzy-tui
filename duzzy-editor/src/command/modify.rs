@@ -163,8 +163,8 @@ mod tests {
         ws.add_doc(Document::default());
 
         let text = ropey::Rope::from_str("test \ntest");
-        let doc = ws.cur_mut();
-        let buf = doc.buf_mut();
+        let buf = ws.cur_mut().buf_mut();
+
         buf.set_text(text);
         buf.new_selection(buf.len_chars() - 1);
         buf.update_selection(4);

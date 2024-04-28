@@ -1,7 +1,6 @@
-use crossterm::cursor::SetCursorStyle;
 use ratatui::{
     buffer::Buffer,
-    layout::Rect,
+    layout::{Constraint, Layout, Rect},
     style::{Color, Style},
     text::{Line, Span, Text},
     widgets::{Paragraph, Widget},
@@ -10,21 +9,14 @@ use ropey::RopeSlice;
 
 use crate::{
     buffer::Mode,
-    editor::DuzzyEditor,
+    editor::Editor,
     selection::{selection_spans, SelectedRange, SpanKind},
 };
 
-#[derive(Default)]
-pub(super) struct Viewport {
+#[derive(Default, Copy, Clone)]
+pub struct Viewport {
     pub width: usize,
     pub height: usize,
-}
-
-impl Viewport {
-    pub fn update(&mut self, width: usize, height: usize) {
-        self.width = width;
-        self.height = height;
-    }
 }
 
 pub struct Cursor {
@@ -40,44 +32,53 @@ pub enum EventOutcome {
     Exit,
 }
 
-impl Cursor {
-    pub const fn style(&self) -> SetCursorStyle {
-        match self.mode {
-            Mode::Insert => SetCursorStyle::BlinkingBar,
-            Mode::Normal | Mode::Visual => SetCursorStyle::BlinkingBlock,
-        }
-    }
+pub struct Renderer<'a> {
+    editor: &'a Editor,
+    status: StatusLine,
+    theme: Theme,
 }
 
-pub struct Renderer<'a>(&'a DuzzyEditor);
-
 impl<'a> Renderer<'a> {
-    pub const fn new(editor: &'a DuzzyEditor) -> Self {
-        Self(editor)
+    pub fn new(editor: &'a Editor) -> Self {
+        let theme = Theme::default();
+
+        let mode = editor.workspace.cur().buf().mode();
+        let status = StatusLine::new(mode);
+
+        Self {
+            editor,
+            status,
+            theme,
+        }
+    }
+
+    fn update_viewport(&self, width: u16, height: u16) {
+        let mut viewport = self.editor.viewport.borrow_mut();
+
+        viewport.width = width as _;
+        viewport.height = height as _;
     }
 
     fn line(
+        &self,
         line_idx: usize,
         max_len: usize,
-        line: RopeSlice<'_>,
+        line: RopeSlice<'a>,
         selection: Option<SelectedRange>,
     ) -> Line<'_> {
-        let default_style = Style::default().fg(Color::Yellow);
-        let selection_style = default_style.bg(Color::Gray);
-
-        let default = Line::raw(line).style(default_style);
+        let default_line = |line: RopeSlice<'a>| Line::raw(line).style(self.theme.text_style);
 
         let Some(range) = selection else {
-            return default;
+            return default_line(line);
         };
 
         if range.0 == range.1 {
-            return default;
+            return default_line(line);
         }
 
         let span_style = |kind: SpanKind| match kind {
-            SpanKind::Nothing => default_style,
-            SpanKind::Selection => selection_style,
+            SpanKind::Nothing => self.theme.text_style,
+            SpanKind::Selection => self.theme.selection_style,
         };
 
         let spans = selection_spans(line_idx, max_len, line, range)
@@ -88,20 +89,20 @@ impl<'a> Renderer<'a> {
         if !spans.is_empty() {
             Line::from(spans)
         } else {
-            default
+            default_line(line)
         }
     }
 
     #[inline]
     pub fn text(&self) -> Option<Text> {
-        let buf = self.0.workspace.cur().buf();
+        let buf = self.editor.workspace.cur().buf();
 
         let text = buf.text();
-        let viewport = self.0.viewport();
+        let viewport = self.editor.viewport.borrow();
         let selection = buf.selection().map(|s| s.range());
 
         let vscroll = buf.vscroll();
-        let max_y = viewport.1.min(text.len_lines());
+        let max_y = viewport.height.min(text.len_lines());
 
         let mut lines = Vec::with_capacity(max_y);
         for y in 0..max_y {
@@ -109,23 +110,93 @@ impl<'a> Renderer<'a> {
             let line = text.line(index);
 
             let line_idx = text.line_to_byte(index);
-            let max_len = viewport.0.min(line.len_chars().saturating_sub(1));
+            let max_len = viewport.width.min(line.len_chars().saturating_sub(1));
 
-            lines.push(Self::line(line_idx, max_len, line, selection));
+            lines.push(self.line(line_idx, max_len, line, selection));
         }
 
         Some(Text::from(lines))
     }
 }
 
-impl<'a> Widget for Renderer<'a> {
+impl Widget for Renderer<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        match self.text() {
-            Some(text) => {
-                let inner = Paragraph::new(text);
-                inner.render(area, buf);
-            }
-            None => log::warn!("nothing to render!"),
+        buf.set_style(area, self.theme.base_style);
+
+        let [main, status] =
+            Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).areas(area);
+
+        self.update_viewport(main.width, main.height);
+
+        if let Some(text) = self.text() {
+            let inner = Paragraph::new(text);
+            inner.render(main, buf);
+        }
+
+        let cursor = self.editor.cursor();
+        buf.get_mut(cursor.x, cursor.y)
+            .set_style(self.theme.cursor_style);
+
+        self.status.render(status, buf);
+    }
+}
+
+pub struct Theme {
+    pub base_style: Style,
+    pub text_style: Style,
+    pub cursor_style: Style,
+    pub selection_style: Style,
+}
+
+impl Default for Theme {
+    fn default() -> Self {
+        Self {
+            base_style: Style::default().bg(color::RICH_BLACK),
+            text_style: Style::default().fg(color::LAVENDER),
+            cursor_style: Style::default().bg(color::COOL_GRAY),
+            selection_style: Style::default().bg(color::COOL_GRAY),
         }
     }
+}
+
+pub struct StatusLine {
+    mode: Mode,
+    line_style: Style,
+    text_style: Style,
+}
+
+impl StatusLine {
+    fn new(mode: Mode) -> Self {
+        Self {
+            mode,
+            line_style: Style::default().fg(color::LAVENDER).bg(color::COOL_GRAY),
+            text_style: Style::default().fg(color::RICH_BLACK).bg(color::LAVENDER),
+        }
+    }
+}
+
+impl Widget for StatusLine {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        let constraints = [Constraint::Length(10), Constraint::Min(0)];
+        let [left, right] = Layout::horizontal(constraints).areas(area);
+
+        let mode_paragraph = Paragraph::new(self.mode.as_ref())
+            .centered()
+            .style(self.text_style);
+
+        let search_paragraph = Paragraph::new("search placeholder")
+            .left_aligned()
+            .style(self.line_style);
+
+        mode_paragraph.render(left, buf);
+        search_paragraph.render(right, buf);
+    }
+}
+
+pub(crate) mod color {
+    use super::Color;
+
+    pub const LAVENDER: Color = Color::Rgb(238, 238, 255);
+    pub const RICH_BLACK: Color = Color::Rgb(17, 21, 28);
+    pub const COOL_GRAY: Color = Color::Rgb(127, 124, 175);
 }
