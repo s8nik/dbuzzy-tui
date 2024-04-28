@@ -180,11 +180,11 @@ impl Widget for StatusLine {
         let constraints = [Constraint::Length(10), Constraint::Min(0)];
         let [left, right] = Layout::horizontal(constraints).areas(area);
 
-        let mode_paragraph = Paragraph::new(Line::from(Span::from(self.mode.as_ref())))
+        let mode_paragraph = Paragraph::new(self.mode.as_ref())
             .centered()
             .style(self.text_style);
 
-        let search_paragraph = Paragraph::new(Line::from("search placeholder"))
+        let search_paragraph = Paragraph::new("search placeholder")
             .left_aligned()
             .style(self.line_style);
 

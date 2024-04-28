@@ -142,7 +142,7 @@ mod tests {
         new_line(&mut ws);
         new_line(&mut ws);
 
-        let buf = ws.cur_mut().buf();
+        let buf = ws.cur().buf();
         assert_eq!((4, 0), buf.pos());
         assert_eq!(&buf.text().to_string(), "\n\n\n\nte");
 
