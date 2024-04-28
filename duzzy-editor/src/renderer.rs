@@ -1,4 +1,3 @@
-use crossterm::cursor::SetCursorStyle;
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
@@ -14,17 +13,10 @@ use crate::{
     selection::{selection_spans, SelectedRange, SpanKind},
 };
 
-#[derive(Default)]
-pub(super) struct Viewport {
+#[derive(Default, Copy, Clone)]
+pub struct Viewport {
     pub width: usize,
     pub height: usize,
-}
-
-impl Viewport {
-    pub fn update(&mut self, width: usize, height: usize) {
-        self.width = width;
-        self.height = height;
-    }
 }
 
 pub struct Cursor {
@@ -38,15 +30,6 @@ pub enum EventOutcome {
     Render,
     Ignore,
     Exit,
-}
-
-impl Cursor {
-    pub const fn style(&self) -> SetCursorStyle {
-        match self.mode {
-            Mode::Insert => SetCursorStyle::BlinkingBar,
-            Mode::Normal | Mode::Visual => SetCursorStyle::BlinkingBlock,
-        }
-    }
 }
 
 pub struct Renderer<'a> {
@@ -67,6 +50,13 @@ impl<'a> Renderer<'a> {
             status,
             theme,
         }
+    }
+
+    fn update_viewport(&self, width: u16, height: u16) {
+        let mut viewport = self.editor.viewport.borrow_mut();
+
+        viewport.width = width as _;
+        viewport.height = height as _;
     }
 
     fn line(
@@ -108,11 +98,11 @@ impl<'a> Renderer<'a> {
         let buf = self.editor.workspace.cur().buf();
 
         let text = buf.text();
-        let viewport = self.editor.viewport();
+        let viewport = self.editor.viewport.borrow();
         let selection = buf.selection().map(|s| s.range());
 
         let vscroll = buf.vscroll();
-        let max_y = viewport.1.min(text.len_lines());
+        let max_y = viewport.height.min(text.len_lines());
 
         let mut lines = Vec::with_capacity(max_y);
         for y in 0..max_y {
@@ -120,7 +110,7 @@ impl<'a> Renderer<'a> {
             let line = text.line(index);
 
             let line_idx = text.line_to_byte(index);
-            let max_len = viewport.0.min(line.len_chars().saturating_sub(1));
+            let max_len = viewport.width.min(line.len_chars().saturating_sub(1));
 
             lines.push(self.line(line_idx, max_len, line, selection));
         }
@@ -135,6 +125,8 @@ impl Widget for Renderer<'_> {
 
         let [main, status] =
             Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).areas(area);
+
+        self.update_viewport(main.width, main.height);
 
         if let Some(text) = self.text() {
             let inner = Paragraph::new(text);
@@ -160,9 +152,9 @@ impl Default for Theme {
     fn default() -> Self {
         Self {
             base_style: Style::default().bg(color::RICH_BLACK),
-            text_style: Style::default().fg(color::MINT_GREEN),
-            cursor_style: Style::default().bg(color::VIOLET),
-            selection_style: Style::default().bg(color::VIOLET),
+            text_style: Style::default().fg(color::LAVENDER),
+            cursor_style: Style::default().bg(color::COOL_GRAY),
+            selection_style: Style::default().bg(color::COOL_GRAY),
         }
     }
 }
@@ -177,8 +169,8 @@ impl StatusLine {
     fn new(mode: Mode) -> Self {
         Self {
             mode,
-            line_style: Style::default().fg(color::MINT_GREEN).bg(color::VIOLET),
-            text_style: Style::default().fg(color::VIOLET).bg(color::MINT_GREEN),
+            line_style: Style::default().fg(color::LAVENDER).bg(color::COOL_GRAY),
+            text_style: Style::default().fg(color::RICH_BLACK).bg(color::LAVENDER),
         }
     }
 }
@@ -204,7 +196,7 @@ impl Widget for StatusLine {
 pub(crate) mod color {
     use super::Color;
 
-    pub const VIOLET: Color = Color::Rgb(138, 112, 144);
+    pub const LAVENDER: Color = Color::Rgb(238, 238, 255);
     pub const RICH_BLACK: Color = Color::Rgb(17, 21, 28);
-    pub const MINT_GREEN: Color = Color::Rgb(201, 237, 220);
+    pub const COOL_GRAY: Color = Color::Rgb(127, 124, 175);
 }

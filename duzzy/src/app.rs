@@ -13,9 +13,7 @@ pub struct App<B: Backend + Write> {
 impl<B: Backend + Write> App<B> {
     pub fn new(args: impl Iterator<Item = String>, backend: B) -> anyhow::Result<Self> {
         let mut terminal = Terminal::new(backend).expect("terminal");
-        let size = terminal.size()?;
-
-        let mut editor = Editor::new(size.width as usize, size.height as usize);
+        let mut editor = Editor::new();
 
         let mut opened = 0;
         let mut failed = 0;
