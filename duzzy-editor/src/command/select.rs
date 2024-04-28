@@ -49,9 +49,7 @@ mod tests {
         let mut ws = Workspace::default();
         ws.add_doc(Document::default());
 
-        let doc = ws.cur_mut();
-        let buf = doc.buf_mut();
-
+        let (doc, buf) = ws.cur_mut();
         let text = Rope::from("test\ntest");
 
         buf.set_pos((0, 2));

@@ -75,8 +75,7 @@ mod tests {
         ws.clipboard().set_local("hello".to_owned());
 
         let text = ropey::Rope::from_str("test test\ntest");
-        let doc = ws.cur_mut();
-        let buf = doc.buf_mut();
+        let buf = ws.cur_mut().buf_mut();
 
         buf.set_mode(Mode::Visual);
         buf.set_text(text);
