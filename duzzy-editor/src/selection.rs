@@ -56,13 +56,13 @@ pub struct SelectionSpan<'a> {
     pub kind: SpanKind,
 }
 
-struct SpanIterator<'a> {
+struct SpanIter<'a> {
     cursor: usize,
     line: RopeSlice<'a>,
     range: SelectedRange,
 }
 
-impl<'a> SpanIterator<'a> {
+impl<'a> SpanIter<'a> {
     pub const fn new(line: RopeSlice<'a>, range: SelectedRange) -> Self {
         Self {
             cursor: 0,
@@ -72,7 +72,7 @@ impl<'a> SpanIterator<'a> {
     }
 }
 
-impl<'a> Iterator for SpanIterator<'a> {
+impl<'a> Iterator for SpanIter<'a> {
     type Item = SelectionSpan<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -130,7 +130,7 @@ pub fn selection_spans(
     );
 
     overlaps
-        .then(|| SpanIterator::new(line, in_line_range).collect())
+        .then(|| SpanIter::new(line, in_line_range).collect())
         .unwrap_or_default()
 }
 
@@ -138,7 +138,7 @@ pub fn selection_spans(
 mod tests {
     use ropey::RopeSlice;
 
-    use super::{selection_spans, Selection, SelectionSpan, SpanIterator, SpanKind};
+    use super::{selection_spans, Selection, SelectionSpan, SpanIter, SpanKind};
 
     #[test]
     fn test_select_all() {
@@ -147,7 +147,7 @@ mod tests {
         let mut selection = Selection::new(0);
         selection.update(text.len_chars() - 1);
 
-        let mut iter = SpanIterator::new(text.slice(..), selection.range());
+        let mut iter = SpanIter::new(text.slice(..), selection.range());
 
         assert_eq!(
             iter.next(),
@@ -167,7 +167,7 @@ mod tests {
         let mut selection = Selection::new(3);
         selection.update(6);
 
-        let mut iter = SpanIterator::new(text.slice(..), selection.range());
+        let mut iter = SpanIter::new(text.slice(..), selection.range());
 
         assert_eq!(
             iter.next(),
@@ -198,7 +198,7 @@ mod tests {
         let mut selection = Selection::new(3);
         selection.update(2);
 
-        let mut iter = SpanIterator::new(text.slice(..), selection.range());
+        let mut iter = SpanIter::new(text.slice(..), selection.range());
 
         assert_eq!(
             iter.next(),
