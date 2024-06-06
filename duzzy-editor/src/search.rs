@@ -48,21 +48,22 @@ impl Iterator for SearchIter<'_> {
     type Item = MatchRange;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let mut index = 0;
-        let mut chars = self.text.chars().skip(self.offset);
+        let mut index = self.offset;
 
-        while index <= self.text.len_chars() - self.offset - self.pattern_len {
+        while index <= self.text.len_chars() - self.pattern_len {
             let mut skips = 0;
 
-            for i in (0..self.pattern_len - 1).rev() {
-                let ch_text = chars.nth(index + i).expect("text char");
-                let ch_pattern = self.pattern.chars().nth(i).expect("pattern char");
+            for i in (0..self.pattern_len).rev() {
+                let ch_text = self.text.char(index + i);
+                let ch_pattern = self.pattern.chars().nth(i)?;
 
                 if ch_pattern != ch_text {
                     match self.bad_match_table.get(&ch_text) {
                         Some(s) => skips = *s,
                         None => skips = self.pattern_len,
-                    }
+                    };
+
+                    break;
                 }
             }
 
@@ -86,12 +87,25 @@ mod tests {
     use super::SearchIter;
 
     #[test]
-    fn test_search() {
+    fn test_search_single_line() {
         let text = Rope::from_str("lotestlol");
         let mut iter = SearchIter::from_rope_slice(text.slice(..), "lo");
 
         assert_eq!(iter.next(), Some((0, 2)));
         assert_eq!(iter.next(), Some((6, 8)));
         assert_eq!(iter.next(), None);
+
+        let mut iter = SearchIter::from_rope_slice(text.slice(..), "test");
+        assert_eq!(iter.next(), Some((2, 6)));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn test_search_multiple_line() {
+        let text = Rope::from_str("foo line1\nbar line2");
+        let mut iter = SearchIter::from_rope_slice(text.slice(..), "line");
+
+        assert_eq!(iter.next(), Some((4, 8)));
+        assert_eq!(iter.next(), Some((14, 18)));
     }
 }
