@@ -2,10 +2,11 @@ use std::{cell::RefCell, collections::HashMap, path::Path};
 
 use crate::{
     clipboard::Clipboard,
-    command::{input, CommandFinder},
+    command::{input_on_key, search_on_key, CommandFinder},
     document::{Document, DocumentId},
     keymap::Keymaps,
     renderer::{Cursor, EventOutcome, Renderer, Viewport},
+    SmartString,
 };
 
 pub struct Editor {
@@ -78,7 +79,8 @@ impl Editor {
                 self.command.reset();
                 EventOutcome::Render
             }
-            None if buf.is_insert() => input::on_key(&mut self.workspace, input),
+            None if buf.is_insert() => input_on_key(&mut self.workspace, input),
+            None if buf.is_search() => search_on_key(&mut self.workspace, input),
             _ => EventOutcome::Ignore,
         };
 
@@ -99,6 +101,7 @@ pub struct Workspace {
     current: DocumentId,
 
     clipboard: Clipboard,
+    search_registry: SmartString,
 }
 
 impl Default for Workspace {
@@ -113,6 +116,7 @@ impl Workspace {
             current: DocumentId::MAX,
             documents: HashMap::new(),
             clipboard: Clipboard::new(),
+            search_registry: SmartString::new_const(),
         }
     }
 
@@ -124,6 +128,14 @@ impl Workspace {
 
     pub fn clipboard(&mut self) -> &mut Clipboard {
         &mut self.clipboard
+    }
+
+    pub fn search_line(&self) -> &str {
+        &self.search_registry
+    }
+
+    pub fn search_registry(&mut self) -> &mut SmartString {
+        &mut self.search_registry
     }
 
     pub fn cur(&self) -> &Document {

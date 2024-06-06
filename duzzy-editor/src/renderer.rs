@@ -34,7 +34,7 @@ pub enum EventOutcome {
 
 pub struct Renderer<'a> {
     editor: &'a Editor,
-    status: StatusLine,
+    status: StatusLine<'a>,
     theme: Theme,
 }
 
@@ -42,8 +42,11 @@ impl<'a> Renderer<'a> {
     pub fn new(editor: &'a Editor) -> Self {
         let theme = Theme::default();
 
-        let mode = editor.workspace.cur().buf().mode();
-        let status = StatusLine::new(mode);
+        let workspace = &editor.workspace;
+        let mode = workspace.cur().buf().mode();
+        let search_line = workspace.search_line();
+
+        let status = StatusLine::new(mode, search_line);
 
         Self {
             editor,
@@ -159,23 +162,25 @@ impl Default for Theme {
     }
 }
 
-pub struct StatusLine {
+pub struct StatusLine<'a> {
     mode: Mode,
+    search_line: &'a str,
     line_style: Style,
     text_style: Style,
 }
 
-impl StatusLine {
-    fn new(mode: Mode) -> Self {
+impl<'a> StatusLine<'a> {
+    fn new(mode: Mode, search_line: &'a str) -> Self {
         Self {
             mode,
+            search_line,
             line_style: Style::default().fg(color::LAVENDER).bg(color::COOL_GRAY),
             text_style: Style::default().fg(color::RICH_BLACK).bg(color::LAVENDER),
         }
     }
 }
 
-impl Widget for StatusLine {
+impl Widget for StatusLine<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let constraints = [Constraint::Length(10), Constraint::Min(0)];
         let [left, right] = Layout::horizontal(constraints).areas(area);
@@ -184,7 +189,7 @@ impl Widget for StatusLine {
             .centered()
             .style(self.text_style);
 
-        let search_paragraph = Paragraph::new("search placeholder")
+        let search_paragraph = Paragraph::new(self.search_line)
             .left_aligned()
             .style(self.line_style);
 
