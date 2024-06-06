@@ -83,6 +83,9 @@ impl Keymaps {
             ("<Space>y", CmdType::CopyGlobal),
             ("p", CmdType::PasteLocal),
             ("<Space>p", CmdType::PasteGlobal),
+            ("/", CmdType::SearchLine),
+            ("n", CmdType::SearchNext),
+            ("N", CmdType::SearchNext),
         ];
 
         mappings.into()
@@ -108,6 +111,9 @@ impl Keymaps {
             ("<Space>y", CmdType::CopyGlobal),
             ("p", CmdType::PasteLocal),
             ("<Space>p", CmdType::PasteGlobal),
+            ("/", CmdType::SearchLine),
+            ("n", CmdType::SearchNext),
+            ("N", CmdType::SearchNext),
         ];
 
         mappings.into()

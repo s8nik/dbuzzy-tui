@@ -52,6 +52,9 @@ pub enum CmdType {
     CopyGlobal,
     PasteLocal,
     PasteGlobal,
+    SearchLine,
+    SearchNext,
+    SearchPrev,
 }
 
 pub struct Command {
