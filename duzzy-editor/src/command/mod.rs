@@ -3,6 +3,7 @@ pub mod input;
 mod modify;
 mod motion;
 mod revert;
+mod search;
 mod select;
 mod switch;
 
@@ -12,6 +13,7 @@ use clip::*;
 use modify::*;
 use motion::*;
 use revert::{redo, undo};
+use search::*;
 use select::*;
 use switch::*;
 
@@ -105,6 +107,9 @@ impl CommandRegistry {
             Command::new(CmdType::CopyGlobal, copy_global),
             Command::new(CmdType::PasteLocal, paste_local),
             Command::new(CmdType::PasteGlobal, paste_global),
+            Command::new(CmdType::SearchLine, search_line),
+            Command::new(CmdType::SearchNext, search_next),
+            Command::new(CmdType::SearchPrev, search_prev),
         ];
 
         let mut map = HashMap::new();
