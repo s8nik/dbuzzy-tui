@@ -56,67 +56,51 @@ impl Keymaps {
         Box::leak(Box::new(Self(map)))
     }
 
-    fn normal_mode() -> Bindings {
-        let mappings = vec![
-            ("i", CmdType::InsertMode),
+    fn common_bindings() -> Vec<(&'static str, CmdType)> {
+        vec![
             ("h", CmdType::MoveLeft),
             ("j", CmdType::MoveDown),
             ("k", CmdType::MoveUp),
             ("l", CmdType::MoveRight),
+            ("d", CmdType::Delete),
+            ("gg", CmdType::GoToTopLine),
+            ("ge", CmdType::GoToBottomLine),
+            ("gl", CmdType::GoToLineEnd),
+            ("gh", CmdType::GoToLineStart),
+            ("w", CmdType::MoveNextWordStart),
+            ("e", CmdType::MoveNextWordEnd),
+            ("b", CmdType::MovePrevWordStart),
+            ("x", CmdType::SelectLine),
+            ("y", CmdType::CopyLocal),
+            ("<Space>y", CmdType::CopyGlobal),
+            ("p", CmdType::PasteLocal),
+            ("<Space>p", CmdType::PasteGlobal),
+            ("/", CmdType::SearchLine),
+            ("n", CmdType::SearchNext),
+            ("N", CmdType::SearchNext),
+        ]
+    }
+
+    fn normal_mode() -> Bindings {
+        let mut bindings = vec![
+            ("i", CmdType::InsertMode),
             ("A", CmdType::InsertModeLineEnd),
             ("I", CmdType::InsertModeLineStart),
             ("o", CmdType::InsertModeLineNext),
             ("O", CmdType::InsertModeLinePrev),
-            ("d", CmdType::Delete),
-            ("gg", CmdType::GoToTopLine),
-            ("ge", CmdType::GoToBottomLine),
-            ("gl", CmdType::GoToLineEnd),
-            ("gh", CmdType::GoToLineStart),
             ("u", CmdType::Undo),
             ("U", CmdType::Redo),
             ("v", CmdType::VisualMode),
-            ("w", CmdType::MoveNextWordStart),
-            ("e", CmdType::MoveNextWordEnd),
-            ("b", CmdType::MovePrevWordStart),
-            ("x", CmdType::SelectLine),
-            ("y", CmdType::CopyLocal),
-            ("<Space>y", CmdType::CopyGlobal),
-            ("p", CmdType::PasteLocal),
-            ("<Space>p", CmdType::PasteGlobal),
-            ("/", CmdType::SearchLine),
-            ("n", CmdType::SearchNext),
-            ("N", CmdType::SearchNext),
         ];
 
-        mappings.into()
+        bindings.extend(Self::common_bindings());
+        bindings.into()
     }
 
     fn visual_mode() -> Bindings {
-        let mappings = vec![
-            ("<Esc>", CmdType::NormalMode),
-            ("h", CmdType::MoveLeft),
-            ("j", CmdType::MoveDown),
-            ("k", CmdType::MoveUp),
-            ("l", CmdType::MoveRight),
-            ("d", CmdType::Delete),
-            ("gg", CmdType::GoToTopLine),
-            ("ge", CmdType::GoToBottomLine),
-            ("gl", CmdType::GoToLineEnd),
-            ("gh", CmdType::GoToLineStart),
-            ("w", CmdType::MoveNextWordStart),
-            ("e", CmdType::MoveNextWordEnd),
-            ("b", CmdType::MovePrevWordStart),
-            ("x", CmdType::SelectLine),
-            ("y", CmdType::CopyLocal),
-            ("<Space>y", CmdType::CopyGlobal),
-            ("p", CmdType::PasteLocal),
-            ("<Space>p", CmdType::PasteGlobal),
-            ("/", CmdType::SearchLine),
-            ("n", CmdType::SearchNext),
-            ("N", CmdType::SearchNext),
-        ];
-
-        mappings.into()
+        let mut bindings = vec![("<Esc>", CmdType::NormalMode)];
+        bindings.extend(Self::common_bindings());
+        bindings.into()
     }
 
     fn parse(root: &mut Bindings, sequence: &str, command_type: CmdType) {
