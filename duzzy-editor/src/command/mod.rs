@@ -1,5 +1,5 @@
 mod clip;
-pub mod input;
+mod input;
 mod modify;
 mod motion;
 mod revert;
@@ -8,6 +8,9 @@ mod select;
 mod switch;
 
 use std::{collections::HashMap, sync::Arc};
+
+pub use input::on_key as input_on_key;
+pub use search::on_key as search_on_key;
 
 use clip::*;
 use modify::*;
@@ -54,7 +57,7 @@ pub enum CmdType {
     CopyGlobal,
     PasteLocal,
     PasteGlobal,
-    SearchLine,
+    SearchMode,
     SearchNext,
     SearchPrev,
 }
@@ -107,7 +110,7 @@ impl CommandRegistry {
             Command::new(CmdType::CopyGlobal, copy_global),
             Command::new(CmdType::PasteLocal, paste_local),
             Command::new(CmdType::PasteGlobal, paste_global),
-            Command::new(CmdType::SearchLine, search_line),
+            Command::new(CmdType::SearchMode, search_mode),
             Command::new(CmdType::SearchNext, search_next),
             Command::new(CmdType::SearchPrev, search_prev),
         ];

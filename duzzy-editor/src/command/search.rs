@@ -1,7 +1,11 @@
-use crate::editor::Workspace;
+use crate::{buffer::Mode, editor::Workspace, event::Input, renderer::EventOutcome};
 
-pub(super) fn search_line(ws: &mut Workspace) {
+pub fn on_key(ws: &mut Workspace, input: Input) -> EventOutcome {
     todo!()
+}
+
+pub(super) fn search_mode(ws: &mut Workspace) {
+    ws.cur_mut().buf_mut().set_mode(Mode::Search)
 }
 
 pub(super) fn search_next(ws: &mut Workspace) {

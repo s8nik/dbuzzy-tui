@@ -75,7 +75,7 @@ impl Keymaps {
             ("<Space>y", CmdType::CopyGlobal),
             ("p", CmdType::PasteLocal),
             ("<Space>p", CmdType::PasteGlobal),
-            ("/", CmdType::SearchLine),
+            ("/", CmdType::SearchMode),
             ("n", CmdType::SearchNext),
             ("N", CmdType::SearchPrev),
         ]
