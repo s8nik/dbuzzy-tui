@@ -17,9 +17,8 @@ pub(super) fn normal_mode(ws: &mut Workspace) {
     let doc = ws.cur_mut();
 
     match doc.buf().mode() {
-        Mode::Visual => visual_to_normal_impl(doc.buf_mut()),
         Mode::Insert => insert_to_normal_impl(doc),
-        _ => (),
+        _ => other_to_normal_impl(doc.buf_mut()),
     }
 }
 
@@ -30,7 +29,7 @@ fn insert_to_normal_impl(doc: &mut Document) {
     });
 }
 
-pub(super) fn visual_to_normal_impl(buf: &mut Buffer) {
+pub(super) fn other_to_normal_impl(buf: &mut Buffer) {
     buf.reset_selection();
     buf.set_mode(Mode::Normal);
 }
@@ -41,6 +40,10 @@ pub(super) fn visual_mode(ws: &mut Workspace) {
 
     buf.new_selection(pos);
     buf.set_mode(Mode::Visual);
+}
+
+pub(super) fn search_mode(ws: &mut Workspace) {
+    ws.cur_mut().buf_mut().set_mode(Mode::Search);
 }
 
 pub(super) fn insert_mode_inplace(ws: &mut Workspace) {
