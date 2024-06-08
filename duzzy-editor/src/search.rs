@@ -1,8 +1,61 @@
 use std::collections::HashMap;
 
-use ropey::RopeSlice;
+use ropey::{Rope, RopeSlice};
 
 pub type MatchRange = (usize, usize);
+
+pub struct SearchRegistry<'a> {
+    done: bool,
+    index: usize,
+    matches: Vec<MatchRange>,
+    iter: SearchIter<'a>,
+}
+
+impl<'a> SearchRegistry<'a> {
+    pub fn new(text: &'a Rope, pattern: &'a str) -> Self {
+        Self {
+            index: 0,
+            done: false,
+            matches: vec![],
+            iter: SearchIter::from_rope_slice(text.slice(..), pattern),
+        }
+    }
+
+    pub fn pattern(&self) -> &str {
+        self.iter.pattern
+    }
+
+    pub fn next(&mut self) -> Option<MatchRange> {
+        if self.done {
+            if self.index == self.matches.len() - 1 {
+                self.index = 0;
+            }
+
+            return self.matches.get(self.index).cloned();
+        }
+
+        let Some(range) = self.iter.next() else {
+            self.done = true;
+            self.index = 0;
+            return self.matches.get(self.index).cloned();
+        };
+
+        self.index += 1;
+        self.matches.push(range);
+
+        Some(range)
+    }
+
+    pub fn prev(&mut self) -> Option<MatchRange> {
+        self.index = if self.index == 0 {
+            self.matches.len() - 1
+        } else {
+            self.index - 1
+        };
+
+        self.matches.get(self.index).cloned()
+    }
+}
 
 #[derive(Debug)]
 struct SearchIter<'a> {
