@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use ropey::RopeSlice;
 
+use crate::SmartString;
+
 pub type MatchRange = (usize, usize);
 
 pub struct SearchRegistry<'a> {
@@ -12,7 +14,7 @@ pub struct SearchRegistry<'a> {
 }
 
 impl<'a> SearchRegistry<'a> {
-    pub fn new(text: RopeSlice<'a>, pattern: &'a str) -> Self {
+    pub fn new(text: RopeSlice<'a>, pattern: SmartString) -> Self {
         Self {
             index: 0,
             done: false,
@@ -21,8 +23,8 @@ impl<'a> SearchRegistry<'a> {
         }
     }
 
-    pub fn pattern(&self) -> &'a str {
-        self.iter.pattern
+    pub fn pattern(&self) -> &str {
+        self.iter.pattern.as_str()
     }
 
     pub fn next(&mut self) -> Option<MatchRange> {
@@ -61,13 +63,13 @@ impl<'a> SearchRegistry<'a> {
 struct SearchIter<'a> {
     text: RopeSlice<'a>,
     offset: usize,
-    pattern: &'a str,
     pattern_len: usize,
+    pattern: SmartString,
     bad_match_table: HashMap<char, usize>,
 }
 
 impl<'a> SearchIter<'a> {
-    fn from_rope_slice(slice: RopeSlice<'a>, search_pattern: &'a str) -> SearchIter<'a> {
+    fn from_rope_slice(slice: RopeSlice<'a>, search_pattern: SmartString) -> SearchIter<'a> {
         assert!(slice.len_chars() != 0, "The text cannot be empty.");
         assert!(
             !search_pattern.is_empty(),
@@ -75,13 +77,14 @@ impl<'a> SearchIter<'a> {
         );
 
         let pattern_len = search_pattern.len();
+        let bad_match_table = Self::bad_match_table(&search_pattern, pattern_len);
 
         SearchIter {
             offset: 0,
             text: slice,
             pattern: search_pattern,
             pattern_len,
-            bad_match_table: Self::bad_match_table(search_pattern, pattern_len),
+            bad_match_table,
         }
     }
 
@@ -142,13 +145,13 @@ mod tests {
     #[test]
     fn test_search_single_line() {
         let text = Rope::from_str("lotestlol");
-        let mut iter = SearchIter::from_rope_slice(text.slice(..), "lo");
+        let mut iter = SearchIter::from_rope_slice(text.slice(..), "lo".into());
 
         assert_eq!(iter.next(), Some((0, 2)));
         assert_eq!(iter.next(), Some((6, 8)));
         assert_eq!(iter.next(), None);
 
-        let mut iter = SearchIter::from_rope_slice(text.slice(..), "test");
+        let mut iter = SearchIter::from_rope_slice(text.slice(..), "test".into());
         assert_eq!(iter.next(), Some((2, 6)));
         assert_eq!(iter.next(), None);
     }
@@ -156,7 +159,7 @@ mod tests {
     #[test]
     fn test_search_multiple_line() {
         let text = Rope::from_str("foo line1\nbar line2");
-        let mut iter = SearchIter::from_rope_slice(text.slice(..), "line");
+        let mut iter = SearchIter::from_rope_slice(text.slice(..), "line".into());
 
         assert_eq!(iter.next(), Some((4, 8)));
         assert_eq!(iter.next(), Some((14, 18)));
