@@ -18,7 +18,8 @@ pub(super) fn normal_mode(ws: &mut Workspace) {
 
     match doc.buf().mode() {
         Mode::Insert => insert_to_normal_impl(doc),
-        _ => other_to_normal_impl(doc.buf_mut()),
+        Mode::Visual => visual_to_normal_impl(doc.buf_mut()),
+        _ => doc.buf_mut().set_mode(Mode::Normal),
     }
 }
 
@@ -29,7 +30,7 @@ fn insert_to_normal_impl(doc: &mut Document) {
     });
 }
 
-pub(super) fn other_to_normal_impl(buf: &mut Buffer) {
+pub(super) fn visual_to_normal_impl(buf: &mut Buffer) {
     buf.reset_selection();
     buf.set_mode(Mode::Normal);
 }
