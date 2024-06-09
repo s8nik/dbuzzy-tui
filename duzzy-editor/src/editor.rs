@@ -6,24 +6,24 @@ use crate::{
     document::{Document, DocumentId},
     keymap::Keymaps,
     renderer::{Cursor, EventOutcome, Renderer, Viewport},
-    SmartString,
+    search::SearchRegistry,
 };
 
-pub struct Editor {
-    pub(super) workspace: Workspace,
+pub struct Editor<'a> {
+    pub(super) workspace: Workspace<'a>,
     pub(super) viewport: RefCell<Viewport>,
 
-    keymaps: &'static Keymaps,
-    command: CommandFinder,
+    keymaps: &'a Keymaps,
+    command: CommandFinder<'a>,
 }
 
-impl Default for Editor {
+impl Default for Editor<'_> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Editor {
+impl<'a> Editor<'a> {
     pub fn new() -> Self {
         Self {
             workspace: Workspace::new(),
@@ -71,7 +71,7 @@ impl Editor {
 
         let input = e.into();
         let buf = self.workspace.cur().buf();
-        let command = self.command.find(self.keymaps, buf, input);
+        let command = self.command.find(&self.keymaps, buf, input);
 
         let outcome = match command {
             Some(command) => {
@@ -96,27 +96,27 @@ impl Editor {
     }
 }
 
-pub struct Workspace {
+pub struct Workspace<'a> {
     documents: HashMap<DocumentId, Document>,
     current: DocumentId,
 
     clipboard: Clipboard,
-    search_registry: SmartString,
+    search_registry: Option<SearchRegistry<'a>>,
 }
 
-impl Default for Workspace {
+impl Default for Workspace<'_> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Workspace {
+impl<'a> Workspace<'a> {
     pub fn new() -> Self {
         Self {
             current: DocumentId::MAX,
             documents: HashMap::new(),
             clipboard: Clipboard::new(),
-            search_registry: SmartString::new_const(),
+            search_registry: None,
         }
     }
 
@@ -130,12 +130,8 @@ impl Workspace {
         &mut self.clipboard
     }
 
-    pub fn search_line(&self) -> &str {
-        &self.search_registry
-    }
-
-    pub fn search_registry(&mut self) -> &mut SmartString {
-        &mut self.search_registry
+    pub fn search_pattern(&self) -> Option<&str> {
+        self.search_registry.as_ref().map(|r| r.pattern())
     }
 
     pub fn cur(&self) -> &Document {

@@ -33,7 +33,7 @@ pub enum EventOutcome {
 }
 
 pub struct Renderer<'a> {
-    editor: &'a Editor,
+    editor: &'a Editor<'a>,
     status: StatusLine<'a>,
     theme: Theme,
 }
@@ -44,9 +44,9 @@ impl<'a> Renderer<'a> {
 
         let workspace = &editor.workspace;
         let mode = workspace.cur().buf().mode();
-        let search_line = workspace.search_line();
+        let search_pattern = workspace.search_pattern();
 
-        let status = StatusLine::new(mode, search_line);
+        let status = StatusLine::new(mode, search_pattern);
 
         Self {
             editor,
@@ -164,13 +164,13 @@ impl Default for Theme {
 
 pub struct StatusLine<'a> {
     mode: Mode,
-    search_line: &'a str,
+    search_line: Option<&'a str>,
     line_style: Style,
     text_style: Style,
 }
 
 impl<'a> StatusLine<'a> {
-    fn new(mode: Mode, search_line: &'a str) -> Self {
+    fn new(mode: Mode, search_line: Option<&'a str>) -> Self {
         Self {
             mode,
             search_line,
@@ -189,7 +189,7 @@ impl Widget for StatusLine<'_> {
             .centered()
             .style(self.text_style);
 
-        let search_paragraph = Paragraph::new(self.search_line)
+        let search_paragraph = Paragraph::new(self.search_line.unwrap_or_default())
             .left_aligned()
             .style(self.line_style);
 

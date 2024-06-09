@@ -135,19 +135,19 @@ impl Default for CommandRegistry {
 }
 
 #[derive(Default)]
-pub struct CommandFinder {
+pub struct CommandFinder<'a> {
     registry: CommandRegistry,
-    current: Option<&'static Keymap>,
+    current: Option<&'a Keymap>,
 }
 
-impl CommandFinder {
+impl<'a> CommandFinder<'a> {
     pub fn reset(&mut self) {
         self.current = None;
     }
 
     pub fn find(
         &mut self,
-        keymaps: &'static Keymaps,
+        keymaps: &'a Keymaps,
         buffer: &Buffer,
         input: Input,
     ) -> Option<Arc<Command>> {
@@ -156,9 +156,9 @@ impl CommandFinder {
         self.current = match self.current {
             Some(node) => match node {
                 Keymap::Leaf(_) => self.current,
-                Keymap::Node(next) => next.get(input),
+                Keymap::Node(next) => next.get(&input),
             },
-            None => bindings.get(input),
+            None => bindings.get(&input),
         };
 
         if let Some(Keymap::Leaf(command)) = self.current {

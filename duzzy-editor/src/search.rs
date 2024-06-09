@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use ropey::{Rope, RopeSlice};
+use ropey::RopeSlice;
 
 pub type MatchRange = (usize, usize);
 
@@ -12,16 +12,16 @@ pub struct SearchRegistry<'a> {
 }
 
 impl<'a> SearchRegistry<'a> {
-    pub fn new(text: &'a Rope, pattern: &'a str) -> Self {
+    pub fn new(text: RopeSlice<'a>, pattern: &'a str) -> Self {
         Self {
             index: 0,
             done: false,
             matches: vec![],
-            iter: SearchIter::from_rope_slice(text.slice(..), pattern),
+            iter: SearchIter::from_rope_slice(text, pattern),
         }
     }
 
-    pub fn pattern(&self) -> &str {
+    pub fn pattern(&self) -> &'a str {
         self.iter.pattern
     }
 
