@@ -283,6 +283,7 @@ dependencies = [
  "arboard",
  "crossterm 0.26.1",
  "log",
+ "once_cell",
  "ratatui",
  "regex",
  "ropey",
