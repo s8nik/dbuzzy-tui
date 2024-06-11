@@ -44,7 +44,7 @@ impl<'a> Renderer<'a> {
 
         let workspace = &editor.workspace;
         let mode = workspace.cur().buf().mode();
-        let search_pattern = workspace.search_pattern();
+        let search_pattern = workspace.search_registry().pattern();
 
         let status = StatusLine::new(mode, search_pattern);
 

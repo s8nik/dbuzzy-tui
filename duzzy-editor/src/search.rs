@@ -18,8 +18,12 @@ impl SearchRegistry {
         self.buffer.push(ch);
     }
 
-    pub fn remove_char(&mut self, ch: char) {
+    pub fn remove_char(&mut self) {
         self.buffer.pop();
+    }
+
+    pub fn pattern(&self) -> Option<&str> {
+        self.pattern.as_deref()
     }
 
     #[cfg(test)]

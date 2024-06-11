@@ -6,7 +6,7 @@ use crate::{
     document::{Document, DocumentId},
     keymap::Keymaps,
     renderer::{Cursor, EventOutcome, Renderer, Viewport},
-    SmartString,
+    search::SearchRegistry,
 };
 
 pub struct Editor {
@@ -101,7 +101,7 @@ pub struct Workspace {
     current: DocumentId,
 
     clipboard: Clipboard,
-    search_pattern: Option<SmartString>,
+    search_registry: SearchRegistry,
 }
 
 impl Default for Workspace {
@@ -116,7 +116,7 @@ impl Workspace {
             current: DocumentId::MAX,
             documents: HashMap::new(),
             clipboard: Clipboard::new(),
-            search_pattern: None,
+            search_registry: SearchRegistry::default(),
         }
     }
 
@@ -130,8 +130,12 @@ impl Workspace {
         &mut self.clipboard
     }
 
-    pub fn search_pattern(&self) -> Option<&str> {
-        self.search_pattern.as_deref()
+    pub fn search_registry(&self) -> &SearchRegistry {
+        &self.search_registry
+    }
+
+    pub fn search_registry_mut(&mut self) -> &mut SearchRegistry {
+        &mut self.search_registry
     }
 
     pub fn cur(&self) -> &Document {
