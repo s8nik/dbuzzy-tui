@@ -6,24 +6,24 @@ use crate::{
     document::{Document, DocumentId},
     keymap::Keymaps,
     renderer::{Cursor, EventOutcome, Renderer, Viewport},
-    search::SearchRegistry,
+    SmartString,
 };
 
-pub struct Editor<'a> {
-    pub(super) workspace: Workspace<'a>,
+pub struct Editor {
+    pub(super) workspace: Workspace,
     pub(super) viewport: RefCell<Viewport>,
 
-    keymaps: &'a Keymaps,
-    command: CommandFinder<'a>,
+    keymaps: &'static Keymaps,
+    command: CommandFinder,
 }
 
-impl Default for Editor<'_> {
+impl Default for Editor {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<'a> Editor<'a> {
+impl Editor {
     pub fn new() -> Self {
         Self {
             workspace: Workspace::new(),
@@ -96,27 +96,27 @@ impl<'a> Editor<'a> {
     }
 }
 
-pub struct Workspace<'a> {
+pub struct Workspace {
     documents: HashMap<DocumentId, Document>,
     current: DocumentId,
 
     clipboard: Clipboard,
-    search_registry: Option<SearchRegistry<'a>>,
+    search_pattern: Option<SmartString>,
 }
 
-impl Default for Workspace<'_> {
+impl Default for Workspace {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<'a> Workspace<'a> {
+impl Workspace {
     pub fn new() -> Self {
         Self {
             current: DocumentId::MAX,
             documents: HashMap::new(),
             clipboard: Clipboard::new(),
-            search_registry: None,
+            search_pattern: None,
         }
     }
 
@@ -131,7 +131,7 @@ impl<'a> Workspace<'a> {
     }
 
     pub fn search_pattern(&self) -> Option<&str> {
-        self.search_registry.as_ref().map(|r| r.pattern())
+        self.search_pattern.as_deref()
     }
 
     pub fn cur(&self) -> &Document {

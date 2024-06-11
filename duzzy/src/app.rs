@@ -5,13 +5,13 @@ use duzzy_editor::{editor::Editor, renderer::EventOutcome};
 use futures_util::StreamExt;
 use ratatui::{backend::Backend, Terminal};
 
-pub struct App<'a, B: Backend + Write> {
+pub struct App<B: Backend + Write> {
     // @note: for testing purposes
-    editor: Editor<'a>,
+    editor: Editor,
     terminal: Terminal<B>,
 }
 
-impl<'a, B: Backend + Write> App<'a, B> {
+impl<B: Backend + Write> App<B> {
     pub fn new(args: impl Iterator<Item = String>, backend: B) -> anyhow::Result<Self> {
         Self::setup_panic();
         let mut terminal = Terminal::new(backend).expect("terminal");
@@ -91,7 +91,7 @@ impl<'a, B: Backend + Write> App<'a, B> {
     }
 }
 
-impl<'a, B: Backend + Write> Drop for App<'a, B> {
+impl<B: Backend + Write> Drop for App<B> {
     fn drop(&mut self) {
         self.terminal.show_cursor().expect("show cursor");
         crossterm::terminal::disable_raw_mode().expect("disable raw mode");

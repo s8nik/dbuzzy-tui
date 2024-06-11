@@ -135,19 +135,19 @@ impl Default for CommandRegistry {
 }
 
 #[derive(Default)]
-pub struct CommandFinder<'a> {
+pub struct CommandFinder {
     registry: CommandRegistry,
-    current: Option<&'a Keymap>,
+    current: Option<&'static Keymap>,
 }
 
-impl<'a> CommandFinder<'a> {
+impl CommandFinder {
     pub fn reset(&mut self) {
         self.current = None;
     }
 
     pub fn find(
         &mut self,
-        keymaps: &'a Keymaps,
+        keymaps: &'static Keymaps,
         buffer: &Buffer,
         input: Input,
     ) -> Option<Arc<Command>> {
