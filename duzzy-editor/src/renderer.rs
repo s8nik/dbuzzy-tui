@@ -44,7 +44,7 @@ impl<'a> Renderer<'a> {
 
         let workspace = &editor.workspace;
         let mode = workspace.cur().buf().mode();
-        let search_pattern = workspace.search_registry().pattern();
+        let search_pattern = workspace.search_registry().buffer();
 
         let status = StatusLine::new(mode, search_pattern);
 
@@ -164,13 +164,13 @@ impl Default for Theme {
 
 pub struct StatusLine<'a> {
     mode: Mode,
-    search_pattern: Option<&'a str>,
+    search_pattern: &'a str,
     line_style: Style,
     text_style: Style,
 }
 
 impl<'a> StatusLine<'a> {
-    fn new(mode: Mode, search_pattern: Option<&'a str>) -> Self {
+    fn new(mode: Mode, search_pattern: &'a str) -> Self {
         Self {
             mode,
             search_pattern,
@@ -189,7 +189,7 @@ impl Widget for StatusLine<'_> {
             .centered()
             .style(self.text_style);
 
-        let search_paragraph = Paragraph::new(self.search_pattern.unwrap_or_default())
+        let search_paragraph = Paragraph::new(self.search_pattern)
             .left_aligned()
             .style(self.line_style);
 

@@ -28,8 +28,8 @@ impl SearchRegistry {
         self.buffer.pop();
     }
 
-    pub fn pattern(&self) -> Option<&str> {
-        self.pattern.as_deref()
+    pub fn buffer(&self) -> &str {
+        &self.buffer
     }
 
     #[cfg(test)]
