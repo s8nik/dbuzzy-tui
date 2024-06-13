@@ -71,7 +71,7 @@ impl Editor {
 
         let input = e.into();
         let buf = self.workspace.cur().buf();
-        let command = self.command.find(&self.keymaps, buf, input);
+        let command = self.command.find(self.keymaps, buf, input);
 
         let outcome = match command {
             Some(command) => {
@@ -130,7 +130,7 @@ impl Workspace {
         &mut self.clipboard
     }
 
-    pub fn search_registry(&self) -> &SearchRegistry {
+    pub const fn search_registry(&self) -> &SearchRegistry {
         &self.search_registry
     }
 

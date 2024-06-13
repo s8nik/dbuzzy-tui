@@ -48,8 +48,8 @@ impl Keymaps {
         KEYMAPS.get_or_init(|| {
             let mut map = HashMap::<Mode, Bindings>::new();
 
-            map.insert(Mode::Normal, Keymaps::normal_mode());
-            map.insert(Mode::Visual, Keymaps::visual_mode());
+            map.insert(Mode::Normal, Self::normal_mode());
+            map.insert(Mode::Visual, Self::visual_mode());
 
             Self(map)
         })
