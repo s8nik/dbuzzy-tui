@@ -155,9 +155,9 @@ impl Default for Theme {
     fn default() -> Self {
         Self {
             base_style: Style::default().bg(color::RICH_BLACK),
-            text_style: Style::default().fg(color::LAVENDER),
-            cursor_style: Style::default().bg(color::COOL_GRAY),
-            selection_style: Style::default().bg(color::COOL_GRAY),
+            text_style: Style::default().fg(color::LIGHT_GOLDENROD_YELLOW),
+            cursor_style: Style::default().bg(color::ENERGY_YELLOW),
+            selection_style: Style::default().bg(color::ALOE_GREEN),
         }
     }
 }
@@ -174,8 +174,12 @@ impl<'a> StatusLine<'a> {
         Self {
             mode,
             search_pattern,
-            line_style: Style::default().fg(color::LAVENDER).bg(color::COOL_GRAY),
-            text_style: Style::default().fg(color::RICH_BLACK).bg(color::LAVENDER),
+            line_style: Style::default()
+                .fg(color::ENERGY_YELLOW)
+                .bg(color::BLACK_BROWN),
+            text_style: Style::default()
+                .fg(color::ENERGY_YELLOW)
+                .bg(color::BLACK_BROWN),
         }
     }
 }
@@ -201,7 +205,9 @@ impl Widget for StatusLine<'_> {
 pub(crate) mod color {
     use super::Color;
 
-    pub const LAVENDER: Color = Color::Rgb(238, 238, 255);
+    pub const ENERGY_YELLOW: Color = Color::Rgb(243, 234, 94);
     pub const RICH_BLACK: Color = Color::Rgb(17, 21, 28);
-    pub const COOL_GRAY: Color = Color::Rgb(127, 124, 175);
+    pub const ALOE_GREEN: Color = Color::Rgb(104, 105, 76);
+    pub const BLACK_BROWN: Color = Color::Rgb(40, 41, 0);
+    pub const LIGHT_GOLDENROD_YELLOW: Color = Color::Rgb(242, 254, 220);
 }
