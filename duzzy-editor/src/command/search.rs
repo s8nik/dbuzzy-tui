@@ -59,13 +59,20 @@ pub(super) fn search_prev(ws: &mut Workspace) {
 
 fn search_impl(ws: &mut Workspace, order: SearchOrder) {
     let buf = ws.cur().buf();
-    let range = ws
-        .search_registry()
-        .search(buf.text(), buf.byte_pos(), order);
+
+    let text = buf.text();
+    let pos = buf.byte_pos();
+
+    let start_pos = match order {
+        SearchOrder::Next => (pos + 1).min(text.len_chars()),
+        SearchOrder::Prev => pos.saturating_sub(1),
+    };
+
+    let range = ws.search_registry().search(buf.text(), start_pos, order);
 
     if let Some((start, end)) = range {
         let buf = ws.cur_mut().buf_mut();
-        buf.set_pos(buf.curs_pos(start));
+        buf.set_pos(buf.curs_pos(end));
         buf.new_selection(start);
         buf.update_selection(end);
     }
