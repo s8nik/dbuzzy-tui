@@ -31,22 +31,22 @@ pub fn on_key(ws: &mut Workspace, input: Input) -> EventOutcome {
 }
 
 fn cancel_search(ws: &mut Workspace) {
-    ws.search_registry_mut().cancel();
+    ws.search_buffer.clear();
     super::visual_to_normal_impl(ws.cur_mut().buf_mut());
 }
 
 fn apply_search(ws: &mut Workspace) {
-    ws.search_registry_mut().apply();
+    ws.apply_search();
     super::normal_mode(ws);
     search_next(ws);
 }
 
 fn insert_pattern_char(ws: &mut Workspace, ch: char) {
-    ws.search_registry_mut().insert_char(ch);
+    ws.search_buffer.push(ch);
 }
 
 fn remove_pattern_char(ws: &mut Workspace) {
-    ws.search_registry_mut().remove_char();
+    ws.search_buffer.pop();
 }
 
 pub(super) fn search_next(ws: &mut Workspace) {

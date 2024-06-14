@@ -7,6 +7,7 @@ use crate::{
     keymap::Keymaps,
     renderer::{Cursor, EventOutcome, Renderer, Viewport},
     search::SearchRegistry,
+    SmartString,
 };
 
 pub struct Editor {
@@ -99,9 +100,9 @@ impl Editor {
 pub struct Workspace {
     documents: HashMap<DocumentId, Document>,
     current: DocumentId,
-
     clipboard: Clipboard,
     search_registry: SearchRegistry,
+    pub(super) search_buffer: SmartString,
 }
 
 impl Default for Workspace {
@@ -116,6 +117,7 @@ impl Workspace {
             current: DocumentId::MAX,
             documents: HashMap::new(),
             clipboard: Clipboard::new(),
+            search_buffer: SmartString::new_const(),
             search_registry: SearchRegistry::default(),
         }
     }
@@ -130,12 +132,15 @@ impl Workspace {
         &mut self.clipboard
     }
 
-    pub const fn search_registry(&self) -> &SearchRegistry {
-        &self.search_registry
+    pub fn apply_search(&mut self) {
+        if !self.search_buffer.is_empty() {
+            let pattern = std::mem::take(&mut self.search_buffer);
+            self.search_registry = SearchRegistry::new(pattern);
+        }
     }
 
-    pub fn search_registry_mut(&mut self) -> &mut SearchRegistry {
-        &mut self.search_registry
+    pub const fn search_registry(&self) -> &SearchRegistry {
+        &self.search_registry
     }
 
     pub fn cur(&self) -> &Document {
