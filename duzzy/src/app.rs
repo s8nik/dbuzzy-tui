@@ -6,7 +6,6 @@ use futures_util::StreamExt;
 use ratatui::{backend::Backend, Terminal};
 
 pub struct App<B: Backend + Write> {
-    // @note: for testing purposes
     editor: Editor,
     terminal: Terminal<B>,
 }
