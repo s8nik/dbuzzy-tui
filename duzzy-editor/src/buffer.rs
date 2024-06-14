@@ -146,6 +146,10 @@ impl Buffer {
     pub fn is_visual(&self) -> bool {
         self.mode == Mode::Visual
     }
+
+    pub fn is_search(&self) -> bool {
+        self.mode == Mode::Search
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
@@ -154,6 +158,7 @@ pub enum Mode {
     Normal,
     Insert,
     Visual,
+    Search,
 }
 
 impl AsRef<str> for Mode {
@@ -162,6 +167,7 @@ impl AsRef<str> for Mode {
             Self::Normal => "Normal",
             Self::Insert => "Insert",
             Self::Visual => "Visual",
+            Self::Search => "Search",
         }
     }
 }

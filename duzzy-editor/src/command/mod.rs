@@ -1,17 +1,22 @@
 mod clip;
-pub mod input;
+mod input;
 mod modify;
 mod motion;
 mod revert;
+mod search;
 mod select;
 mod switch;
 
 use std::{collections::HashMap, sync::Arc};
 
+pub use input::on_key as input_on_key;
+pub use search::on_key as search_on_key;
+
 use clip::*;
 use modify::*;
 use motion::*;
 use revert::{redo, undo};
+use search::*;
 use select::*;
 use switch::*;
 
@@ -52,6 +57,9 @@ pub enum CmdType {
     CopyGlobal,
     PasteLocal,
     PasteGlobal,
+    SearchMode,
+    SearchNext,
+    SearchPrev,
 }
 
 pub struct Command {
@@ -102,6 +110,9 @@ impl CommandRegistry {
             Command::new(CmdType::CopyGlobal, copy_global),
             Command::new(CmdType::PasteLocal, paste_local),
             Command::new(CmdType::PasteGlobal, paste_global),
+            Command::new(CmdType::SearchMode, search_mode),
+            Command::new(CmdType::SearchNext, search_next),
+            Command::new(CmdType::SearchPrev, search_prev),
         ];
 
         let mut map = HashMap::new();
@@ -145,9 +156,9 @@ impl CommandFinder {
         self.current = match self.current {
             Some(node) => match node {
                 Keymap::Leaf(_) => self.current,
-                Keymap::Node(next) => next.get(input),
+                Keymap::Node(next) => next.get(&input),
             },
-            None => bindings.get(input),
+            None => bindings.get(&input),
         };
 
         if let Some(Keymap::Leaf(command)) = self.current {

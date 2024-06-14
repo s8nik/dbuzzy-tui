@@ -2,10 +2,12 @@ use std::{cell::RefCell, collections::HashMap, path::Path};
 
 use crate::{
     clipboard::Clipboard,
-    command::{input, CommandFinder},
+    command::{input_on_key, search_on_key, CommandFinder},
     document::{Document, DocumentId},
     keymap::Keymaps,
     renderer::{Cursor, EventOutcome, Renderer, Viewport},
+    search::SearchRegistry,
+    SmartString,
 };
 
 pub struct Editor {
@@ -78,7 +80,8 @@ impl Editor {
                 self.command.reset();
                 EventOutcome::Render
             }
-            None if buf.is_insert() => input::on_key(&mut self.workspace, input),
+            None if buf.is_insert() => input_on_key(&mut self.workspace, input),
+            None if buf.is_search() => search_on_key(&mut self.workspace, input),
             _ => EventOutcome::Ignore,
         };
 
@@ -97,8 +100,9 @@ impl Editor {
 pub struct Workspace {
     documents: HashMap<DocumentId, Document>,
     current: DocumentId,
-
     clipboard: Clipboard,
+    search_registry: SearchRegistry,
+    pub(super) search_buffer: SmartString,
 }
 
 impl Default for Workspace {
@@ -113,6 +117,8 @@ impl Workspace {
             current: DocumentId::MAX,
             documents: HashMap::new(),
             clipboard: Clipboard::new(),
+            search_buffer: SmartString::new_const(),
+            search_registry: SearchRegistry::default(),
         }
     }
 
@@ -124,6 +130,17 @@ impl Workspace {
 
     pub fn clipboard(&mut self) -> &mut Clipboard {
         &mut self.clipboard
+    }
+
+    pub fn apply_search(&mut self) {
+        if !self.search_buffer.is_empty() {
+            let pattern = std::mem::take(&mut self.search_buffer);
+            self.search_registry = SearchRegistry::new(pattern);
+        }
+    }
+
+    pub const fn search_registry(&self) -> &SearchRegistry {
+        &self.search_registry
     }
 
     pub fn cur(&self) -> &Document {

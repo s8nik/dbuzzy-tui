@@ -3,6 +3,8 @@ use std::{
     ops::Deref,
 };
 
+use once_cell::sync::OnceCell;
+
 use crate::{
     buffer::Mode,
     command::CmdType,
@@ -14,8 +16,8 @@ use crate::{
 pub struct Bindings(BTreeMap<Input, Keymap>);
 
 impl Bindings {
-    pub fn get(&self, input: Input) -> Option<&Keymap> {
-        self.0.get(&input)
+    pub fn get(&self, input: &Input) -> Option<&Keymap> {
+        self.0.get(input)
     }
 }
 
@@ -41,76 +43,67 @@ pub enum Keymap {
 pub struct Keymaps(HashMap<Mode, Bindings>);
 
 impl Keymaps {
+    pub fn init() -> &'static Self {
+        static KEYMAPS: OnceCell<Keymaps> = OnceCell::new();
+        KEYMAPS.get_or_init(|| {
+            let mut map = HashMap::<Mode, Bindings>::new();
+
+            map.insert(Mode::Normal, Self::normal_mode());
+            map.insert(Mode::Visual, Self::visual_mode());
+
+            Self(map)
+        })
+    }
+
     pub fn get(&self, mode: &Mode) -> Option<&Bindings> {
         self.0.get(mode)
     }
-}
 
-impl Keymaps {
-    pub fn init() -> &'static Self {
-        let mut map = HashMap::<Mode, Bindings>::new();
-
-        map.insert(Mode::Normal, Self::normal_mode());
-        map.insert(Mode::Visual, Self::visual_mode());
-
-        Box::leak(Box::new(Self(map)))
-    }
-
-    fn normal_mode() -> Bindings {
-        let mappings = vec![
-            ("i", CmdType::InsertMode),
+    fn common_bindings() -> Vec<(&'static str, CmdType)> {
+        vec![
             ("h", CmdType::MoveLeft),
             ("j", CmdType::MoveDown),
             ("k", CmdType::MoveUp),
             ("l", CmdType::MoveRight),
+            ("d", CmdType::Delete),
+            ("gg", CmdType::GoToTopLine),
+            ("ge", CmdType::GoToBottomLine),
+            ("gl", CmdType::GoToLineEnd),
+            ("gh", CmdType::GoToLineStart),
+            ("w", CmdType::MoveNextWordStart),
+            ("e", CmdType::MoveNextWordEnd),
+            ("b", CmdType::MovePrevWordStart),
+            ("x", CmdType::SelectLine),
+            ("y", CmdType::CopyLocal),
+            ("<Space>y", CmdType::CopyGlobal),
+            ("p", CmdType::PasteLocal),
+            ("<Space>p", CmdType::PasteGlobal),
+            ("/", CmdType::SearchMode),
+            ("n", CmdType::SearchNext),
+            ("N", CmdType::SearchPrev),
+        ]
+    }
+
+    fn normal_mode() -> Bindings {
+        let mut bindings = vec![
+            ("i", CmdType::InsertMode),
             ("A", CmdType::InsertModeLineEnd),
             ("I", CmdType::InsertModeLineStart),
             ("o", CmdType::InsertModeLineNext),
             ("O", CmdType::InsertModeLinePrev),
-            ("d", CmdType::Delete),
-            ("gg", CmdType::GoToTopLine),
-            ("ge", CmdType::GoToBottomLine),
-            ("gl", CmdType::GoToLineEnd),
-            ("gh", CmdType::GoToLineStart),
             ("u", CmdType::Undo),
             ("U", CmdType::Redo),
             ("v", CmdType::VisualMode),
-            ("w", CmdType::MoveNextWordStart),
-            ("e", CmdType::MoveNextWordEnd),
-            ("b", CmdType::MovePrevWordStart),
-            ("x", CmdType::SelectLine),
-            ("y", CmdType::CopyLocal),
-            ("<Space>y", CmdType::CopyGlobal),
-            ("p", CmdType::PasteLocal),
-            ("<Space>p", CmdType::PasteGlobal),
         ];
 
-        mappings.into()
+        bindings.extend(Self::common_bindings());
+        bindings.into()
     }
 
     fn visual_mode() -> Bindings {
-        let mappings = vec![
-            ("<Esc>", CmdType::NormalMode),
-            ("h", CmdType::MoveLeft),
-            ("j", CmdType::MoveDown),
-            ("k", CmdType::MoveUp),
-            ("l", CmdType::MoveRight),
-            ("d", CmdType::Delete),
-            ("gg", CmdType::GoToTopLine),
-            ("ge", CmdType::GoToBottomLine),
-            ("gl", CmdType::GoToLineEnd),
-            ("gh", CmdType::GoToLineStart),
-            ("w", CmdType::MoveNextWordStart),
-            ("e", CmdType::MoveNextWordEnd),
-            ("b", CmdType::MovePrevWordStart),
-            ("x", CmdType::SelectLine),
-            ("y", CmdType::CopyLocal),
-            ("<Space>y", CmdType::CopyGlobal),
-            ("p", CmdType::PasteLocal),
-            ("<Space>p", CmdType::PasteGlobal),
-        ];
-
-        mappings.into()
+        let mut bindings = vec![("<Esc>", CmdType::NormalMode)];
+        bindings.extend(Self::common_bindings());
+        bindings.into()
     }
 
     fn parse(root: &mut Bindings, sequence: &str, command_type: CmdType) {
@@ -185,7 +178,7 @@ mod tests {
         let normal = keymap.get(&Mode::Normal).unwrap();
 
         let node = normal
-            .get(super::Input {
+            .get(&super::Input {
                 event: super::Event::Char('g'),
                 ..Default::default()
             })
@@ -196,7 +189,7 @@ mod tests {
         };
 
         let leaf = bindings
-            .get(super::Input {
+            .get(&super::Input {
                 event: super::Event::Char('e'),
                 ..Default::default()
             })

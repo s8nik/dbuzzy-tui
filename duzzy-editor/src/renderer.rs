@@ -34,7 +34,7 @@ pub enum EventOutcome {
 
 pub struct Renderer<'a> {
     editor: &'a Editor,
-    status: StatusLine,
+    status: StatusLine<'a>,
     theme: Theme,
 }
 
@@ -42,8 +42,11 @@ impl<'a> Renderer<'a> {
     pub fn new(editor: &'a Editor) -> Self {
         let theme = Theme::default();
 
-        let mode = editor.workspace.cur().buf().mode();
-        let status = StatusLine::new(mode);
+        let workspace = &editor.workspace;
+        let mode = workspace.cur().buf().mode();
+        let search_pattern = workspace.search_buffer.as_str();
+
+        let status = StatusLine::new(mode, search_pattern);
 
         Self {
             editor,
@@ -152,30 +155,36 @@ impl Default for Theme {
     fn default() -> Self {
         Self {
             base_style: Style::default().bg(color::RICH_BLACK),
-            text_style: Style::default().fg(color::LAVENDER),
-            cursor_style: Style::default().bg(color::COOL_GRAY),
-            selection_style: Style::default().bg(color::COOL_GRAY),
+            text_style: Style::default().fg(color::LIGHT_GOLDENROD_YELLOW),
+            cursor_style: Style::default().bg(color::ENERGY_YELLOW),
+            selection_style: Style::default().bg(color::ALOE_GREEN),
         }
     }
 }
 
-pub struct StatusLine {
+pub struct StatusLine<'a> {
     mode: Mode,
+    search_pattern: &'a str,
     line_style: Style,
     text_style: Style,
 }
 
-impl StatusLine {
-    fn new(mode: Mode) -> Self {
+impl<'a> StatusLine<'a> {
+    fn new(mode: Mode, search_pattern: &'a str) -> Self {
         Self {
             mode,
-            line_style: Style::default().fg(color::LAVENDER).bg(color::COOL_GRAY),
-            text_style: Style::default().fg(color::RICH_BLACK).bg(color::LAVENDER),
+            search_pattern,
+            line_style: Style::default()
+                .fg(color::ENERGY_YELLOW)
+                .bg(color::BLACK_BROWN),
+            text_style: Style::default()
+                .fg(color::ENERGY_YELLOW)
+                .bg(color::BLACK_BROWN),
         }
     }
 }
 
-impl Widget for StatusLine {
+impl Widget for StatusLine<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let constraints = [Constraint::Length(10), Constraint::Min(0)];
         let [left, right] = Layout::horizontal(constraints).areas(area);
@@ -184,7 +193,7 @@ impl Widget for StatusLine {
             .centered()
             .style(self.text_style);
 
-        let search_paragraph = Paragraph::new("search placeholder")
+        let search_paragraph = Paragraph::new(self.search_pattern)
             .left_aligned()
             .style(self.line_style);
 
@@ -196,7 +205,9 @@ impl Widget for StatusLine {
 pub(crate) mod color {
     use super::Color;
 
-    pub const LAVENDER: Color = Color::Rgb(238, 238, 255);
+    pub const ENERGY_YELLOW: Color = Color::Rgb(243, 234, 94);
     pub const RICH_BLACK: Color = Color::Rgb(17, 21, 28);
-    pub const COOL_GRAY: Color = Color::Rgb(127, 124, 175);
+    pub const ALOE_GREEN: Color = Color::Rgb(104, 105, 76);
+    pub const BLACK_BROWN: Color = Color::Rgb(40, 41, 0);
+    pub const LIGHT_GOLDENROD_YELLOW: Color = Color::Rgb(242, 254, 220);
 }

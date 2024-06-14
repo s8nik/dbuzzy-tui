@@ -13,6 +13,7 @@ mod event;
 mod history;
 mod keymap;
 pub mod renderer;
+mod search;
 mod selection;
 mod transaction;
 

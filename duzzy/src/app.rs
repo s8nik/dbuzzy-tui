@@ -12,6 +12,7 @@ pub struct App<B: Backend + Write> {
 
 impl<B: Backend + Write> App<B> {
     pub fn new(args: impl Iterator<Item = String>, backend: B) -> anyhow::Result<Self> {
+        Self::setup_panic();
         let mut terminal = Terminal::new(backend).expect("terminal");
         let mut editor = Editor::new();
 
@@ -61,8 +62,6 @@ impl<B: Backend + Write> App<B> {
     }
 
     pub async fn run(&mut self) -> anyhow::Result<()> {
-        Self::setup_panic();
-
         let mut reader = EventStream::new();
 
         self.terminal.draw(|ui| {
