@@ -1,0 +1,7 @@
+[package]
+name = "duzzy-db"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+
+[dependencies]

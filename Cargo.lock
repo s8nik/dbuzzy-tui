@@ -276,6 +276,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "duzzy-db"
+version = "0.1.0"
+
+[[package]]
 name = "duzzy-editor"
 version = "0.1.0"
 dependencies = [

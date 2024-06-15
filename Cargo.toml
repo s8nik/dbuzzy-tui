@@ -1,7 +1,8 @@
 [workspace]
 members = [
+  "duzzy-db",
   "duzzy-editor",
-  "duzzy",
+  "duzzy"
 ]
 resolver = "2"
 
