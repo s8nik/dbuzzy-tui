@@ -5,3 +5,8 @@ edition.workspace = true
 authors.workspace = true
 
 [dependencies]
+anyhow.workspace = true
+tokio.workspace = true
+
+toml = "0.8.14"
+serde = { version = "1.0.203", features = ["derive"] }
