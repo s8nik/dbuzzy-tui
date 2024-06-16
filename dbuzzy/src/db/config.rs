@@ -4,7 +4,7 @@ use anyhow::Context;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
-pub struct ConnConfig {
+pub struct ConnectionConfig {
     name: String,
     host: String,
     port: u16,
@@ -13,7 +13,7 @@ pub struct ConnConfig {
     password: Option<String>,
 }
 
-impl ConnConfig {
+impl ConnectionConfig {
     // @todo: should be moved as it is general purpose
     pub fn from_file() -> anyhow::Result<Self> {
         // @note: linux & macos support only for now
@@ -90,12 +90,12 @@ impl ConnConfigBuilder {
         self
     }
 
-    pub fn build(self) -> ConnConfig {
+    pub fn build(self) -> ConnectionConfig {
         self.into()
     }
 }
 
-impl From<ConnConfigBuilder> for ConnConfig {
+impl From<ConnConfigBuilder> for ConnectionConfig {
     fn from(builder: ConnConfigBuilder) -> Self {
         let host = builder.host.unwrap_or("localhost".to_owned());
         let port = builder.port.unwrap_or(5432);
@@ -115,8 +115,8 @@ impl From<ConnConfigBuilder> for ConnConfig {
     }
 }
 
-impl From<ConnConfig> for deadpool_postgres::Config {
-    fn from(conf: ConnConfig) -> Self {
+impl From<ConnectionConfig> for deadpool_postgres::Config {
+    fn from(conf: ConnectionConfig) -> Self {
         deadpool_postgres::Config {
             user: Some(conf.user),
             password: conf.password,
