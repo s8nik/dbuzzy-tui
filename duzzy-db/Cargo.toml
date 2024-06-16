@@ -10,3 +10,6 @@ tokio.workspace = true
 
 toml = "0.8.14"
 serde = { version = "1.0.203", features = ["derive"] }
+
+tokio-postgres = "0.7.10"
+deadpool-postgres = "0.14.0"
