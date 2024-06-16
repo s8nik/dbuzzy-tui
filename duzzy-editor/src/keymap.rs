@@ -8,7 +8,7 @@ use once_cell::sync::OnceCell;
 use crate::{
     buffer::Mode,
     command::CmdType,
-    event::{Event, Input, Modifiers},
+    event::{Input, Modifiers},
 };
 
 #[cfg_attr(test, derive(PartialEq))]
@@ -144,12 +144,9 @@ impl Keymaps {
             return;
         };
 
-        let event: Event = match key.as_str().try_into() {
-            Ok(e) => e,
-            Err(e) => {
-                log::error!("parse keys error: {e}");
-                return;
-            }
+        let Ok(event) = key.as_str().try_into() else {
+            //@todo: better logs
+            return;
         };
 
         let input = Input { event, modifiers };
@@ -170,7 +167,7 @@ impl Keymaps {
 
 #[cfg(test)]
 mod tests {
-    use crate::{buffer::Mode, command::CmdType};
+    use crate::{buffer::Mode, command::CmdType, event::Event};
 
     #[test]
     fn test_keymap() {
@@ -179,7 +176,7 @@ mod tests {
 
         let node = normal
             .get(&super::Input {
-                event: super::Event::Char('g'),
+                event: Event::Char('g'),
                 ..Default::default()
             })
             .unwrap();
@@ -190,7 +187,7 @@ mod tests {
 
         let leaf = bindings
             .get(&super::Input {
-                event: super::Event::Char('e'),
+                event: Event::Char('e'),
                 ..Default::default()
             })
             .unwrap();

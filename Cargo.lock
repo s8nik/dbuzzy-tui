@@ -370,19 +370,10 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "crossterm 0.26.1",
+ "deadpool-postgres",
  "duzzy-editor",
  "futures-util",
- "log",
  "ratatui",
- "tokio",
-]
-
-[[package]]
-name = "duzzy-db"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "deadpool-postgres",
  "serde",
  "thiserror",
  "tokio",
@@ -397,7 +388,6 @@ dependencies = [
  "anyhow",
  "arboard",
  "crossterm 0.26.1",
- "log",
  "once_cell",
  "ratatui",
  "regex",

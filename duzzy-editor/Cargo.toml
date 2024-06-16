@@ -5,7 +5,6 @@ edition.workspace = true
 authors.workspace = true
 
 [dependencies]
-log.workspace = true
 anyhow.workspace = true
 tokio.workspace = true
 ratatui.workspace = true

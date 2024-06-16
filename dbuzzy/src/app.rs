@@ -21,16 +21,19 @@ impl<B: Backend + Write> App<B> {
 
         for arg in args.skip(1) {
             if let Err(e) = editor.open_file(&*arg) {
-                log::error!("{e}");
+                // @todo: better logs
+                // log::error!("{e}");
                 failed += 1;
             } else {
                 opened += 1;
             }
         }
 
-        if failed > 0 {
-            log::info!("Failed to open {failed} documents");
-        }
+        // @note: fix it later
+        // if failed > 0 {
+        // @todo: better logs
+        // log::info!("Failed to open {failed} documents");
+        // }
 
         if opened == 0 {
             editor.open_scratch();
