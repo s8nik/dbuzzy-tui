@@ -1,7 +1,8 @@
 use std::{io::Write, time::Duration};
 
 use crossterm::{event::EventStream, ExecutableCommand};
-use duzzy_editor::{editor::Editor, renderer::EventOutcome};
+use duzzy_editor::editor::Editor;
+use duzzy_lib::event::{EventOutcome, OnEvent};
 use futures_util::StreamExt;
 use ratatui::{backend::Backend, Terminal};
 
@@ -20,7 +21,7 @@ impl<B: Backend + Write> App<B> {
         let mut failed = 0;
 
         for arg in args.skip(1) {
-            if let Err(e) = editor.open_file(&*arg) {
+            if let Err(_) = editor.open_file(&*arg) {
                 // @todo: better logs
                 // log::error!("{e}");
                 failed += 1;
@@ -30,10 +31,10 @@ impl<B: Backend + Write> App<B> {
         }
 
         // @note: fix it later
-        // if failed > 0 {
-        // @todo: better logs
-        // log::info!("Failed to open {failed} documents");
-        // }
+        if failed > 0 {
+            // @todo: better logs
+            // log::info!("Failed to open {failed} documents");
+        }
 
         if opened == 0 {
             editor.open_scratch();

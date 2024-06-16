@@ -25,13 +25,6 @@ pub struct Cursor {
     pub mode: Mode,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EventOutcome {
-    Render,
-    Ignore,
-    Exit,
-}
-
 pub struct Renderer<'a> {
     editor: &'a Editor,
     status: StatusLine<'a>,

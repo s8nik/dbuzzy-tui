@@ -1,7 +1,8 @@
+use duzzy_lib::event::EventOutcome;
+
 use crate::{
     editor::Workspace,
     event::{Event, Input},
-    renderer::EventOutcome,
     search::SearchOrder,
 };
 

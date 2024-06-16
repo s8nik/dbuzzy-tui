@@ -19,4 +19,5 @@ deadpool-postgres = "0.14.0"
 toml = "0.8.14"
 serde = { version = "1.0.203", features = ["derive"] }
 
+duzzy-lib = { path = "../duzzy-lib" }
 duzzy-editor = { path = "../duzzy-editor" }

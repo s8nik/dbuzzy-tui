@@ -1,7 +1,8 @@
+use duzzy_lib::event::EventOutcome;
+
 use crate::{
     editor::Workspace,
     event::{Event, Input, Modifiers},
-    renderer::EventOutcome,
 };
 
 pub fn on_key(ws: &mut Workspace, input: Input) -> EventOutcome {

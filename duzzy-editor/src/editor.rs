@@ -1,11 +1,13 @@
 use std::{cell::RefCell, collections::HashMap, path::Path};
 
+use duzzy_lib::event::{EventOutcome, OnEvent};
+
 use crate::{
     clipboard::Clipboard,
     command::{input_on_key, search_on_key, CommandFinder},
     document::{Document, DocumentId},
     keymap::Keymaps,
-    renderer::{Cursor, EventOutcome, Renderer, Viewport},
+    renderer::{Cursor, Renderer, Viewport},
     search::SearchRegistry,
     SmartString,
 };
@@ -64,8 +66,10 @@ impl Editor {
             mode,
         }
     }
+}
 
-    pub fn on_event(&mut self, event: crossterm::event::Event) -> EventOutcome {
+impl OnEvent for Editor {
+    fn on_event(&mut self, event: crossterm::event::Event) -> duzzy_lib::event::EventOutcome {
         let crossterm::event::Event::Key(e) = event else {
             return EventOutcome::Ignore;
         };
