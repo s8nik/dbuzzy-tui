@@ -372,6 +372,7 @@ dependencies = [
  "crossterm 0.26.1",
  "deadpool-postgres",
  "duzzy-editor",
+ "duzzy-lib",
  "futures-util",
  "ratatui",
  "serde",
@@ -388,12 +389,23 @@ dependencies = [
  "anyhow",
  "arboard",
  "crossterm 0.26.1",
+ "duzzy-lib",
  "once_cell",
  "ratatui",
  "regex",
  "ropey",
  "smartstring",
  "tokio",
+]
+
+[[package]]
+name = "duzzy-lib"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "crossterm 0.26.1",
+ "serde",
+ "toml",
 ]
 
 [[package]]

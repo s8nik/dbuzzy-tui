@@ -1,9 +1,8 @@
 use deadpool_postgres::{GenericClient, Runtime};
 
-use super::{
-    config::ConnectionConfig,
-    types::{ColumnRow, DatabaseRow, TableRow},
-};
+use crate::config::ConnConfig;
+
+use super::types::{ColumnRow, DatabaseRow, TableRow};
 
 pub struct Pool {
     inner: deadpool_postgres::Pool,
@@ -11,7 +10,7 @@ pub struct Pool {
 
 impl Pool {
     #[must_use]
-    pub async fn create(config: ConnectionConfig) -> super::DbResult<Self> {
+    pub async fn create(config: ConnConfig) -> super::DbResult<Self> {
         let pg_conf: deadpool_postgres::Config = config.into();
         let pool = pg_conf.create_pool(Some(Runtime::Tokio1), tokio_postgres::NoTls)?;
 
