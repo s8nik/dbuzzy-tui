@@ -1,3 +1,4 @@
+pub mod colors;
 mod utils;
 
 use ratatui::{buffer::Buffer, layout::Rect};
