@@ -202,12 +202,6 @@ impl Drawable for StatusLine<'_> {
     }
 }
 
-impl Widget for StatusLine<'_> {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        self.draw(area, buf)
-    }
-}
-
 pub(crate) mod color {
     use super::Color;
 
