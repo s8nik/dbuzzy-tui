@@ -404,6 +404,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "crossterm 0.26.1",
+ "ratatui",
  "serde",
  "toml",
 ]

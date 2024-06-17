@@ -1,3 +1,4 @@
+use duzzy_lib::Drawable;
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
@@ -115,8 +116,8 @@ impl<'a> Renderer<'a> {
     }
 }
 
-impl Widget for Renderer<'_> {
-    fn render(self, area: Rect, buf: &mut Buffer) {
+impl Drawable for Renderer<'_> {
+    fn draw(&self, area: Rect, buf: &mut Buffer) {
         buf.set_style(area, self.theme.base_style);
 
         let [main, status] =
@@ -133,7 +134,13 @@ impl Widget for Renderer<'_> {
         buf.get_mut(cursor.x, cursor.y)
             .set_style(self.theme.cursor_style);
 
-        self.status.render(status, buf);
+        self.status.draw(status, buf);
+    }
+}
+
+impl Widget for Renderer<'_> {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        self.draw(area, buf);
     }
 }
 
@@ -177,8 +184,8 @@ impl<'a> StatusLine<'a> {
     }
 }
 
-impl Widget for StatusLine<'_> {
-    fn render(self, area: Rect, buf: &mut Buffer) {
+impl Drawable for StatusLine<'_> {
+    fn draw(&self, area: Rect, buf: &mut Buffer) {
         let constraints = [Constraint::Length(10), Constraint::Min(0)];
         let [left, right] = Layout::horizontal(constraints).areas(area);
 
@@ -192,6 +199,12 @@ impl Widget for StatusLine<'_> {
 
         mode_paragraph.render(left, buf);
         search_paragraph.render(right, buf);
+    }
+}
+
+impl Widget for StatusLine<'_> {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        self.draw(area, buf)
     }
 }
 

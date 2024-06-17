@@ -6,6 +6,7 @@ authors.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+ratatui.workspace = true
 crossterm.workspace = true
 
 toml = "0.8.14"
