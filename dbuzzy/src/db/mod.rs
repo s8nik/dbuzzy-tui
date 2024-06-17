@@ -1,4 +1,5 @@
 pub mod connection;
+pub mod queries;
 pub mod types;
 
 pub type DbResult<T> = anyhow::Result<T, Error>;

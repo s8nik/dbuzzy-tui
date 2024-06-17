@@ -7,6 +7,8 @@
 use ratatui::backend::CrosstermBackend;
 
 mod app;
+mod components;
+mod config;
 mod db;
 
 #[tokio::main]
