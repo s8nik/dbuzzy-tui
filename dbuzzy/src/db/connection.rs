@@ -11,6 +11,12 @@ pub struct ConnCfg {
     pub password: Option<String>,
 }
 
+impl std::fmt::Display for ConnCfg {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
+    }
+}
+
 // @todo: `postgres` feature
 impl From<ConnCfg> for deadpool_postgres::Config {
     fn from(conf: ConnCfg) -> Self {
