@@ -1,7 +1,7 @@
 use std::{io::Write, time::Duration};
 
 use crossterm::{event::EventStream, ExecutableCommand};
-use duzzy_editor::editor::Editor;
+use duzzy_editor::Editor;
 use duzzy_lib::{EventOutcome, OnEvent};
 use futures_util::StreamExt;
 use ratatui::{backend::Backend, Terminal};
