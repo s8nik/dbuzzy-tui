@@ -7,8 +7,8 @@ use crate::{
     command::{input_on_key, search_on_key, CommandFinder},
     document::{Document, DocumentId},
     keymap::Keymaps,
-    renderer::{Cursor, Renderer, Viewport},
     search::SearchRegistry,
+    widget::{Cursor, EditorWidget, Viewport},
     SmartString,
 };
 
@@ -46,8 +46,8 @@ impl Editor {
         self.workspace.add_doc(Document::default());
     }
 
-    pub fn widget(&self) -> Renderer<'_> {
-        Renderer::new(self)
+    pub fn widget(&self) -> EditorWidget<'_> {
+        EditorWidget::new(self)
     }
 
     pub fn cursor(&self) -> Cursor {

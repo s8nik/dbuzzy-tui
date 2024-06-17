@@ -26,13 +26,13 @@ pub struct Cursor {
     pub mode: Mode,
 }
 
-pub struct Renderer<'a> {
+pub struct EditorWidget<'a> {
     editor: &'a Editor,
     status: StatusLine<'a>,
     theme: Theme,
 }
 
-impl<'a> Renderer<'a> {
+impl<'a> EditorWidget<'a> {
     pub fn new(editor: &'a Editor) -> Self {
         let theme = Theme::default();
 
@@ -116,7 +116,7 @@ impl<'a> Renderer<'a> {
     }
 }
 
-impl Drawable for Renderer<'_> {
+impl Drawable for EditorWidget<'_> {
     fn draw(&self, area: Rect, buf: &mut Buffer) {
         buf.set_style(area, self.theme.base_style);
 
@@ -138,7 +138,7 @@ impl Drawable for Renderer<'_> {
     }
 }
 
-impl Widget for Renderer<'_> {
+impl Widget for EditorWidget<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         self.draw(area, buf);
     }

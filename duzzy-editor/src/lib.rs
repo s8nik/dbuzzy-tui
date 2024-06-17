@@ -8,13 +8,16 @@ mod buffer;
 mod clipboard;
 mod command;
 mod document;
-pub mod editor;
+mod editor;
 mod event;
 mod history;
 mod keymap;
-pub mod renderer;
 mod search;
 mod selection;
 mod transaction;
+mod widget;
 
-pub type SmartString = smartstring::SmartString<smartstring::LazyCompact>;
+pub(crate) type SmartString = smartstring::SmartString<smartstring::LazyCompact>;
+
+pub use editor::Editor;
+pub use widget::{Cursor, EditorWidget, Viewport};
