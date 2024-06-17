@@ -7,9 +7,9 @@
 use ratatui::backend::CrosstermBackend;
 
 mod app;
-mod components;
 mod config;
 mod db;
+mod widgets;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
