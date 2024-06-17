@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, path::Path};
 
-use duzzy_lib::event::{EventOutcome, OnEvent};
+use duzzy_lib::{EventOutcome, OnEvent};
 
 use crate::{
     clipboard::Clipboard,
@@ -69,7 +69,7 @@ impl Editor {
 }
 
 impl OnEvent for Editor {
-    fn on_event(&mut self, event: crossterm::event::Event) -> duzzy_lib::event::EventOutcome {
+    fn on_event(&mut self, event: crossterm::event::Event) -> EventOutcome {
         let crossterm::event::Event::Key(e) = event else {
             return EventOutcome::Ignore;
         };

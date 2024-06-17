@@ -1,4 +1,4 @@
-use duzzy_lib::event::EventOutcome;
+use duzzy_lib::EventOutcome;
 
 use crate::{
     editor::Workspace,
