@@ -138,12 +138,6 @@ impl Drawable for EditorWidget<'_> {
     }
 }
 
-impl Widget for EditorWidget<'_> {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        self.draw(area, buf);
-    }
-}
-
 pub struct Theme {
     pub base_style: Style,
     pub text_style: Style,
