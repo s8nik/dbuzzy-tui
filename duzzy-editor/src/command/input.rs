@@ -1,9 +1,9 @@
-use duzzy_lib::EventOutcome;
-
-use crate::{
-    editor::Workspace,
+use duzzy_lib::{
     event::{Event, Input, Modifiers},
+    EventOutcome,
 };
+
+use crate::editor::Workspace;
 
 pub fn on_key(ws: &mut Workspace, input: Input) -> EventOutcome {
     if let Input {

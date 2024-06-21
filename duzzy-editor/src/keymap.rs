@@ -3,13 +3,10 @@ use std::{
     ops::Deref,
 };
 
+use duzzy_lib::event::{Input, Modifiers};
 use once_cell::sync::OnceCell;
 
-use crate::{
-    buffer::Mode,
-    command::CmdType,
-    event::{Input, Modifiers},
-};
+use crate::{buffer::Mode, command::CmdType};
 
 #[cfg_attr(test, derive(PartialEq))]
 #[derive(Debug, Default)]
@@ -167,7 +164,9 @@ impl Keymaps {
 
 #[cfg(test)]
 mod tests {
-    use crate::{buffer::Mode, command::CmdType, event::Event};
+    use duzzy_lib::event::Event;
+
+    use crate::{buffer::Mode, command::CmdType};
 
     #[test]
     fn test_keymap() {

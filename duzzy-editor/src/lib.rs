@@ -9,7 +9,6 @@ mod clipboard;
 mod command;
 mod document;
 mod editor;
-mod event;
 mod history;
 mod keymap;
 mod search;

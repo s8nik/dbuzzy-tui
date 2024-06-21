@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, path::Path};
 
-use duzzy_lib::{EventOutcome, OnEvent};
+use duzzy_lib::{event::Input, EventOutcome, OnInput};
 
 use crate::{
     clipboard::Clipboard,
@@ -68,13 +68,8 @@ impl Editor {
     }
 }
 
-impl OnEvent for Editor {
-    fn on_event(&mut self, event: crossterm::event::Event) -> EventOutcome {
-        let crossterm::event::Event::Key(e) = event else {
-            return EventOutcome::Ignore;
-        };
-
-        let input = e.into();
+impl OnInput for Editor {
+    fn on_input(&mut self, input: Input) -> EventOutcome {
         let buf = self.workspace.cur().buf();
         let command = self.command.find(self.keymaps, buf, input);
 

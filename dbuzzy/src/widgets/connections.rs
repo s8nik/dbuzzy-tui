@@ -1,5 +1,8 @@
-use crossterm::event::{Event, KeyCode, KeyEventKind};
-use duzzy_lib::{colors, DrawableStateful, EventOutcome, OnEvent};
+use duzzy_lib::{
+    colors,
+    event::{Event, Input},
+    DrawableStateful, EventOutcome, OnInput,
+};
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
@@ -87,24 +90,16 @@ impl DrawableStateful for ConnWidget {
     }
 }
 
-impl OnEvent for ConnWidget {
-    fn on_event(&mut self, event: Event) -> EventOutcome {
+impl OnInput for ConnWidget {
+    fn on_input(&mut self, input: Input) -> EventOutcome {
         let mut outcome = EventOutcome::Render;
 
-        let Event::Key(key) = event else {
-            return EventOutcome::Ignore;
-        };
-
-        if key.kind == KeyEventKind::Press {
-            use KeyCode::*;
-
-            match key.code {
-                Char('q') | Esc => outcome = EventOutcome::Exit,
-                Char('j') | Down => self.next_conn(),
-                Char('k') | Up => self.prev_conn(),
-                Char('l') | Right | Enter => todo!(),
-                _ => outcome = EventOutcome::Ignore,
-            }
+        match input.event {
+            Event::Char('q') | Event::Esc => outcome = EventOutcome::Exit,
+            Event::Char('j') | Event::Down => self.next_conn(),
+            Event::Char('k') | Event::Up => self.prev_conn(),
+            Event::Char('l') | Event::Right | Event::Enter => todo!(),
+            _ => outcome = EventOutcome::Ignore,
         }
 
         outcome

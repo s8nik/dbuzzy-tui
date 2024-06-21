@@ -1,4 +1,5 @@
 pub mod colors;
+pub mod event;
 mod utils;
 
 use ratatui::{buffer::Buffer, layout::Rect};
@@ -11,8 +12,8 @@ pub enum EventOutcome {
     Exit,
 }
 
-pub trait OnEvent {
-    fn on_event(&mut self, event: crossterm::event::Event) -> EventOutcome;
+pub trait OnInput {
+    fn on_input(&mut self, input: event::Input) -> EventOutcome;
 }
 
 pub trait Drawable {
