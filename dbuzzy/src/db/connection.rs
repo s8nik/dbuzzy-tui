@@ -25,7 +25,7 @@ impl std::fmt::Display for ConnectionConfig {
 // @todo: `postgres` feature
 impl From<ConnectionConfig> for deadpool_postgres::Config {
     fn from(conf: ConnectionConfig) -> Self {
-        deadpool_postgres::Config {
+        Self {
             user: Some(conf.user),
             password: conf.password,
             dbname: conf.dbname,
@@ -43,7 +43,6 @@ pub struct Pool {
 }
 
 impl Pool {
-    #[must_use]
     pub async fn create(config: ConnectionConfig) -> super::DbResult<Self> {
         let pg_conf: deadpool_postgres::Config = config.into();
         let pool = pg_conf.create_pool(Some(Runtime::Tokio1), tokio_postgres::NoTls)?;
