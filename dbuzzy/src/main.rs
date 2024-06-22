@@ -22,7 +22,7 @@ async fn main() -> anyhow::Result<()> {
     let stdout = std::io::stdout();
 
     let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend).expect("terminal");
+    let mut terminal = Terminal::new(backend)?;
 
     setup_terminal(&mut terminal)?;
     setup_panic();
