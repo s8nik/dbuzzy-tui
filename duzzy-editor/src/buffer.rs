@@ -39,10 +39,6 @@ impl Buffer {
         self.index
     }
 
-    pub fn set_index(&mut self, index: usize) {
-        self.index = index;
-    }
-
     pub const fn offset(&self) -> usize {
         self.offset
     }
@@ -133,10 +129,6 @@ impl Buffer {
 
     pub fn char(&self, pos: usize) -> char {
         self.text.char(pos)
-    }
-
-    pub fn is_normal(&self) -> bool {
-        self.mode == Mode::Normal
     }
 
     pub fn is_insert(&self) -> bool {
