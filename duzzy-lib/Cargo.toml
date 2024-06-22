@@ -1,16 +1,13 @@
 [package]
-name = "duzzy"
+name = "duzzy-lib"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 
 [dependencies]
-log.workspace = true
 anyhow.workspace = true
-tokio.workspace = true
 ratatui.workspace = true
 crossterm.workspace = true
 
-futures-util = "0.3.30"
-
-duzzy-editor = { path = "../duzzy-editor" }
+toml = "0.8.14"
+serde = { version = "1.0.203", features = ["derive"] }

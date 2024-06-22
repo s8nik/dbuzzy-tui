@@ -9,6 +9,7 @@ mod switch;
 
 use std::{collections::HashMap, sync::Arc};
 
+use duzzy_lib::event::Input;
 pub use input::on_key as input_on_key;
 pub use search::on_key as search_on_key;
 
@@ -23,7 +24,6 @@ use switch::*;
 use crate::{
     buffer::Buffer,
     editor::Workspace,
-    event::Input,
     keymap::{Keymap, Keymaps},
 };
 

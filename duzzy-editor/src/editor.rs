@@ -1,12 +1,14 @@
 use std::{cell::RefCell, collections::HashMap, path::Path};
 
+use duzzy_lib::{event::Input, EventOutcome, OnInput};
+
 use crate::{
     clipboard::Clipboard,
     command::{input_on_key, search_on_key, CommandFinder},
     document::{Document, DocumentId},
     keymap::Keymaps,
-    renderer::{Cursor, EventOutcome, Renderer, Viewport},
     search::SearchRegistry,
+    widget::{Cursor, EditorWidget, Viewport},
     SmartString,
 };
 
@@ -44,8 +46,8 @@ impl Editor {
         self.workspace.add_doc(Document::default());
     }
 
-    pub fn widget(&self) -> Renderer<'_> {
-        Renderer::new(self)
+    pub fn widget(&self) -> EditorWidget<'_> {
+        EditorWidget::new(self)
     }
 
     pub fn cursor(&self) -> Cursor {
@@ -64,13 +66,10 @@ impl Editor {
             mode,
         }
     }
+}
 
-    pub fn on_event(&mut self, event: crossterm::event::Event) -> EventOutcome {
-        let crossterm::event::Event::Key(e) = event else {
-            return EventOutcome::Ignore;
-        };
-
-        let input = e.into();
+impl OnInput for Editor {
+    fn on_input(&mut self, input: Input) -> EventOutcome {
         let buf = self.workspace.cur().buf();
         let command = self.command.find(self.keymaps, buf, input);
 

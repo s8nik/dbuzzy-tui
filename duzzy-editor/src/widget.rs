@@ -1,7 +1,8 @@
+use duzzy_lib::{colors, Drawable};
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
-    style::{Color, Style},
+    style::Style,
     text::{Line, Span, Text},
     widgets::{Paragraph, Widget},
 };
@@ -25,20 +26,13 @@ pub struct Cursor {
     pub mode: Mode,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EventOutcome {
-    Render,
-    Ignore,
-    Exit,
-}
-
-pub struct Renderer<'a> {
+pub struct EditorWidget<'a> {
     editor: &'a Editor,
     status: StatusLine<'a>,
     theme: Theme,
 }
 
-impl<'a> Renderer<'a> {
+impl<'a> EditorWidget<'a> {
     pub fn new(editor: &'a Editor) -> Self {
         let theme = Theme::default();
 
@@ -122,8 +116,8 @@ impl<'a> Renderer<'a> {
     }
 }
 
-impl Widget for Renderer<'_> {
-    fn render(self, area: Rect, buf: &mut Buffer) {
+impl Drawable for EditorWidget<'_> {
+    fn draw(&self, area: Rect, buf: &mut Buffer) {
         buf.set_style(area, self.theme.base_style);
 
         let [main, status] =
@@ -140,7 +134,7 @@ impl Widget for Renderer<'_> {
         buf.get_mut(cursor.x, cursor.y)
             .set_style(self.theme.cursor_style);
 
-        self.status.render(status, buf);
+        self.status.draw(status, buf);
     }
 }
 
@@ -154,10 +148,10 @@ pub struct Theme {
 impl Default for Theme {
     fn default() -> Self {
         Self {
-            base_style: Style::default().bg(color::RICH_BLACK),
-            text_style: Style::default().fg(color::LIGHT_GOLDENROD_YELLOW),
-            cursor_style: Style::default().bg(color::ENERGY_YELLOW),
-            selection_style: Style::default().bg(color::ALOE_GREEN),
+            base_style: Style::default().bg(colors::RICH_BLACK),
+            text_style: Style::default().fg(colors::LIGHT_GOLDENROD_YELLOW),
+            cursor_style: Style::default().bg(colors::ENERGY_YELLOW),
+            selection_style: Style::default().bg(colors::ALOE_GREEN),
         }
     }
 }
@@ -175,17 +169,17 @@ impl<'a> StatusLine<'a> {
             mode,
             search_pattern,
             line_style: Style::default()
-                .fg(color::ENERGY_YELLOW)
-                .bg(color::BLACK_BROWN),
+                .fg(colors::ENERGY_YELLOW)
+                .bg(colors::BLACK_BROWN),
             text_style: Style::default()
-                .fg(color::ENERGY_YELLOW)
-                .bg(color::BLACK_BROWN),
+                .fg(colors::ENERGY_YELLOW)
+                .bg(colors::BLACK_BROWN),
         }
     }
 }
 
-impl Widget for StatusLine<'_> {
-    fn render(self, area: Rect, buf: &mut Buffer) {
+impl Drawable for StatusLine<'_> {
+    fn draw(&self, area: Rect, buf: &mut Buffer) {
         let constraints = [Constraint::Length(10), Constraint::Min(0)];
         let [left, right] = Layout::horizontal(constraints).areas(area);
 
@@ -200,14 +194,4 @@ impl Widget for StatusLine<'_> {
         mode_paragraph.render(left, buf);
         search_paragraph.render(right, buf);
     }
-}
-
-pub(crate) mod color {
-    use super::Color;
-
-    pub const ENERGY_YELLOW: Color = Color::Rgb(243, 234, 94);
-    pub const RICH_BLACK: Color = Color::Rgb(17, 21, 28);
-    pub const ALOE_GREEN: Color = Color::Rgb(104, 105, 76);
-    pub const BLACK_BROWN: Color = Color::Rgb(40, 41, 0);
-    pub const LIGHT_GOLDENROD_YELLOW: Color = Color::Rgb(242, 254, 220);
 }

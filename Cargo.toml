@@ -1,7 +1,8 @@
 [workspace]
 members = [
+  "duzzy-lib",
   "duzzy-editor",
-  "duzzy",
+  "dbuzzy", 
 ]
 resolver = "2"
 
@@ -11,11 +12,10 @@ edition = "2021"
 authors = ["Nikita S"]
 
 [workspace.dependencies]
-log = "0.4.21"
 anyhow = "1.0.70"
+thiserror = "1.0.61"
 
 tokio = { version = "1.36.0", features = ["rt-multi-thread", "macros", "sync", "time"] }
 
 ratatui = "0.26.1"
 crossterm = { version = "0.26.1", features = ["event-stream"] }
-

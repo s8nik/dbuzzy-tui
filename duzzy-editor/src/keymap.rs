@@ -3,13 +3,10 @@ use std::{
     ops::Deref,
 };
 
+use duzzy_lib::event::{Input, Modifiers};
 use once_cell::sync::OnceCell;
 
-use crate::{
-    buffer::Mode,
-    command::CmdType,
-    event::{Event, Input, Modifiers},
-};
+use crate::{buffer::Mode, command::CmdType};
 
 #[cfg_attr(test, derive(PartialEq))]
 #[derive(Debug, Default)]
@@ -144,12 +141,9 @@ impl Keymaps {
             return;
         };
 
-        let event: Event = match key.as_str().try_into() {
-            Ok(e) => e,
-            Err(e) => {
-                log::error!("parse keys error: {e}");
-                return;
-            }
+        let Ok(event) = key.as_str().try_into() else {
+            //@todo: better logs
+            return;
         };
 
         let input = Input { event, modifiers };
@@ -170,6 +164,8 @@ impl Keymaps {
 
 #[cfg(test)]
 mod tests {
+    use duzzy_lib::event::Event;
+
     use crate::{buffer::Mode, command::CmdType};
 
     #[test]
@@ -179,7 +175,7 @@ mod tests {
 
         let node = normal
             .get(&super::Input {
-                event: super::Event::Char('g'),
+                event: Event::Char('g'),
                 ..Default::default()
             })
             .unwrap();
@@ -190,7 +186,7 @@ mod tests {
 
         let leaf = bindings
             .get(&super::Input {
-                event: super::Event::Char('e'),
+                event: Event::Char('e'),
                 ..Default::default()
             })
             .unwrap();

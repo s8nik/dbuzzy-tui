@@ -113,6 +113,7 @@ impl Document {
         }
     }
 
+    #[cfg(test)]
     pub fn commit(&mut self) {
         if let Some(tx) = self.transaction.take() {
             self.history.commit(tx);

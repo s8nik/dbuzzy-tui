@@ -1,9 +1,9 @@
-use crate::{
-    editor::Workspace,
+use duzzy_lib::{
     event::{Event, Input},
-    renderer::EventOutcome,
-    search::SearchOrder,
+    EventOutcome,
 };
+
+use crate::{editor::Workspace, search::SearchOrder};
 
 pub fn on_key(ws: &mut Workspace, input: Input) -> EventOutcome {
     let mut outcome = EventOutcome::Render;
