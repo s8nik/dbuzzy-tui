@@ -320,6 +320,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "dbuzzy"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "crossterm 0.26.1",
+ "deadpool-postgres",
+ "duzzy-editor",
+ "duzzy-lib",
+ "futures-util",
+ "ratatui",
+ "serde",
+ "thiserror",
+ "tokio",
+ "tokio-postgres",
+ "toml",
+]
+
+[[package]]
 name = "deadpool"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -362,24 +380,6 @@ dependencies = [
  "block-buffer",
  "crypto-common",
  "subtle",
-]
-
-[[package]]
-name = "duzzy"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "crossterm 0.26.1",
- "deadpool-postgres",
- "duzzy-editor",
- "duzzy-lib",
- "futures-util",
- "ratatui",
- "serde",
- "thiserror",
- "tokio",
- "tokio-postgres",
- "toml",
 ]
 
 [[package]]
