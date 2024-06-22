@@ -1,3 +1,6 @@
+// @todo:
+#![allow(dead_code)]
+
 pub mod connection;
 pub mod queries;
 pub mod types;

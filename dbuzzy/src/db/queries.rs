@@ -1,6 +1,6 @@
 use super::types::{ColumnRow, DatabaseRow, TableRow};
 
-pub async fn execute(client: &deadpool_postgres::Client) -> super::DbResult<()> {
+pub async fn execute(_client: &deadpool_postgres::Client) -> super::DbResult<()> {
     todo!()
 }
 

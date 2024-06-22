@@ -1,3 +1,3 @@
 mod connections;
 
-pub use connections::ConnWidget;
+pub use connections::Connections;

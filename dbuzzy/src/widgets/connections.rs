@@ -11,15 +11,15 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph, StatefulWidget, Widget},
 };
 
-use crate::db::connection::ConnCfg;
+use crate::db::connection::ConnectionConfig;
 
-pub struct ConnWidget {
-    items: Vec<ConnCfg>,
+pub struct Connections<'a> {
+    items: &'a [ConnectionConfig],
     state: ListState,
 }
 
-impl ConnWidget {
-    pub fn new(conns: Vec<ConnCfg>) -> Self {
+impl<'a> Connections<'a> {
+    pub fn new(conns: &'a [ConnectionConfig]) -> Self {
         let mut state = ListState::default();
 
         if !conns.is_empty() {
@@ -50,12 +50,14 @@ impl ConnWidget {
         self.state.select(i);
     }
 
-    pub fn selected_conn(&self) -> Option<&ConnCfg> {
+    // @todo:
+    #[allow(dead_code)]
+    pub fn selected_conn(&self) -> Option<&ConnectionConfig> {
         self.state.selected().and_then(|i| self.items.get(i))
     }
 }
 
-impl DrawableStateful for ConnWidget {
+impl DrawableStateful for Connections<'_> {
     fn draw(&mut self, area: Rect, buf: &mut Buffer) {
         let vertical = Layout::vertical([Constraint::Min(0), Constraint::Length(2)]);
 
@@ -90,7 +92,7 @@ impl DrawableStateful for ConnWidget {
     }
 }
 
-impl OnInput for ConnWidget {
+impl OnInput for Connections<'_> {
     fn on_input(&mut self, input: Input) -> EventOutcome {
         let mut outcome = EventOutcome::Render;
 

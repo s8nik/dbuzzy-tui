@@ -6,7 +6,7 @@
 )]
 use std::io::Write;
 
-use crossterm::{event::EventStream, ExecutableCommand};
+use crossterm::ExecutableCommand;
 use ratatui::{
     backend::{Backend, CrosstermBackend},
     Terminal,
@@ -27,7 +27,10 @@ async fn main() -> anyhow::Result<()> {
     setup_terminal(&mut terminal)?;
     setup_panic();
 
-    let mut reader = EventStream::new();
+    let config = Box::new(config::Config::from_toml()?);
+    let mut app = app::App::new(&config);
+
+    app.run(&mut terminal).await?;
 
     clear_terminal(terminal)
 }
