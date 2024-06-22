@@ -3,7 +3,7 @@ pub mod event;
 mod utils;
 
 use ratatui::{buffer::Buffer, layout::Rect};
-pub use utils::config_toml;
+pub use utils::{ensure_config_dir, read_toml};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EventOutcome {
