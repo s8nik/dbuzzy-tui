@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use crossterm::event::{Event, EventStream};
-use duzzy_lib::{DrawableStateful, EventOutcome, OnInput};
+use duzzy_lib::{EventOutcome, OnInput, Renderer};
 use futures_util::StreamExt;
 use ratatui::{backend::Backend, buffer::Buffer, layout::Rect, widgets::Widget, Terminal};
 
@@ -53,6 +53,6 @@ impl Widget for &mut App<'_> {
     where
         Self: Sized,
     {
-        self.connections.draw(area, buf);
+        self.connections.render(area, buf);
     }
 }

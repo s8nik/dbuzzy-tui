@@ -1,4 +1,4 @@
-use duzzy_lib::{colors, Drawable};
+use duzzy_lib::{colors, Renderer};
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
@@ -116,8 +116,8 @@ impl<'a> EditorWidget<'a> {
     }
 }
 
-impl Drawable for EditorWidget<'_> {
-    fn draw(&self, area: Rect, buf: &mut Buffer) {
+impl Renderer for &EditorWidget<'_> {
+    fn render(self, area: Rect, buf: &mut Buffer) {
         buf.set_style(area, self.theme.base_style);
 
         let [main, status] =
@@ -134,7 +134,7 @@ impl Drawable for EditorWidget<'_> {
         buf.get_mut(cursor.x, cursor.y)
             .set_style(self.theme.cursor_style);
 
-        self.status.draw(status, buf);
+        self.status.render(status, buf);
     }
 }
 
@@ -178,8 +178,8 @@ impl<'a> StatusLine<'a> {
     }
 }
 
-impl Drawable for StatusLine<'_> {
-    fn draw(&self, area: Rect, buf: &mut Buffer) {
+impl Renderer for &StatusLine<'_> {
+    fn render(self, area: Rect, buf: &mut Buffer) {
         let constraints = [Constraint::Length(10), Constraint::Min(0)];
         let [left, right] = Layout::horizontal(constraints).areas(area);
 
