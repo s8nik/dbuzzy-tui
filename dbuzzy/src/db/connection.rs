@@ -23,14 +23,14 @@ impl std::fmt::Display for ConnectionConfig {
 }
 
 // @todo: `postgres` feature
-impl From<ConnectionConfig> for deadpool_postgres::Config {
-    fn from(conf: ConnectionConfig) -> Self {
+impl From<&ConnectionConfig> for deadpool_postgres::Config {
+    fn from(conf: &ConnectionConfig) -> Self {
         Self {
-            user: Some(conf.user),
-            password: conf.password,
-            dbname: conf.dbname,
-            application_name: conf.name,
-            host: Some(conf.host),
+            user: Some(conf.user.to_owned()),
+            password: conf.password.to_owned(),
+            dbname: conf.dbname.to_owned(),
+            application_name: conf.name.to_owned(),
+            host: Some(conf.host.to_owned()),
             port: Some(conf.port),
             connect_timeout: Some(std::time::Duration::from_secs(5)),
             keepalives: Some(true),
@@ -38,12 +38,12 @@ impl From<ConnectionConfig> for deadpool_postgres::Config {
         }
     }
 }
-pub struct Pool {
+pub struct PgPool {
     inner: deadpool_postgres::Pool,
 }
 
-impl Pool {
-    pub async fn create(config: ConnectionConfig) -> super::DbResult<Self> {
+impl PgPool {
+    pub fn create(config: &ConnectionConfig) -> super::DbResult<Self> {
         let pg_conf: deadpool_postgres::Config = config.into();
         let pool = pg_conf.create_pool(Some(Runtime::Tokio1), tokio_postgres::NoTls)?;
 

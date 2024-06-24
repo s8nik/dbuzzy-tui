@@ -11,6 +11,7 @@ impl Config {
     pub fn from_toml() -> anyhow::Result<Self> {
         let mut path = duzzy_lib::ensure_config_dir(std::env!("CARGO_PKG_NAME"))?;
         path.push("config");
+        path.set_extension("toml");
 
         duzzy_lib::read_toml(path)
     }
