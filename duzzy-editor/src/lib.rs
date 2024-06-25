@@ -19,4 +19,4 @@ mod widget;
 pub(crate) type SmartString = smartstring::SmartString<smartstring::LazyCompact>;
 
 pub use editor::Editor;
-pub use widget::{Cursor, EditorWidget, Viewport};
+pub use widget::Cursor;

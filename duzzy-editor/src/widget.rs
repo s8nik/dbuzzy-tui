@@ -1,4 +1,4 @@
-use duzzy_lib::{colors, Renderer};
+use duzzy_lib::colors;
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
@@ -12,10 +12,11 @@ use crate::{
     buffer::Mode,
     editor::Editor,
     selection::{selection_spans, SelectedRange, SpanKind},
+    SmartString,
 };
 
 #[derive(Default, Copy, Clone)]
-pub struct Viewport {
+pub(super) struct Viewport {
     pub width: usize,
     pub height: usize,
 }
@@ -26,19 +27,18 @@ pub struct Cursor {
     pub mode: Mode,
 }
 
-pub struct EditorWidget<'a> {
-    editor: &'a Editor,
-    status: StatusLine<'a>,
+pub(super) struct EditorWidget<'a> {
+    editor: &'a mut Editor,
+    status: StatusLine,
     theme: Theme,
 }
 
 impl<'a> EditorWidget<'a> {
-    pub fn new(editor: &'a Editor) -> Self {
+    pub fn new(editor: &'a mut Editor) -> Self {
         let theme = Theme::default();
 
-        let workspace = &editor.workspace;
-        let mode = workspace.cur().buf().mode();
-        let search_pattern = workspace.search_buffer.as_str();
+        let mode = editor.workspace.cur().buf().mode();
+        let search_pattern = editor.workspace.search_buffer.to_owned();
 
         let status = StatusLine::new(mode, search_pattern);
 
@@ -49,11 +49,9 @@ impl<'a> EditorWidget<'a> {
         }
     }
 
-    fn update_viewport(&self, width: u16, height: u16) {
-        let mut viewport = self.editor.viewport.borrow_mut();
-
-        viewport.width = width as _;
-        viewport.height = height as _;
+    fn update_viewport(&mut self, width: u16, height: u16) {
+        self.editor.viewport.width = width as _;
+        self.editor.viewport.height = height as _;
     }
 
     fn line(
@@ -95,7 +93,7 @@ impl<'a> EditorWidget<'a> {
         let buf = self.editor.workspace.cur().buf();
 
         let text = buf.text();
-        let viewport = self.editor.viewport.borrow();
+        let viewport = self.editor.viewport;
         let selection = buf.selection().map(|s| s.range());
 
         let vscroll = buf.vscroll();
@@ -114,10 +112,8 @@ impl<'a> EditorWidget<'a> {
 
         Some(Text::from(lines))
     }
-}
 
-impl Renderer for &EditorWidget<'_> {
-    fn render(self, area: Rect, buf: &mut Buffer) {
+    pub fn render(&mut self, area: Rect, buf: &mut Buffer) {
         buf.set_style(area, self.theme.base_style);
 
         let [main, status] =
@@ -156,15 +152,15 @@ impl Default for Theme {
     }
 }
 
-pub struct StatusLine<'a> {
+pub struct StatusLine {
     mode: Mode,
-    search_pattern: &'a str,
+    search_pattern: SmartString,
     line_style: Style,
     text_style: Style,
 }
 
-impl<'a> StatusLine<'a> {
-    fn new(mode: Mode, search_pattern: &'a str) -> Self {
+impl StatusLine {
+    fn new(mode: Mode, search_pattern: SmartString) -> Self {
         Self {
             mode,
             search_pattern,
@@ -176,10 +172,8 @@ impl<'a> StatusLine<'a> {
                 .bg(colors::BLACK_BROWN),
         }
     }
-}
 
-impl Renderer for &StatusLine<'_> {
-    fn render(self, area: Rect, buf: &mut Buffer) {
+    fn render(&mut self, area: Rect, buf: &mut Buffer) {
         let constraints = [Constraint::Length(10), Constraint::Min(0)];
         let [left, right] = Layout::horizontal(constraints).areas(area);
 
@@ -187,7 +181,7 @@ impl Renderer for &StatusLine<'_> {
             .centered()
             .style(self.text_style);
 
-        let search_paragraph = Paragraph::new(self.search_pattern)
+        let search_paragraph = Paragraph::new(self.search_pattern.as_str())
             .left_aligned()
             .style(self.line_style);
 
