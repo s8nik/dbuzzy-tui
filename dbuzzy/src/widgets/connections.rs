@@ -1,7 +1,7 @@
 use duzzy_lib::{
     colors,
     event::{Event, Input},
-    EventOutcome, OnInput, Renderer,
+    DuzzyWidget, EventOutcome,
 };
 use ratatui::{
     buffer::Buffer,
@@ -78,8 +78,26 @@ impl<'a> Connections<'a> {
     }
 }
 
-impl Renderer for &mut Connections<'_> {
-    fn render(self, area: Rect, buf: &mut Buffer) {
+impl DuzzyWidget for Connections<'_> {
+    fn name() -> &'static str {
+        "connections"
+    }
+
+    fn input(&mut self, input: Input) -> EventOutcome {
+        let mut outcome = EventOutcome::Render;
+
+        match input.event {
+            Event::Char('q') | Event::Esc => outcome = EventOutcome::Exit,
+            Event::Char('j') | Event::Down => self.next_connection(),
+            Event::Char('k') | Event::Up => self.prev_connection(),
+            Event::Char('l') | Event::Right | Event::Enter => self.select_connection(),
+            _ => outcome = EventOutcome::Ignore,
+        }
+
+        outcome
+    }
+
+    fn render(&mut self, area: Rect, buf: &mut Buffer) {
         let vertical = Layout::vertical([Constraint::Min(0), Constraint::Length(2)]);
 
         let [conn_area, info_area] = vertical.areas(area);
@@ -110,21 +128,5 @@ impl Renderer for &mut Connections<'_> {
             .highlight_style(Style::default().bg(colors::ALOE_GREEN));
 
         StatefulWidget::render(connections, conn_area, buf, &mut self.state);
-    }
-}
-
-impl OnInput for Connections<'_> {
-    fn on_input(&mut self, input: Input) -> EventOutcome {
-        let mut outcome = EventOutcome::Render;
-
-        match input.event {
-            Event::Char('q') | Event::Esc => outcome = EventOutcome::Exit,
-            Event::Char('j') | Event::Down => self.next_connection(),
-            Event::Char('k') | Event::Up => self.prev_connection(),
-            Event::Char('l') | Event::Right | Event::Enter => self.select_connection(),
-            _ => outcome = EventOutcome::Ignore,
-        }
-
-        outcome
     }
 }

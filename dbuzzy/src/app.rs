@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use crossterm::event::{Event, EventStream};
-use duzzy_lib::{EventOutcome, OnInput, Renderer};
+use duzzy_lib::{DuzzyWidget, EventOutcome};
 use futures_util::StreamExt;
 use ratatui::{backend::Backend, buffer::Buffer, layout::Rect, widgets::Widget, Terminal};
 
@@ -33,6 +33,7 @@ impl<'a> App<'a> {
                 EventOutcome::Render => self.draw(terminal)?,
                 EventOutcome::Exit => return Ok(()),
                 EventOutcome::Ignore => continue,
+                EventOutcome::Focus(_) => todo!(),
             }
         }
     }
@@ -44,7 +45,7 @@ impl<'a> App<'a> {
 
     fn handle_event(&mut self, event: Event) -> EventOutcome {
         let input = event.into();
-        self.connections.on_input(input)
+        self.connections.input(input)
     }
 }
 
