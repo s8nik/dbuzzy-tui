@@ -22,7 +22,7 @@ impl App {
             Box::new(Connections::new(config.conn.as_slice())),
         );
 
-        components.insert(Editor::name(), Box::new(Editor::new()));
+        components.insert(Editor::name(), Box::new(Editor::new_scratch()));
 
         Self {
             components,

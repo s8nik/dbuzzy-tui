@@ -21,28 +21,31 @@ pub struct Editor {
 
 impl Default for Editor {
     fn default() -> Self {
-        Self::new()
+        Self::new_scratch()
     }
 }
 
 impl Editor {
-    pub fn new() -> Self {
+    fn new(workspace: Workspace) -> Self {
         Self {
-            workspace: Workspace::new(),
+            workspace,
             viewport: Viewport::default(),
             keymaps: Keymaps::init(),
             command: CommandFinder::default(),
         }
     }
 
-    pub fn open_file(&mut self, filepath: impl AsRef<Path>) -> anyhow::Result<()> {
+    pub fn new_file(filepath: impl AsRef<Path>) -> anyhow::Result<Self> {
+        let mut workspace = Workspace::default();
         let doc = Document::from_path(filepath)?;
-        self.workspace.add_doc(doc);
-        Ok(())
+        workspace.add_doc(doc);
+        Ok(Self::new(workspace))
     }
 
-    pub fn open_scratch(&mut self) {
-        self.workspace.add_doc(Document::default());
+    pub fn new_scratch() -> Self {
+        let mut workspace = Workspace::default();
+        workspace.add_doc(Document::default());
+        Self::new(workspace)
     }
 
     pub fn cursor(&self) -> Cursor {
