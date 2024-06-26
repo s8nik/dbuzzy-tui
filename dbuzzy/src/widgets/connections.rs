@@ -73,7 +73,9 @@ impl Connections {
         };
     }
 
-    pub fn pool(&self) -> Option<&PgPool> {
+    // @todo:
+    #[allow(dead_code)]
+    pub const fn pool(&self) -> Option<&PgPool> {
         self.pool.as_ref()
     }
 }
