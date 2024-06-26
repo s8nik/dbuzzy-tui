@@ -1,7 +1,7 @@
 use duzzy_lib::{
     colors,
     event::{Event, Input},
-    DuzzyWidget, EventOutcome,
+    DuzzyWidget, EventOutcome, NamedWidget,
 };
 use ratatui::{
     buffer::Buffer,
@@ -13,14 +13,14 @@ use ratatui::{
 
 use crate::db::connection::{ConnectionConfig, PgPool};
 
-pub struct Connections<'a> {
+pub struct Connections {
     state: ListState,
-    configs: &'a [ConnectionConfig],
+    configs: &'static [ConnectionConfig],
     pool: Option<PgPool>,
 }
 
-impl<'a> Connections<'a> {
-    pub fn new(conns: &'a [ConnectionConfig]) -> Self {
+impl Connections {
+    pub fn new(conns: &'static [ConnectionConfig]) -> Self {
         let mut state = ListState::default();
 
         if !conns.is_empty() {
@@ -78,11 +78,7 @@ impl<'a> Connections<'a> {
     }
 }
 
-impl DuzzyWidget for Connections<'_> {
-    fn name() -> &'static str {
-        "connections"
-    }
-
+impl DuzzyWidget for Connections {
     fn input(&mut self, input: Input) -> EventOutcome {
         let mut outcome = EventOutcome::Render;
 
@@ -128,5 +124,11 @@ impl DuzzyWidget for Connections<'_> {
             .highlight_style(Style::default().bg(colors::ALOE_GREEN));
 
         StatefulWidget::render(connections, conn_area, buf, &mut self.state);
+    }
+}
+
+impl NamedWidget for Connections {
+    fn name() -> &'static str {
+        "connection-widget"
     }
 }

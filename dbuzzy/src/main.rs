@@ -27,8 +27,8 @@ async fn main() -> anyhow::Result<()> {
     setup_terminal(&mut terminal)?;
     setup_panic();
 
-    let config = Box::new(config::Config::from_toml()?);
-    let mut app = app::App::new(&config);
+    let config = Box::leak(Box::new(config::Config::from_toml()?));
+    let mut app = app::App::new(config);
 
     app.run(&mut terminal).await?;
 

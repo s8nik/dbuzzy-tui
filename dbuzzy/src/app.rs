@@ -1,20 +1,32 @@
-use std::time::Duration;
+use std::{collections::HashMap, time::Duration};
 
 use crossterm::event::{Event, EventStream};
-use duzzy_lib::{DuzzyWidget, EventOutcome};
+use duzzy_editor::Editor;
+use duzzy_lib::{DuzzyWidget, EventOutcome, NamedWidget};
 use futures_util::StreamExt;
 use ratatui::{backend::Backend, buffer::Buffer, layout::Rect, widgets::Widget, Terminal};
 
 use crate::{config::Config, widgets::Connections};
 
-pub struct App<'a> {
-    connections: Connections<'a>,
+pub struct App {
+    components: HashMap<&'static str, Box<dyn DuzzyWidget>>,
+    focus: &'static str,
 }
 
-impl<'a> App<'a> {
-    pub fn new(config: &'a Config) -> Self {
+impl App {
+    pub fn new(config: &'static Config) -> Self {
+        let mut components: HashMap<&str, Box<dyn DuzzyWidget>> = HashMap::new();
+
+        components.insert(
+            Connections::name(),
+            Box::new(Connections::new(config.conn.as_slice())),
+        );
+
+        components.insert(Editor::name(), Box::new(Editor::new()));
+
         Self {
-            connections: Connections::new(config.conn.as_slice()),
+            components,
+            focus: Connections::name(),
         }
     }
 
@@ -44,16 +56,19 @@ impl<'a> App<'a> {
     }
 
     fn handle_event(&mut self, event: Event) -> EventOutcome {
-        let input = event.into();
-        self.connections.input(input)
+        self.focused().input(event.into())
+    }
+
+    fn focused(&mut self) -> &mut Box<dyn DuzzyWidget> {
+        self.components.get_mut(self.focus).expect("should focus")
     }
 }
 
-impl Widget for &mut App<'_> {
+impl Widget for &mut App {
     fn render(self, area: Rect, buf: &mut Buffer)
     where
         Self: Sized,
     {
-        self.connections.render(area, buf);
+        self.focused().render(area, buf);
     }
 }

@@ -15,7 +15,10 @@ pub enum EventOutcome {
 }
 
 pub trait DuzzyWidget {
-    fn name() -> &'static str;
     fn input(&mut self, input: Input) -> EventOutcome;
     fn render(&mut self, area: Rect, buf: &mut Buffer);
+}
+
+pub trait NamedWidget: DuzzyWidget {
+    fn name() -> &'static str;
 }

@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::Path};
 
-use duzzy_lib::{event::Input, DuzzyWidget, EventOutcome};
+use duzzy_lib::{event::Input, DuzzyWidget, EventOutcome, NamedWidget};
 
 use crate::{
     clipboard::Clipboard,
@@ -64,10 +64,6 @@ impl Editor {
 }
 
 impl DuzzyWidget for Editor {
-    fn name() -> &'static str {
-        "editor"
-    }
-
     fn input(&mut self, input: Input) -> EventOutcome {
         let buf = self.workspace.cur().buf();
         let command = self.command.find(self.keymaps, buf, input);
@@ -95,6 +91,12 @@ impl DuzzyWidget for Editor {
 
     fn render(&mut self, area: ratatui::layout::Rect, buf: &mut ratatui::buffer::Buffer) {
         EditorWidget::new(self).render(area, buf);
+    }
+}
+
+impl NamedWidget for Editor {
+    fn name() -> &'static str {
+        "duzzy-editor"
     }
 }
 
