@@ -2,31 +2,35 @@ use std::{collections::HashMap, time::Duration};
 
 use crossterm::event::{Event, EventStream};
 use duzzy_editor::Editor;
-use duzzy_lib::{DuzzyWidget, EventOutcome, NamedWidget};
+use duzzy_lib::{DuzzyWidget, EventOutcome};
 use futures_util::StreamExt;
 use ratatui::{backend::Backend, buffer::Buffer, layout::Rect, widgets::Widget, Terminal};
 
-use crate::{config::Config, widgets::Connections};
+use crate::{
+    config::Config,
+    widgets::{AppEventOutcome, AppWidget, Connections},
+};
 
 pub struct App {
-    components: HashMap<&'static str, Box<dyn DuzzyWidget>>,
-    focus: &'static str,
+    focus: AppWidget,
+    editor: Box<Editor>,
+    widgets: HashMap<AppWidget, Box<dyn DuzzyWidget<Outcome = AppEventOutcome>>>,
 }
 
 impl App {
     pub fn new(config: &'static Config) -> Self {
-        let mut components: HashMap<&str, Box<dyn DuzzyWidget>> = HashMap::new();
+        let mut widgets: HashMap<AppWidget, Box<dyn DuzzyWidget<Outcome = AppEventOutcome>>> =
+            HashMap::new();
 
-        components.insert(
-            Connections::name(),
+        widgets.insert(
+            AppWidget::Connections,
             Box::new(Connections::new(config.conn.as_slice())),
         );
 
-        components.insert(Editor::name(), Box::new(Editor::new_scratch()));
-
         Self {
-            components,
-            focus: Connections::name(),
+            widgets,
+            editor: Box::new(Editor::new_scratch()),
+            focus: AppWidget::Connections,
         }
     }
 
@@ -42,10 +46,12 @@ impl App {
             };
 
             match self.handle_event(event) {
-                EventOutcome::Render => self.draw(terminal)?,
-                EventOutcome::Exit => return Ok(()),
-                EventOutcome::Ignore => continue,
-                EventOutcome::Focus(_) => todo!(),
+                AppEventOutcome::Outcome(event) => match event {
+                    EventOutcome::Render => self.draw(terminal)?,
+                    EventOutcome::Ignore => continue,
+                    EventOutcome::Exit => return Ok(()),
+                },
+                AppEventOutcome::Focus(focus) => self.focus = focus,
             }
         }
     }
@@ -55,12 +61,18 @@ impl App {
         Ok(())
     }
 
-    fn handle_event(&mut self, event: Event) -> EventOutcome {
-        self.focused().input(event.into())
+    fn handle_event(&mut self, event: Event) -> AppEventOutcome {
+        let input = event.into();
+
+        if self.focus == AppWidget::Editor {
+            return self.editor.input(input).into();
+        }
+
+        self.widgets().input(input)
     }
 
-    fn focused(&mut self) -> &mut Box<dyn DuzzyWidget> {
-        self.components.get_mut(self.focus).expect("should focus")
+    fn widgets(&mut self) -> &mut Box<dyn DuzzyWidget<Outcome = AppEventOutcome>> {
+        self.widgets.get_mut(&self.focus).expect("should focus")
     }
 }
 
@@ -69,6 +81,7 @@ impl Widget for &mut App {
     where
         Self: Sized,
     {
-        self.focused().render(area, buf);
+        // @note: draw widgets based on currently focused one
+        self.widgets().render(area, buf);
     }
 }

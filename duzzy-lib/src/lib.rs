@@ -11,14 +11,11 @@ pub enum EventOutcome {
     Render,
     Ignore,
     Exit,
-    Focus(&'static str),
 }
 
 pub trait DuzzyWidget {
-    fn input(&mut self, input: Input) -> EventOutcome;
-    fn render(&mut self, area: Rect, buf: &mut Buffer);
-}
+    type Outcome;
 
-pub trait NamedWidget: DuzzyWidget {
-    fn name() -> &'static str;
+    fn input(&mut self, input: Input) -> Self::Outcome;
+    fn render(&mut self, area: Rect, buf: &mut Buffer);
 }

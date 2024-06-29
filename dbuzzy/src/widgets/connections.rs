@@ -1,7 +1,7 @@
 use duzzy_lib::{
     colors,
     event::{Event, Input},
-    DuzzyWidget, EventOutcome, NamedWidget,
+    DuzzyWidget, EventOutcome,
 };
 use ratatui::{
     buffer::Buffer,
@@ -81,7 +81,9 @@ impl Connections {
 }
 
 impl DuzzyWidget for Connections {
-    fn input(&mut self, input: Input) -> EventOutcome {
+    type Outcome = super::AppEventOutcome;
+
+    fn input(&mut self, input: Input) -> Self::Outcome {
         let mut outcome = EventOutcome::Render;
 
         match input.event {
@@ -92,7 +94,7 @@ impl DuzzyWidget for Connections {
             _ => outcome = EventOutcome::Ignore,
         }
 
-        outcome
+        outcome.into()
     }
 
     fn render(&mut self, area: Rect, buf: &mut Buffer) {
@@ -126,11 +128,5 @@ impl DuzzyWidget for Connections {
             .highlight_style(Style::default().bg(colors::ALOE_GREEN));
 
         StatefulWidget::render(connections, conn_area, buf, &mut self.state);
-    }
-}
-
-impl NamedWidget for Connections {
-    fn name() -> &'static str {
-        "connection-widget"
     }
 }
