@@ -19,15 +19,15 @@ pub async fn database_tree(client: &Client) -> anyhow::Result<DatabaseTree> {
             r#"
                 WITH schemas AS (
                     SELECT
-                		table_catalog as database,
-                		table_schema as schema,
-                		jsonb_agg(table_name) AS tables
-                	FROM information_schema.tables
-                	GROUP BY table_catalog, table_schema
+                        table_catalog as database,
+                        table_schema as schema,
+                        jsonb_agg(table_name) AS tables
+                    FROM information_schema.tables
+                    GROUP BY table_catalog, table_schema
                 )
                 SELECT
-                	datname as name,
-                	jsonb_object_agg(schema, tables) AS schemas
+                    datname as name,
+                    jsonb_object_agg(schema, tables) AS schemas
                 FROM pg_database
                 INNER JOIN schemas on database = datname
                 GROUP BY datname
