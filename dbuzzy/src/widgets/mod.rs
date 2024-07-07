@@ -3,6 +3,8 @@ mod connections;
 pub use connections::Connections;
 use duzzy_lib::EventOutcome;
 
+// @todo:
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AppEventOutcome {
     Outcome(EventOutcome),
