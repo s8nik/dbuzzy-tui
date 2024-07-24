@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use deadpool_postgres::{Client, GenericClient};
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 pub struct DatabaseTree(HashMap<String, TreeItem>);
 
 #[derive(Debug, Deserialize)]
@@ -11,6 +11,12 @@ pub struct DatabaseTree(HashMap<String, TreeItem>);
 pub enum TreeItem {
     Schemas(HashMap<String, TreeItem>),
     Tables(Vec<String>),
+}
+
+impl AsRef<HashMap<String, TreeItem>> for DatabaseTree {
+    fn as_ref(&self) -> &HashMap<String, TreeItem> {
+        &self.0
+    }
 }
 
 pub async fn database_tree(client: &Client) -> anyhow::Result<DatabaseTree> {

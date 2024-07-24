@@ -50,8 +50,6 @@ impl PgPool {
         Ok(Self { inner: pool })
     }
 
-    //@todo:
-    #[allow(dead_code)]
     pub async fn acquire(&self) -> super::DbResult<deadpool_postgres::Client> {
         let client = self.inner.get().await?;
         Ok(client)
