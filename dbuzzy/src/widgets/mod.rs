@@ -1,6 +1,7 @@
 mod connections;
+mod databases;
 
-pub use connections::Connections;
+pub use connections::ConnectionsWidget;
 use duzzy_lib::EventOutcome;
 
 // @todo:

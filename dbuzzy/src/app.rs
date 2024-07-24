@@ -8,7 +8,7 @@ use ratatui::{backend::Backend, buffer::Buffer, layout::Rect, widgets::Widget, T
 
 use crate::{
     config::Config,
-    widgets::{AppEventOutcome, AppWidget, Connections},
+    widgets::{AppEventOutcome, AppWidget, ConnectionsWidget},
 };
 
 pub struct App {
@@ -24,7 +24,7 @@ impl App {
 
         widgets.insert(
             AppWidget::Connections,
-            Box::new(Connections::new(config.conn.as_slice())),
+            Box::new(ConnectionsWidget::new(config.conn.as_slice())),
         );
 
         Self {
@@ -68,10 +68,10 @@ impl App {
             return self.editor.input(input).into();
         }
 
-        self.widgets().input(input)
+        self.focused().input(input)
     }
 
-    fn widgets(&mut self) -> &mut Box<dyn DuzzyWidget<Outcome = AppEventOutcome>> {
+    fn focused(&mut self) -> &mut Box<dyn DuzzyWidget<Outcome = AppEventOutcome>> {
         self.widgets.get_mut(&self.focus).expect("should focus")
     }
 }
@@ -82,6 +82,6 @@ impl Widget for &mut App {
         Self: Sized,
     {
         // @note: draw widgets based on currently focused one
-        self.widgets().render(area, buf);
+        self.focused().render(area, buf);
     }
 }

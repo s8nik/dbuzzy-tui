@@ -13,13 +13,13 @@ use ratatui::{
 
 use crate::db::connection::{ConnectionConfig, PgPool};
 
-pub struct Connections {
+pub struct ConnectionsWidget {
     state: ListState,
     configs: &'static [ConnectionConfig],
     pool: Option<PgPool>,
 }
 
-impl Connections {
+impl ConnectionsWidget {
     pub fn new(conns: &'static [ConnectionConfig]) -> Self {
         let mut state = ListState::default();
 
@@ -80,7 +80,7 @@ impl Connections {
     }
 }
 
-impl DuzzyWidget for Connections {
+impl DuzzyWidget for ConnectionsWidget {
     type Outcome = super::AppEventOutcome;
 
     fn input(&mut self, input: Input) -> Self::Outcome {
