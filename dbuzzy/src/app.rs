@@ -8,29 +8,31 @@ use ratatui::{backend::Backend, buffer::Buffer, layout::Rect, widgets::Widget, T
 
 use crate::{
     config::Config,
-    widgets::{AppEventOutcome, AppWidget, ConnectionsWidget},
+    widgets::{
+        AppEventOutcome, AppWidgetData, AppWidgetName, ConnectionsWidget, DatabaseTreeWidget,
+    },
 };
 
 pub struct App {
-    focus: AppWidget,
+    focus: AppWidgetName,
     editor: Box<Editor>,
-    widgets: HashMap<AppWidget, Box<dyn DuzzyWidget<Outcome = AppEventOutcome>>>,
+    widgets: HashMap<AppWidgetName, Box<dyn DuzzyWidget<Outcome = AppEventOutcome>>>,
 }
 
 impl App {
     pub fn new(config: &'static Config) -> Self {
-        let mut widgets: HashMap<AppWidget, Box<dyn DuzzyWidget<Outcome = AppEventOutcome>>> =
+        let mut widgets: HashMap<AppWidgetName, Box<dyn DuzzyWidget<Outcome = AppEventOutcome>>> =
             HashMap::new();
 
         widgets.insert(
-            AppWidget::Connections,
+            AppWidgetName::Connections,
             Box::new(ConnectionsWidget::new(config.conn.as_slice())),
         );
 
         Self {
             widgets,
             editor: Box::new(Editor::new_scratch()),
-            focus: AppWidget::Connections,
+            focus: AppWidgetName::Connections,
         }
     }
 
@@ -51,7 +53,15 @@ impl App {
                     EventOutcome::Ignore => continue,
                     EventOutcome::Exit => return Ok(()),
                 },
-                AppEventOutcome::Focus(focus) => self.focus = focus,
+                AppEventOutcome::Focus(name) => self.focus = name,
+                // @todo: show error widget
+                #[allow(clippy::redundant_pattern_matching)]
+                AppEventOutcome::Apply(data) => {
+                    if let Err(_) = self.apply(data).await {
+                        // @todo: error widget
+                    }
+                    self.draw(terminal)?;
+                }
             }
         }
     }
@@ -64,11 +74,26 @@ impl App {
     fn handle_event(&mut self, event: Event) -> AppEventOutcome {
         let input = event.into();
 
-        if self.focus == AppWidget::Editor {
+        if self.focus == AppWidgetName::Editor {
             return self.editor.input(input).into();
         }
 
         self.focused().input(input)
+    }
+
+    async fn apply(&mut self, data: AppWidgetData) -> anyhow::Result<()> {
+        match data {
+            AppWidgetData::Connection(pool) => {
+                self.widgets.insert(
+                    AppWidgetName::DatabaseTree,
+                    Box::new(DatabaseTreeWidget::new(&pool).await?),
+                );
+
+                self.focus = AppWidgetName::DatabaseTree;
+            }
+        };
+
+        Ok(())
     }
 
     fn focused(&mut self) -> &mut Box<dyn DuzzyWidget<Outcome = AppEventOutcome>> {

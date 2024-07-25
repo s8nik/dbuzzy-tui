@@ -38,6 +38,8 @@ impl From<&ConnectionConfig> for deadpool_postgres::Config {
         }
     }
 }
+
+#[derive(Clone)]
 pub struct PgPool {
     inner: deadpool_postgres::Pool,
 }

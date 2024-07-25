@@ -2,20 +2,29 @@ mod connections;
 mod databases;
 
 pub use connections::ConnectionsWidget;
+pub use databases::DatabaseTreeWidget;
+
 use duzzy_lib::EventOutcome;
+
+use crate::db::connection::PgPool;
 
 // @todo:
 #[allow(dead_code)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AppEventOutcome {
     Outcome(EventOutcome),
-    Focus(AppWidget),
+    Focus(AppWidgetName),
+    Apply(AppWidgetData),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum AppWidget {
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub enum AppWidgetName {
     Connections,
+    DatabaseTree,
     Editor,
+}
+
+pub enum AppWidgetData {
+    Connection(PgPool),
 }
 
 impl From<EventOutcome> for AppEventOutcome {

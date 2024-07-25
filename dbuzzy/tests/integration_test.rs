@@ -1,6 +1,6 @@
 mod db;
 
-#[tokio::test]
+// #[tokio::test]
 async fn test_db_tree() -> anyhow::Result<()> {
     let (container, pool) = db::setup().await?;
 

@@ -59,22 +59,11 @@ impl ConnectionsWidget {
     }
 
     pub fn select_connection(&mut self) {
-        let Some(config) = self.state.selected().and_then(|i| self.configs.get(i)) else {
-            return;
-        };
-
-        self.pool = match PgPool::create(config) {
-            Ok(pool) => Some(pool),
-            Err(_e) => {
-                // @todo: call error widget?
-                // and better logs
-                return;
-            }
+        if let Some(config) = self.state.selected().and_then(|i| self.configs.get(i)) {
+            self.pool = PgPool::create(config).ok();
         };
     }
 
-    // @todo:
-    #[allow(dead_code)]
     pub const fn pool(&self) -> Option<&PgPool> {
         self.pool.as_ref()
     }
@@ -90,7 +79,12 @@ impl DuzzyWidget for ConnectionsWidget {
             Event::Char('q') | Event::Esc => outcome = EventOutcome::Exit,
             Event::Char('j') | Event::Down => self.next_connection(),
             Event::Char('k') | Event::Up => self.prev_connection(),
-            Event::Char('l') | Event::Right | Event::Enter => self.select_connection(),
+            Event::Char('l') | Event::Right | Event::Enter => {
+                self.select_connection();
+                if let Some(pool) = self.pool().cloned() {
+                    return super::AppEventOutcome::Apply(super::AppWidgetData::Connection(pool));
+                }
+            }
             _ => outcome = EventOutcome::Ignore,
         }
 
