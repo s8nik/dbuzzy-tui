@@ -13,10 +13,15 @@ pub struct ConnectionConfig {
 
 impl std::fmt::Display for ConnectionConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let name = self.name.as_ref().map_or_else(
+        let mut name = self.name.as_ref().map_or_else(
             || format!("postgres://{}:@{}:{}", &self.user, &self.host, self.port),
             |n| n.to_owned(),
         );
+
+        if let Some(dbname) = self.dbname.as_ref() {
+            name.push('/');
+            name.push_str(dbname);
+        }
 
         write!(f, "{}", name)
     }
