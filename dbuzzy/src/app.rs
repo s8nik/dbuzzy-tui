@@ -107,6 +107,10 @@ impl Widget for &mut App {
         Self: Sized,
     {
         // @note: draw widgets based on currently focused one
-        self.focused().render(area, buf);
+        if self.focus == AppWidgetName::Editor {
+            self.editor.render(area, buf);
+        } else {
+            self.focused().render(area, buf);
+        }
     }
 }
