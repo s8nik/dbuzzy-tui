@@ -34,7 +34,21 @@ pub async fn setup() -> anyhow::Result<(ContainerAsync<GenericImage>, PgPool)> {
 
     let connection = pool.acquire().await?;
 
-    connection.execute("CREATE DATABASE test;", &[]).await?;
+    let dbname = "test";
+
+    let does_exist: bool = connection
+        .query_one(
+            "SELECT EXISTS(SELECT 1 FROM pg_catalog.pg_database WHERE datname = $1)",
+            &[&dbname],
+        )
+        .await?
+        .get(0);
+
+    if !does_exist {
+        connection
+            .execute("SELECT 'CREATE DATABASE test'", &[])
+            .await?;
+    }
 
     connection
         .execute("CREATE SCHEMA IF NOT EXISTS foo;", &[])
