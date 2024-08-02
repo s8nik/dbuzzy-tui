@@ -6,17 +6,14 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, Widget},
 };
 
-use crate::db::{connection::PgPool, queries::DatabaseTree};
-
-const OPEN_INDENT_ICON: &str = "├──";
-const CLOSE_INDENT_ICON: &str = "└──";
+use crate::db::{tree::DatabaseTree, PgPool};
 
 #[derive(Default)]
-pub struct DatabaseTreeWidget {
-    tree: DatabaseTree,
+pub struct DbTreeWidget {
+    inner: DatabaseTree,
 }
 
-impl DatabaseTreeWidget {
+impl DbTreeWidget {
     pub async fn new(pool: &PgPool) -> anyhow::Result<Self> {
         let mut widget = Self::default();
         widget.update(pool).await?;
@@ -25,12 +22,15 @@ impl DatabaseTreeWidget {
 
     pub async fn update(&mut self, pool: &PgPool) -> anyhow::Result<()> {
         let conn = pool.acquire().await?;
-        self.tree = DatabaseTree::load(&conn).await?;
+        self.inner = DatabaseTree::load(&conn).await?;
         Ok(())
     }
 }
 
-impl DuzzyWidget for DatabaseTreeWidget {
+const OPEN_INDENT_ICON: &str = "├──";
+const CLOSE_INDENT_ICON: &str = "└──";
+
+impl DuzzyWidget for DbTreeWidget {
     type Outcome = super::AppEventOutcome;
 
     fn input(&mut self, input: duzzy_lib::event::Input) -> Self::Outcome {
@@ -50,7 +50,7 @@ impl DuzzyWidget for DatabaseTreeWidget {
 
         let mut items = vec![];
         let tree_list = self
-            .tree
+            .inner
             .as_ref()
             .iter()
             .filter(|x| x.is_visible())

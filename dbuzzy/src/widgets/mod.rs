@@ -1,12 +1,12 @@
-mod connections;
-mod databases;
+mod conn_list;
+mod db_tree;
 
-pub use connections::ConnectionsWidget;
-pub use databases::DatabaseTreeWidget;
+pub use conn_list::ConnListWidget;
+pub use db_tree::DbTreeWidget;
 
 use duzzy_lib::EventOutcome;
 
-use crate::db::connection::PgPool;
+use crate::db::PgPool;
 
 // @todo:
 #[allow(dead_code)]
@@ -18,7 +18,7 @@ pub enum AppEventOutcome {
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AppWidgetName {
-    Connections,
+    ConnectionList,
     DatabaseTree,
     Editor,
 }

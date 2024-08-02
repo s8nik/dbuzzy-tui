@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::db::connection::ConnectionConfig;
+use crate::db::ConnectionConfig;
 
 #[derive(Debug, Default, Deserialize)]
 pub struct Config {

@@ -1,4 +1,4 @@
-use dbuzzy::db::queries::{DatabaseTree, TreeItem, TreeItemKind};
+use dbuzzy::db::tree::{DatabaseTree, TreeItem, TreeItemKind};
 
 mod db;
 

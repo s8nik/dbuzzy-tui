@@ -11,15 +11,15 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph, StatefulWidget, Widget},
 };
 
-use crate::db::connection::{ConnectionConfig, PgPool};
+use crate::db::{ConnectionConfig, PgPool};
 
-pub struct ConnectionsWidget {
+pub struct ConnListWidget {
     state: ListState,
     configs: &'static [ConnectionConfig],
     pool: Option<PgPool>,
 }
 
-impl ConnectionsWidget {
+impl ConnListWidget {
     pub fn new(conns: &'static [ConnectionConfig]) -> Self {
         let mut state = ListState::default();
 
@@ -69,7 +69,7 @@ impl ConnectionsWidget {
     }
 }
 
-impl DuzzyWidget for ConnectionsWidget {
+impl DuzzyWidget for ConnListWidget {
     type Outcome = super::AppEventOutcome;
 
     fn input(&mut self, input: Input) -> Self::Outcome {

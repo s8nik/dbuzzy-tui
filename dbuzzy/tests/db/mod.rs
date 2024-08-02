@@ -1,4 +1,4 @@
-use dbuzzy::db::connection::{ConnectionConfig, PgPool};
+use dbuzzy::db::{ConnectionConfig, PgPool};
 use deadpool_postgres::GenericClient;
 use testcontainers::{
     core::{IntoContainerPort, WaitFor},

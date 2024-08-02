@@ -8,9 +8,7 @@ use ratatui::{backend::Backend, buffer::Buffer, layout::Rect, widgets::Widget, T
 
 use crate::{
     config::Config,
-    widgets::{
-        AppEventOutcome, AppWidgetData, AppWidgetName, ConnectionsWidget, DatabaseTreeWidget,
-    },
+    widgets::{AppEventOutcome, AppWidgetData, AppWidgetName, ConnListWidget, DbTreeWidget},
 };
 
 pub struct App {
@@ -25,14 +23,14 @@ impl App {
             HashMap::new();
 
         widgets.insert(
-            AppWidgetName::Connections,
-            Box::new(ConnectionsWidget::new(config.conn.as_slice())),
+            AppWidgetName::ConnectionList,
+            Box::new(ConnListWidget::new(config.conn.as_slice())),
         );
 
         Self {
             widgets,
             editor: Box::new(Editor::new_scratch()),
-            focus: AppWidgetName::Connections,
+            focus: AppWidgetName::ConnectionList,
         }
     }
 
@@ -86,7 +84,7 @@ impl App {
             AppWidgetData::Connection(pool) => {
                 self.widgets.insert(
                     AppWidgetName::DatabaseTree,
-                    Box::new(DatabaseTreeWidget::new(&pool).await?),
+                    Box::new(DbTreeWidget::new(&pool).await?),
                 );
 
                 self.focus = AppWidgetName::DatabaseTree;
