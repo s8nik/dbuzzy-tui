@@ -1,21 +1,11 @@
-#![warn(
-    clippy::perf,
-    clippy::semicolon_if_nothing_returned,
-    clippy::missing_const_for_fn,
-    clippy::use_self
-)]
 use std::io::Write;
 
 use crossterm::ExecutableCommand;
+use dbuzzy::{App, Config};
 use ratatui::{
     backend::{Backend, CrosstermBackend},
     Terminal,
 };
-
-mod app;
-mod config;
-mod db;
-mod widgets;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -27,8 +17,8 @@ async fn main() -> anyhow::Result<()> {
     setup_terminal(&mut terminal)?;
     setup_panic();
 
-    let config = Box::new(config::Config::from_toml()?);
-    let mut app = app::App::new(&config);
+    let config = Box::leak(Box::new(Config::from_toml()?));
+    let mut app = App::new(config);
 
     app.run(&mut terminal).await?;
 

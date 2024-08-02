@@ -1,9 +1,10 @@
 // @todo:
 #![allow(dead_code)]
 
-pub mod connection;
-pub mod queries;
-pub mod types;
+mod conn;
+pub mod tree;
+
+pub use conn::{ConnectionConfig, PgPool};
 
 pub type DbResult<T> = anyhow::Result<T, Error>;
 

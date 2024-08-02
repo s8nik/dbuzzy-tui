@@ -2,6 +2,7 @@ pub mod colors;
 pub mod event;
 mod utils;
 
+use event::Input;
 use ratatui::{buffer::Buffer, layout::Rect};
 pub use utils::{ensure_config_dir, read_toml};
 
@@ -12,14 +13,9 @@ pub enum EventOutcome {
     Exit,
 }
 
-pub trait OnInput {
-    fn on_input(&mut self, input: event::Input) -> EventOutcome;
-}
+pub trait DuzzyWidget {
+    type Outcome;
 
-pub trait Drawable {
-    fn draw(&self, area: Rect, buf: &mut Buffer);
-}
-
-pub trait DrawableStateful {
-    fn draw(&mut self, area: Rect, buf: &mut Buffer);
+    fn input(&mut self, input: Input) -> Self::Outcome;
+    fn render(&mut self, area: Rect, buf: &mut Buffer);
 }

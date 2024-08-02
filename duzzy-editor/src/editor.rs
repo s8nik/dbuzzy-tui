@@ -1,6 +1,6 @@
-use std::{cell::RefCell, collections::HashMap, path::Path};
+use std::{collections::HashMap, path::Path};
 
-use duzzy_lib::{event::Input, EventOutcome, OnInput};
+use duzzy_lib::{event::Input, DuzzyWidget, EventOutcome};
 
 use crate::{
     clipboard::Clipboard,
@@ -14,51 +14,49 @@ use crate::{
 
 pub struct Editor {
     pub(super) workspace: Workspace,
-    pub(super) viewport: RefCell<Viewport>,
-
+    pub(super) viewport: Viewport,
     keymaps: &'static Keymaps,
     command: CommandFinder,
 }
 
 impl Default for Editor {
     fn default() -> Self {
-        Self::new()
+        Self::new_scratch()
     }
 }
 
 impl Editor {
-    pub fn new() -> Self {
+    fn new(workspace: Workspace) -> Self {
         Self {
-            workspace: Workspace::new(),
+            workspace,
+            viewport: Viewport::default(),
             keymaps: Keymaps::init(),
             command: CommandFinder::default(),
-            viewport: RefCell::new(Viewport::default()),
         }
     }
 
-    pub fn open_file(&mut self, filepath: impl AsRef<Path>) -> anyhow::Result<()> {
+    pub fn new_file(filepath: impl AsRef<Path>) -> anyhow::Result<Self> {
+        let mut workspace = Workspace::default();
         let doc = Document::from_path(filepath)?;
-        self.workspace.add_doc(doc);
-        Ok(())
+        workspace.add_doc(doc);
+        Ok(Self::new(workspace))
     }
 
-    pub fn open_scratch(&mut self) {
-        self.workspace.add_doc(Document::default());
-    }
-
-    pub fn widget(&self) -> EditorWidget<'_> {
-        EditorWidget::new(self)
+    pub fn new_scratch() -> Self {
+        let mut workspace = Workspace::default();
+        workspace.add_doc(Document::default());
+        Self::new(workspace)
     }
 
     pub fn cursor(&self) -> Cursor {
         let buf = self.workspace.cur().buf();
         let mode = buf.mode();
 
-        let viewport = self.viewport.borrow();
         let (mut y, mut x) = buf.pos();
-
-        x = x.min(viewport.width - 1);
-        y = y.saturating_sub(buf.vscroll()).min(viewport.height - 1);
+        x = x.min(self.viewport.width - 1);
+        y = y
+            .saturating_sub(buf.vscroll())
+            .min(self.viewport.height - 1);
 
         Cursor {
             x: x as _,
@@ -68,8 +66,10 @@ impl Editor {
     }
 }
 
-impl OnInput for Editor {
-    fn on_input(&mut self, input: Input) -> EventOutcome {
+impl DuzzyWidget for Editor {
+    type Outcome = EventOutcome;
+
+    fn input(&mut self, input: Input) -> Self::Outcome {
         let buf = self.workspace.cur().buf();
         let command = self.command.find(self.keymaps, buf, input);
 
@@ -85,14 +85,17 @@ impl OnInput for Editor {
         };
 
         if matches!(outcome, EventOutcome::Render) {
-            let viewport = self.viewport.borrow();
             self.workspace
                 .cur_mut()
                 .buf_mut()
-                .update_vscroll(viewport.height);
+                .update_vscroll(self.viewport.height);
         }
 
         outcome
+    }
+
+    fn render(&mut self, area: ratatui::layout::Rect, buf: &mut ratatui::buffer::Buffer) {
+        EditorWidget::new(self).render(area, buf);
     }
 }
 
