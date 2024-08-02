@@ -1,7 +1,6 @@
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
-use quote::quote;
 use syn::{parse_macro_input, DeriveInput};
 
 #[proc_macro_derive(DuzzyListImpl)]
@@ -10,7 +9,7 @@ pub fn duzzy_list(input: TokenStream) -> TokenStream {
 
     let name = input.ident;
 
-    let expanded = quote! {
+    let expanded = quote::quote! {
         impl duzzy_lib::DuzzyList for #name {
             fn next(&mut self) {
                 let len = self.length();

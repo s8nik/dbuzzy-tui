@@ -1,29 +1,55 @@
-use duzzy_lib::{colors, event::Event, DuzzyWidget, EventOutcome};
+use duzzy_lib::{
+    colors, duzzy_lib_derive::DuzzyListImpl, event::Event, DuzzyList, DuzzyListState, DuzzyWidget,
+    EventOutcome,
+};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
-    style::Stylize,
+    style::{Style, Stylize},
     text::Line,
-    widgets::{Block, Borders, List, ListItem, Widget},
+    widgets::{Block, Borders, List, ListItem, ListState, StatefulWidget},
 };
 
 use crate::db::{tree::DatabaseTree, PgPool};
 
-#[derive(Default)]
+#[derive(DuzzyListImpl)]
 pub struct DbTreeWidget {
+    state: ListState,
     inner: DatabaseTree,
+    pool: PgPool,
 }
 
 impl DbTreeWidget {
-    pub async fn new(pool: &PgPool) -> anyhow::Result<Self> {
-        let mut widget = Self::default();
-        widget.update(pool).await?;
-        Ok(widget)
+    pub fn new(pool: PgPool) -> Self {
+        Self {
+            state: ListState::default(),
+            inner: DatabaseTree::default(),
+            pool,
+        }
     }
 
-    pub async fn update(&mut self, pool: &PgPool) -> anyhow::Result<()> {
-        let conn = pool.acquire().await?;
+    pub async fn update(&mut self) -> anyhow::Result<()> {
+        let conn = self.pool.acquire().await?;
         self.inner = DatabaseTree::load(&conn).await?;
+
+        if !self.inner.as_ref().is_empty() {
+            self.state.select(Some(0));
+        }
+
         Ok(())
+    }
+}
+
+impl DuzzyListState for DbTreeWidget {
+    fn state(&mut self) -> &mut ListState {
+        &mut self.state
+    }
+
+    fn length(&self) -> usize {
+        self.inner
+            .as_ref()
+            .iter()
+            .filter(|x| x.is_visible())
+            .count()
     }
 }
 
@@ -34,9 +60,13 @@ impl DuzzyWidget for DbTreeWidget {
     type Outcome = super::AppEventOutcome;
 
     fn input(&mut self, input: duzzy_lib::event::Input) -> Self::Outcome {
-        let outcome = match input.event {
-            Event::Char('q') | Event::Esc => EventOutcome::Exit,
-            _ => EventOutcome::Ignore,
+        let mut outcome = EventOutcome::Render;
+
+        match input.event {
+            Event::Char('q') | Event::Esc => outcome = EventOutcome::Exit,
+            Event::Char('j') | Event::Down => self.next(),
+            Event::Char('k') | Event::Up => self.prev(),
+            _ => outcome = EventOutcome::Ignore,
         };
 
         outcome.into()
@@ -80,13 +110,16 @@ impl DuzzyWidget for DbTreeWidget {
             items.push(item);
         }
 
-        let tree = List::new(items).block(
-            Block::default()
-                .title("Database Tree")
-                .borders(Borders::ALL)
-                .fg(colors::ENERGY_YELLOW),
-        );
+        let tree = List::new(items)
+            .block(
+                Block::default()
+                    .title("Database Tree")
+                    .borders(Borders::ALL)
+                    .fg(colors::ENERGY_YELLOW),
+            )
+            .highlight_symbol(">")
+            .highlight_style(Style::default().bg(colors::ALOE_GREEN));
 
-        Widget::render(tree, tree_area, buf);
+        StatefulWidget::render(tree, tree_area, buf, &mut self.state);
     }
 }
