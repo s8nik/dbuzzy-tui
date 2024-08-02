@@ -4,7 +4,7 @@ use proc_macro::TokenStream;
 use syn::{parse_macro_input, DeriveInput};
 
 #[proc_macro_derive(DuzzyListImpl)]
-pub fn duzzy_list(input: TokenStream) -> TokenStream {
+pub fn duzzy_list_impl(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
     let name = input.ident;
