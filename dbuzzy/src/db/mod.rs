@@ -4,7 +4,7 @@
 mod conn;
 pub mod tree;
 
-pub use conn::{ConnectionConfig, PgPool};
+pub use conn::{ConnConfig, PgPool};
 
 pub type DbResult<T> = anyhow::Result<T, Error>;
 

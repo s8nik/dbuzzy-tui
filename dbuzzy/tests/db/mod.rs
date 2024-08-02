@@ -1,4 +1,4 @@
-use dbuzzy::db::{ConnectionConfig, PgPool};
+use dbuzzy::db::{ConnConfig, PgPool};
 use deadpool_postgres::GenericClient;
 use testcontainers::{
     core::{IntoContainerPort, WaitFor},
@@ -21,7 +21,7 @@ pub async fn setup() -> anyhow::Result<(ContainerAsync<GenericImage>, PgPool)> {
 
     let container = image.start().await?;
 
-    let config = ConnectionConfig {
+    let config = ConnConfig {
         name: None,
         host: "127.0.0.1".to_owned(),
         port: 5432,

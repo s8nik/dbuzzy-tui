@@ -12,17 +12,17 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph, StatefulWidget, Widget},
 };
 
-use crate::db::{ConnectionConfig, PgPool};
+use crate::db::{ConnConfig, PgPool};
 
 #[derive(DuzzyListImpl)]
 pub struct ConnListWidget {
     state: ListState,
-    configs: &'static [ConnectionConfig],
+    configs: &'static [ConnConfig],
     pool: Option<PgPool>,
 }
 
 impl ConnListWidget {
-    pub fn new(conns: &'static [ConnectionConfig]) -> Self {
+    pub fn new(conns: &'static [ConnConfig]) -> Self {
         let mut state = ListState::default();
 
         if !conns.is_empty() {
