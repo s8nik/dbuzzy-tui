@@ -18,9 +18,8 @@ impl std::fmt::Display for ConnectionConfig {
             |n| n.to_owned(),
         );
 
-        if let Some(dbname) = self.dbname.as_ref() {
-            name.push('/');
-            name.push_str(dbname);
+        if let Some(db_name) = self.dbname.as_ref() {
+            name = format!("{}/{}", name, db_name);
         }
 
         write!(f, "{}", name)
