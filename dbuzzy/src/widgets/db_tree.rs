@@ -37,6 +37,17 @@ impl DbTreeWidget {
 
         Ok(())
     }
+
+    fn toggle_colapse(&mut self) {
+        if let Some(item) = self
+            .state
+            .selected()
+            .and_then(|i| self.inner.as_ref().get(i))
+        {
+            let collapsed = item.borrow().is_collapsed();
+            item.borrow_mut().set_collapse(!collapsed);
+        };
+    }
 }
 
 impl DuzzyListState for DbTreeWidget {
@@ -48,7 +59,7 @@ impl DuzzyListState for DbTreeWidget {
         self.inner
             .as_ref()
             .iter()
-            .filter(|x| x.is_visible())
+            .filter(|x| x.borrow().is_visible())
             .count()
     }
 }
@@ -66,6 +77,7 @@ impl DuzzyWidget for DbTreeWidget {
             Event::Char('q') | Event::Esc => outcome = EventOutcome::Exit,
             Event::Char('j') | Event::Down => self.next(),
             Event::Char('k') | Event::Up => self.prev(),
+            Event::Enter => self.toggle_colapse(),
             _ => outcome = EventOutcome::Ignore,
         };
 
@@ -83,14 +95,16 @@ impl DuzzyWidget for DbTreeWidget {
             .inner
             .as_ref()
             .iter()
-            .filter(|x| x.is_visible())
+            .filter(|x| x.borrow().is_visible())
             .enumerate()
             .collect::<Vec<_>>();
 
         let tree_len = tree_list.len() - 1;
 
         for (i, tree_item) in tree_list {
-            let is_close = i == tree_len || !tree_item.is_collapsed();
+            let item = tree_item.borrow();
+
+            let is_close = i == tree_len || !item.is_collapsed();
 
             let indent_icon = if is_close {
                 CLOSE_INDENT_ICON
@@ -101,8 +115,8 @@ impl DuzzyWidget for DbTreeWidget {
             let item = ListItem::new(Line::styled(
                 format!(
                     "{}{indent_icon} {}",
-                    " ".repeat(tree_item.indent as usize),
-                    tree_item.name
+                    " ".repeat(item.indent as usize),
+                    item.name
                 ),
                 colors::LIGHT_GOLDENROD_YELLOW,
             ));
