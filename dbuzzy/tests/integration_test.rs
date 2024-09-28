@@ -21,6 +21,7 @@ async fn test_db_tree() -> anyhow::Result<()> {
             name: "postgres".to_owned(),
             kind: TreeItemKind::Database { collapsed: false }
         }
+        .into()
     );
 
     assert_eq!(
@@ -33,6 +34,7 @@ async fn test_db_tree() -> anyhow::Result<()> {
                 database: tree_list[0].clone()
             },
         }
+        .into()
     );
 
     assert_eq!(
@@ -45,6 +47,7 @@ async fn test_db_tree() -> anyhow::Result<()> {
                 database: tree_list[0].clone()
             }
         }
+        .into()
     );
 
     container.stop().await?;

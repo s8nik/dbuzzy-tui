@@ -20,8 +20,8 @@ toml = "0.8.14"
 serde_json = "1.0.118"
 serde = { version = "1.0.203", features = ["derive"] }
 
-duzzy-lib = { path = "../duzzy-lib" }
 duzzy-editor = { path = "../duzzy-editor" }
+duzzy-lib = { path = "../duzzy-lib", features = ["derive"] }
 
 [dev-dependencies]
 testcontainers = "0.19.0"

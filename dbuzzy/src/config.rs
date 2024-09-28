@@ -1,10 +1,10 @@
 use serde::Deserialize;
 
-use crate::db::ConnectionConfig;
+use crate::db::ConnConfig;
 
 #[derive(Debug, Default, Deserialize)]
 pub struct Config {
-    pub conn: Vec<ConnectionConfig>,
+    pub conn: Vec<ConnConfig>,
 }
 
 impl Config {

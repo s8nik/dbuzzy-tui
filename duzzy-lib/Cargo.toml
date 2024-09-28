@@ -4,6 +4,10 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 
+[features]
+default = []
+derive = ["duzzy-lib-derive"]
+
 [dependencies]
 anyhow.workspace = true
 ratatui.workspace = true
@@ -11,3 +15,5 @@ crossterm.workspace = true
 
 toml = "0.8.14"
 serde = { version = "1.0.203", features = ["derive"] }
+
+duzzy-lib-derive = { path = "derive", optional = true }

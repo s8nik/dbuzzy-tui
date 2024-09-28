@@ -2,7 +2,7 @@ use deadpool_postgres::Runtime;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
-pub struct ConnectionConfig {
+pub struct ConnConfig {
     pub name: Option<String>,
     pub host: String,
     pub port: u16,
@@ -11,7 +11,7 @@ pub struct ConnectionConfig {
     pub password: Option<String>,
 }
 
-impl std::fmt::Display for ConnectionConfig {
+impl std::fmt::Display for ConnConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut name = self.name.as_ref().map_or_else(
             || format!("postgres://{}:@{}:{}", &self.user, &self.host, self.port),
@@ -27,8 +27,8 @@ impl std::fmt::Display for ConnectionConfig {
 }
 
 // @todo: `postgres` feature
-impl From<&ConnectionConfig> for deadpool_postgres::Config {
-    fn from(conf: &ConnectionConfig) -> Self {
+impl From<&ConnConfig> for deadpool_postgres::Config {
+    fn from(conf: &ConnConfig) -> Self {
         Self {
             user: Some(conf.user.to_owned()),
             password: conf.password.to_owned(),
@@ -49,7 +49,7 @@ pub struct PgPool {
 }
 
 impl PgPool {
-    pub fn create(config: &ConnectionConfig) -> super::DbResult<Self> {
+    pub fn create(config: &ConnConfig) -> super::DbResult<Self> {
         let pg_conf: deadpool_postgres::Config = config.into();
         let pool = pg_conf.create_pool(Some(Runtime::Tokio1), tokio_postgres::NoTls)?;
 

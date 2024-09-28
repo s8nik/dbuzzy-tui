@@ -1,7 +1,8 @@
 use duzzy_lib::{
     colors,
+    duzzy_lib_derive::DuzzyListImpl,
     event::{Event, Input},
-    DuzzyWidget, EventOutcome,
+    DuzzyList, DuzzyListState, DuzzyWidget, EventOutcome,
 };
 use ratatui::{
     buffer::Buffer,
@@ -11,16 +12,17 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph, StatefulWidget, Widget},
 };
 
-use crate::db::{ConnectionConfig, PgPool};
+use crate::db::{ConnConfig, PgPool};
 
+#[derive(DuzzyListImpl)]
 pub struct ConnListWidget {
     state: ListState,
-    configs: &'static [ConnectionConfig],
+    configs: &'static [ConnConfig],
     pool: Option<PgPool>,
 }
 
 impl ConnListWidget {
-    pub fn new(conns: &'static [ConnectionConfig]) -> Self {
+    pub fn new(conns: &'static [ConnConfig]) -> Self {
         let mut state = ListState::default();
 
         if !conns.is_empty() {
@@ -34,31 +36,7 @@ impl ConnListWidget {
         }
     }
 
-    pub fn next_connection(&mut self) {
-        let i = self.state.selected().map(|i| {
-            if i >= self.configs.len() - 1 {
-                0
-            } else {
-                i + 1
-            }
-        });
-
-        self.state.select(i);
-    }
-
-    pub fn prev_connection(&mut self) {
-        let i = self.state.selected().map(|i| {
-            if i == 0 {
-                self.configs.len() - 1
-            } else {
-                i - 1
-            }
-        });
-
-        self.state.select(i);
-    }
-
-    pub fn select_connection(&mut self) {
+    fn select_connection(&mut self) {
         if let Some(config) = self.state.selected().and_then(|i| self.configs.get(i)) {
             self.pool = PgPool::create(config).ok();
         };
@@ -66,6 +44,16 @@ impl ConnListWidget {
 
     pub const fn pool(&self) -> Option<&PgPool> {
         self.pool.as_ref()
+    }
+}
+
+impl DuzzyListState for ConnListWidget {
+    fn state(&mut self) -> &mut ListState {
+        &mut self.state
+    }
+
+    fn length(&self) -> usize {
+        self.configs.len()
     }
 }
 
@@ -77,8 +65,8 @@ impl DuzzyWidget for ConnListWidget {
 
         match input.event {
             Event::Char('q') | Event::Esc => outcome = EventOutcome::Exit,
-            Event::Char('j') | Event::Down => self.next_connection(),
-            Event::Char('k') | Event::Up => self.prev_connection(),
+            Event::Char('j') | Event::Down => self.next(),
+            Event::Char('k') | Event::Up => self.prev(),
             Event::Char('l') | Event::Right | Event::Enter => {
                 self.select_connection();
                 if let Some(pool) = self.pool().cloned() {

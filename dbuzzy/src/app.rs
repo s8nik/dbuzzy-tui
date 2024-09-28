@@ -82,11 +82,11 @@ impl App {
     async fn apply(&mut self, data: AppWidgetData) -> anyhow::Result<()> {
         match data {
             AppWidgetData::Connection(pool) => {
-                self.widgets.insert(
-                    AppWidgetName::DatabaseTree,
-                    Box::new(DbTreeWidget::new(&pool).await?),
-                );
+                let mut tree = DbTreeWidget::new(pool);
+                tree.update().await?;
 
+                self.widgets
+                    .insert(AppWidgetName::DatabaseTree, Box::new(tree));
                 self.focus = AppWidgetName::DatabaseTree;
             }
         };
